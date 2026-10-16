@@ -13,7 +13,7 @@ from urllib.robotparser import RobotFileParser
 
 import httpx
 
-from app.crawler import filter, ressourcen, site, sitemap
+from app.crawler import filter, rendern, ressourcen, site, sitemap
 from app.crawler.parser import zerlegen
 from app.crawler.urls import host, ist_intern, normalisieren
 
@@ -23,6 +23,9 @@ MAX_EXTERN = 500       # externe Links/Ressourcen pro Crawl
 EXTERN_PAUSE = 0.1     # Sekunden; verschiedene Hosts, daher kürzer als die Crawl-Pause
 MAX_SITEMAP_PRUEFUNG = 1000  # Sitemap-URLs, die nicht gecrawlt wurden, per HEAD prüfen
 QUELLEN = ("website", "sitemap", "beides")
+
+# austauschbar für Tests (ohne Chromium)
+RENDERER_FABRIK = rendern.Renderer
 
 
 @dataclass
@@ -37,6 +40,7 @@ class CrawlEinstellungen:
     erlauben: str = ""        # Pfad-Masken, eine pro Zeile (app/crawler/filter.py)
     sperren: str = ""
     parameter_entfernen: str = ""
+    js_rendern: bool = False  # Seiten zusätzlich in Chromium laden und das fertige DOM auswerten (app/crawler/rendern.py)
 
 
 class Crawler:
@@ -54,12 +58,23 @@ class Crawler:
         self.sitemap_urls: list[str] = []
         self.filter = filter.UrlFilter(filter.liste(e.erlauben), filter.liste(e.sperren),
                                        filter.liste(e.parameter_entfernen))
+        self.renderer: rendern.Renderer | None = None
 
     # ---------- Ablauf ----------
 
     def ausfuehren(self) -> None:
         self._robots_und_sitemap()
-        self._seiten_crawlen()
+        if self.e.js_rendern:
+            try:
+                with RENDERER_FABRIK(self.e.user_agent) as self.renderer:
+                    self._seiten_crawlen()
+            except ImportError as fehler:
+                raise RuntimeError("JavaScript ausführen braucht Playwright: .venv/bin/pip install -r requirements.txt"
+                                   " && .venv/bin/playwright install chromium") from fehler
+            finally:
+                self.renderer = None
+        else:
+            self._seiten_crawlen()
         self._ressourcen_pruefen()
         self._extern_pruefen()
         self._sitemap_urls_pruefen()
@@ -197,7 +212,12 @@ class Crawler:
             self._seite_speichern(url, tiefe, **daten)
             return []
 
-        inhalt = zerlegen(r.text, url)
+        html, woerter_roh = r.text, None
+        if self.renderer:
+            gerendert = self.renderer.rendern(url)
+            if gerendert:  # Wörter ohne JavaScript merken: zeigt, was Crawler ohne Rendering sehen
+                woerter_roh, html = zerlegen(r.text, url).woerter, gerendert
+        inhalt = zerlegen(html, url)
         for l in inhalt.links:  # ignorierte Parameter: Link zählt für die Seite ohne diese Parameter
             if l.art == "a" and ist_intern(l.url, self.start_host):
                 l.url = self.filter.bereinigen(l.url)
@@ -211,6 +231,7 @@ class Crawler:
             canonical=inhalt.canonicals[0] if inhalt.canonicals else None,
             meta_robots=inhalt.meta_robots,
             woerter=inhalt.woerter,
+            woerter_roh=woerter_roh,
             text_anteil=inhalt.text_anteil,
             hat_viewport=int(inhalt.hat_viewport),
             viewport_ok=int(inhalt.viewport_ok),

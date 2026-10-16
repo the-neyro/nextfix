@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS einstellungen (
     sperren        TEXT    NOT NULL DEFAULT '',   -- diese Pfad-Masken nicht crawlen
     parameter_entfernen TEXT NOT NULL DEFAULT '', -- URL-Parameter, die ignoriert werden ("*" = alle)
     checks_aus     TEXT    NOT NULL DEFAULT '',   -- Check-IDs, die nicht ausgewertet werden
-    ladezeit_auto  INTEGER NOT NULL DEFAULT 0     -- 1 = nach jedem Crawl Ladezeit messen (app/core/vitals.py)
+    ladezeit_auto  INTEGER NOT NULL DEFAULT 0,    -- 1 = nach jedem Crawl Ladezeit messen (app/core/vitals.py)
+    js_rendern     INTEGER NOT NULL DEFAULT 0     -- 1 = JavaScript ausführen (app/crawler/rendern.py)
 );
 
 CREATE TABLE IF NOT EXISTS crawls (
@@ -42,7 +43,8 @@ CREATE TABLE IF NOT EXISTS crawls (
     lebenszeichen TEXT,         -- letzte Aktivität des Crawlers; alt = Crawl-Prozess tot
     quelle        TEXT NOT NULL DEFAULT 'website',  -- Crawl-Quelle zum Zeitpunkt des Crawls
     fakten        TEXT,         -- JSON: Site-weite Fakten (HTTPS, www, TLS, llms.txt), siehe app/crawler/site.py
-    checks_aus    TEXT NOT NULL DEFAULT ''  -- beim Start ausgeschlossene Checks (zählen nicht zum Health Score)
+    checks_aus    TEXT NOT NULL DEFAULT '',  -- beim Start ausgeschlossene Checks (zählen nicht zum Health Score)
+    js_rendern    INTEGER NOT NULL DEFAULT 0  -- 1 = Seiten mit JavaScript ausgeführt geprüft
 );
 
 CREATE TABLE IF NOT EXISTS seiten (
@@ -90,6 +92,7 @@ CREATE TABLE IF NOT EXISTS seiten (
     link_rank        INTEGER,          -- interne Link-Stärke 0–100 (app/core/linkrank.py)
     geo              TEXT,             -- JSON: Signale für KI-Suche (app/crawler/geo.py)
     blockierend      TEXT,             -- JSON: externe Skripte im <head> ohne async/defer
+    woerter_roh      INTEGER,          -- Wörter ohne JavaScript (nur wenn gerendert wurde, sonst NULL)
     UNIQUE (crawl_id, url)
 );
 

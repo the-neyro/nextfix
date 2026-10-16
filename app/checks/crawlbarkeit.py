@@ -109,3 +109,17 @@ def x_robots_noindex(conn, crawl_id):
        "Wichtige Seiten aus Navigation oder Hub-Seiten verlinken.")
 def klicktiefe(conn, crawl_id):
     return abfrage(conn, f"SELECT id, tiefe FROM seiten WHERE crawl_id=? AND {HTML} AND tiefe > 3", crawl_id)
+
+
+@check("inhalt_nur_per_js", "Inhalt entsteht erst per JavaScript", "warning", "crawlbarkeit",
+       "Ohne JavaScript steht auf der Seite weniger als die Hälfte des Textes. Google rendert JavaScript, aber "
+       "verzögert; die Crawler der KI-Suchdienste (ChatGPT, Perplexity, Claude) und viele andere führen es gar nicht "
+       "aus und sehen eine fast leere Seite.",
+       "Wichtige Inhalte schon im HTML ausliefern: Server-Rendering oder statische Seiten (z. B. Next.js/Nuxt mit "
+       "SSR/SSG, Prerendering). Nur Komfort-Funktionen per JavaScript nachladen.")
+def inhalt_nur_per_js(conn, crawl_id):
+    # Nur bei Crawls mit „JavaScript ausführen“ ist woerter_roh gefüllt
+    return abfrage(conn, f"""
+        SELECT id, 'ohne JavaScript ' || woerter_roh || ' Wörter, mit JavaScript ' || woerter
+        FROM seiten WHERE crawl_id=? AND {HTML} AND woerter_roh IS NOT NULL
+          AND woerter >= 50 AND woerter_roh * 2 < woerter""", crawl_id)

@@ -164,7 +164,7 @@ def einstellungen_speichern(projekt_id: int, start_url: str = Form(...), seitenl
                             crawl_delay: float = Form(...), user_agent: str = Form(...),
                             robots_beachten: int = Form(...), quelle: str = Form("website"),
                             erlauben: str = Form(""), sperren: str = Form(""), parameter_entfernen: str = Form(""),
-                            checks_aus: list[str] = Form([]), ladezeit_auto: str = Form(""),
+                            checks_aus: list[str] = Form([]), ladezeit_auto: str = Form(""), js_rendern: str = Form(""),
                             conn: Conn = Depends(sitzung)):
     _projekt(conn, projekt_id)
     try:
@@ -172,7 +172,7 @@ def einstellungen_speichern(projekt_id: int, start_url: str = Form(...), seitenl
                                    crawl_delay=crawl_delay, user_agent=user_agent,
                                    robots_beachten=bool(robots_beachten), quelle=quelle, erlauben=erlauben,
                                    sperren=sperren, parameter_entfernen=parameter_entfernen, checks_aus=checks_aus,
-                                   ladezeit_auto=bool(ladezeit_auto))
+                                   ladezeit_auto=bool(ladezeit_auto), js_rendern=bool(js_rendern))
     except audit.AuditFehler as e:
         return HTMLResponse(f'<span class="fehler">{html.escape(str(e))}</span>')
     return HTMLResponse('<span class="gut">Gespeichert</span>')
