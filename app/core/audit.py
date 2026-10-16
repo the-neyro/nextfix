@@ -7,7 +7,7 @@ from contextlib import closing
 from urllib.parse import urlsplit
 
 from app import checks
-from app.core import ausblenden, linkrank, projekte, score
+from app.core import ausblenden, autoritaet, linkrank, projekte, score
 from app.crawler.crawler import CrawlEinstellungen, Crawler
 from app.crawler.filter import liste
 from app.db import verbinden
@@ -131,6 +131,9 @@ def _crawl_ausfuehren(crawl_id: int, einst: CrawlEinstellungen, ladezeit: bool =
                 return
             abgebrochen = conn.execute("SELECT abbrechen FROM crawls WHERE id=?", (crawl_id,)).fetchone()[0]
             _abschliessen(conn, crawl_id, "abgebrochen" if abgebrochen else "fertig")
+            domain = conn.execute("SELECT p.domain FROM projekte p JOIN crawls c ON c.projekt_id = p.id"
+                                  " WHERE c.id=?", (crawl_id,)).fetchone()[0]
+            autoritaet.still_aktualisieren(conn, [domain])
             if ladezeit and not abgebrochen:
                 _ladezeit_messen(conn, crawl_id)
     except Exception as fehler:  # letzte Rettung, z. B. DB beim Öffnen gesperrt

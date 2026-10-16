@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
 from app import berichte, gsc
-from app.core import audit, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
+from app.core import audit, autoritaet, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import sitzung
 
 router = APIRouter(prefix="/api")
@@ -221,6 +221,25 @@ def csv_export(crawl_id: int, art: str, conn: Conn = Depends(sitzung)) -> Respon
 @router.get("/checks")
 def checks_katalog() -> list[dict]:
     return audit.checks_katalog()
+
+
+class AutoritaetAbruf(BaseModel):
+    domains: list[str] | None = None   # leer = alle Projekte
+    neu: bool = False                  # Zwischenspeicher (30 Tage) übergehen
+
+
+@router.get("/autoritaet")
+def autoritaet_vergleich(conn: Conn = Depends(sitzung)) -> list[dict]:
+    """Gespeicherte Autorität (Open PageRank 0–10) aller Projekte, stärkste zuerst."""
+    return autoritaet.vergleich(conn)
+
+
+@router.post("/autoritaet")
+def autoritaet_abrufen(daten: AutoritaetAbruf, conn: Conn = Depends(sitzung)) -> dict:
+    try:
+        return autoritaet.aktualisieren(conn, daten.domains or [p.domain for p in projekte.liste(conn)], daten.neu)
+    except autoritaet.opr.OprFehler as e:
+        raise HTTPException(400, str(e))
 
 
 # ---------- Position Tracking (Search Console) ----------

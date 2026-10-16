@@ -10,7 +10,7 @@ from contextlib import closing
 from mcp.server import MCPServer
 
 from app import berichte, config
-from app.core import audit, ausblenden, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
+from app.core import audit, ausblenden, autoritaet, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import verbinden
 
 server = MCPServer(
@@ -266,6 +266,15 @@ def csv_export(art: str, crawl_id: int | None = None, projekt_id: int | None = N
     pfad = ordner / f"crawl-{cid}-{art}.csv"
     pfad.write_text(inhalt, encoding="utf-8")
     return str(pfad)
+
+
+@server.tool()
+def autoritaet_abrufen(domains: list[str] | None = None, neu: bool = False) -> dict:
+    """Domain-Autorität (Open PageRank, 0–10, logarithmisch) für beliebige Domains, z. B. eigene Website und
+    Mitbewerber. Ohne domains: alle Projekte. Werte werden 30 Tage gespeichert (neu=True fragt trotzdem neu).
+    Kleine lokale Websites liegen meist bei 1–3; sinnvoll ist der Vergleich, nicht der Wert allein."""
+    with _db() as conn:
+        return autoritaet.aktualisieren(conn, domains or [p.domain for p in projekte.liste(conn)], neu)
 
 
 @server.tool()

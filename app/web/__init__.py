@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from app import checks, gsc
 from app.api import router as api_router
-from app.core import audit, aufgaben, ausblenden, export, teilnoten, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
+from app.core import audit, aufgaben, ausblenden, autoritaet, export, teilnoten, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import sitzung, verbinden
 from app.gsc.laender import land_name
 
@@ -123,9 +123,24 @@ def _projekt_karten(conn: Conn) -> list[dict]:
     return karten
 
 
+def _autoritaet_daten(conn: Conn, fehler: str | None = None) -> dict:
+    return {"vergleich": autoritaet.vergleich(conn), "autoritaet_verfuegbar": autoritaet.verfuegbar(), "fehler": fehler}
+
+
 @app.get("/", response_class=HTMLResponse)
 def startseite(request: Request, conn: Conn = Depends(sitzung)):
-    return _seite(request, "index.html", karten=_projekt_karten(conn))
+    return _seite(request, "index.html", karten=_projekt_karten(conn), **_autoritaet_daten(conn))
+
+
+@app.post("/autoritaet", response_class=HTMLResponse)
+def autoritaet_abrufen(request: Request, conn: Conn = Depends(sitzung)):
+    """HTMX: Autorität aller Projekte bei Open PageRank abrufen (nur fehlende/veraltete Werte)."""
+    fehler = None
+    try:
+        autoritaet.aktualisieren(conn, [p.domain for p in projekte.liste(conn)])
+    except autoritaet.opr.OprFehler as e:
+        fehler = str(e)
+    return _seite(request, "_autoritaet.html", **_autoritaet_daten(conn, fehler))
 
 
 @app.post("/projekte", response_class=HTMLResponse)

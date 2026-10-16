@@ -38,8 +38,13 @@
   {% set w = n.wert %}
   <a href="{{ n.link }}">
     <span class="klein">{{ n.name }}</span>
+    {% if n.skala %}{# eigene Skala ohne Ampel, z. B. Autorität 0–10 #}
+    <span class="wert">{{ '–' if w is none else w|zahl(1) }}</span>
+    <span class="balken" aria-hidden="true"><div class="neutral" style="width:{{ 100 * (w or 0) / n.skala }}%"></div></span>
+    {% else %}
     <span class="wert {{ '' if w is none else 'gut' if w >= 80 else 'warning' if w >= 50 else 'error' }}">{{ '–' if w is none else w|round|int }}</span>
     <span class="balken" aria-hidden="true"><div class="{{ '' if w is none or w >= 80 else 'wichtig' if w >= 50 else 'dringend' }}" style="width:{{ w or 0 }}%"></div></span>
+    {% endif %}
     <span class="klein">{{ n.hinweis or '' }}</span>
   </a>
   {% endfor %}
