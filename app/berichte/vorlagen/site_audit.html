@@ -63,7 +63,8 @@
   /* Maßnahmen: echte Reihenfolge nach Wirkung, daher nummeriert */
   .massnahme { display: grid; grid-template-columns: 10mm 1fr 24mm; gap: 0 3mm; padding: 3mm 0; border-bottom: .5pt solid var(--linie); }
   .massnahme .nr { font-size: 20pt; font-weight: 500; line-height: 1; color: var(--akzent); }
-  .massnahme .gewinn { text-align: right; font-weight: 600; color: var(--gut); white-space: nowrap; }
+  .massnahme .wirkung { text-align: right; font-weight: 600; white-space: nowrap; }
+  .wirkung.hoch { color: var(--gut); } .wirkung.gering { color: var(--gedaempft); font-weight: 500; }
   .massnahme .info { display: flex; gap: 1.5mm; flex-wrap: wrap; margin: 1mm 0 1.5mm; }
   .massnahme dl { margin: 0; display: grid; grid-template-columns: 22mm 1fr; gap: .6mm 2mm; line-height: 1.45; }
   .massnahme dt { color: var(--gedaempft); font-size: 8.5pt; }
@@ -205,7 +206,7 @@
 {# ---------- Maßnahmen ---------- #}
 <section class="neue-seite">
   <h2>Maßnahmen</h2>
-  <p>Sortiert nach Wirkung: zuerst, was den Website-Zustand am meisten verbessert. Die Punkte gelten jeweils, wenn nur dieses Problem behoben wird.</p>
+  <p>Sortiert nach Wirkung auf den Website-Zustand: zuerst, was am meisten zählt. Die Wirkung (hoch, mittel, gering) ergibt sich aus Dringlichkeit und Anteil betroffener Seiten. Sie ist eine Einschätzung, keine Vorhersage für Platzierungen bei Google.</p>
   {% for i in aufg.aufgaben[:massnahmen_max] %}
   <div class="massnahme zusammen">
     <div class="nr">{{ loop.index }}</div>
@@ -222,7 +223,7 @@
         {% if i.beispiele %}<dt>Zum Beispiel</dt><dd>{% for u in i.beispiele %}<div class="url">{{ u }}</div>{% endfor %}</dd>{% endif %}
       </dl>
     </div>
-    <div class="gewinn">+{{ zahl(i.gewinn, 1) }} Punkte</div>
+    <div class="wirkung {{ i.wirkung }}">Wirkung {{ i.wirkung }}</div>
   </div>
   {% else %}<p class="gut">Keine dringenden oder wichtigen Probleme. Der Feinschliff in den Bereichen ist optional.</p>{% endfor %}
   {% if aufg.aufgaben|length > massnahmen_max %}

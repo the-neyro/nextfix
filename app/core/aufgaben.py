@@ -1,8 +1,12 @@
 """„Was jetzt tun“: Probleme eines Crawls als priorisierte Aufgaben (siehe docs/ui/ux-ablaeufe.md, Abschnitt 3).
 
-Priorität = Punkte, die der Website-Zustand (Health) gewinnt, wenn nur dieses Problem behoben ist – mit der Formel
-aus app/core/score.py, damit Liste und Zustandszahl zusammenpassen. Feinschliff (Notices, Gewicht 0) kommt
-nicht in die Liste, sondern getrennt darunter. Bei gleichem Gewinn zuerst der geringere Aufwand.
+Reihenfolge = Punkte, die der Website-Zustand (Health) gewinnt, wenn nur dieses Problem behoben ist – mit der Formel
+aus app/core/score.py, damit Liste und Zustandszahl zusammenpassen. Bei gleichem Gewinn zuerst der geringere Aufwand.
+Feinschliff (Notices, Gewicht 0) kommt nicht in die Liste, sondern getrennt darunter.
+
+Angezeigt wird nur die Wirkung als Stufe (hoch / mittel / gering), keine Punktzahl: Die Punkte stammen aus unserer
+eigenen Formel und sagen nichts darüber, was eine Behebung bei Rankings oder Besuchern bringt. Eine Zahl wie „+4,2“
+täuscht eine Genauigkeit vor, die es nicht gibt. „gewinn“ bleibt für Sortierung und MCP im Ergebnis.
 """
 
 import sqlite3
@@ -74,6 +78,17 @@ HANDLUNG = {
 }
 
 
+# Wirkung nach Abzug des Problems (Gewicht × Anteil betroffener Seiten, siehe score.strafe), unabhängig vom
+# Gesamtzustand: Fehler zählen mindestens „mittel“, ab etwa einem Fünftel der Seiten „hoch“; Warnungen werden erst
+# auf vielen Seiten (ab etwa 30 %) „mittel“ und site-weit „hoch“.
+WIRKUNG_HOCH = 1.0
+WIRKUNG_MITTEL = 0.4
+
+
+def wirkung(abzug: float) -> str:
+    return "hoch" if abzug >= WIRKUNG_HOCH else "mittel" if abzug >= WIRKUNG_MITTEL else "gering"
+
+
 def _seiten_text(n: int, ganze_site: bool) -> str:
     if ganze_site:
         return "die ganze Website"
@@ -136,7 +151,7 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
         a = {"id": c.id, "name": c.name, "was": handlung(c, seiten, ganze_site), "warum": c.warum,
              "beheben": c.beheben, "schwere": c.schwere, "stufe": STUFEN[c.schwere], "kategorie": c.kategorie,
              "seiten": seiten, "ganze_site": ganze_site, "seiten_text": _seiten_text(seiten, ganze_site),
-             "gewinn": round(gewinn, 1), "aufwand": _aufwand(c), "aufwand_text": AUFWAND_TEXT[_aufwand(c)],
+             "gewinn": round(gewinn, 1), "wirkung": wirkung(abzug[c.id]), "aufwand": _aufwand(c), "aufwand_text": AUFWAND_TEXT[_aufwand(c)],
              "wer": _wer(c), "verlauf": verlauf, "vorher": vorher.get(c.id, (0, 0, False))[1]}
         (feinschliff if c.schwere == "notice" else aufgaben).append(a)
 

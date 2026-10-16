@@ -65,7 +65,7 @@ def test_audit_ueber_api_ui_und_mcp(testseite):
 
     # Web-UI rendert alle Seiten
     start = client.get(f"/projekte/{pid}").text
-    assert "Website-Zustand" in start and "Was jetzt tun" in start and "Punkte" in start
+    assert "Website-Zustand" in start and "Was jetzt tun" in start and "Wirkung " in start and "Punkte</span>" not in start
     assert "Sichtbarkeit Google" in start and "Search Console nicht verbunden" in start
     assert "Title-Tag fehlt" in client.get(f"/crawls/{cid}/issues").text
     detail = client.get(f"/crawls/{cid}/issues/status_4xx/seite").text

@@ -24,7 +24,7 @@ is in German.</sub>
 
 | Module | Question it answers |
 |---|---|
-| **Site audit** | What is broken, and what comes first? Crawler (links, sitemap or both, robots.txt), 101 checks in 8 areas, site health 0–100, tasks ranked by the points they win, “intentional” flag to hide deliberate cases, history between audits, CSV and PDF report. |
+| **Site audit** | What is broken, and what comes first? Crawler (links, sitemap or both, robots.txt), 101 checks in 8 areas, site health 0–100, tasks ranked by impact (high / medium / low), “intentional” flag to hide deliberate cases, history between audits, CSV and PDF report. |
 | **Page speed** | Is the site fast enough? Core Web Vitals (LCP, CLS, TBT) measured in the lab with real Chromium, mobile and desktop, scored with the Lighthouse formula and checked against PageSpeed Insights. Poor values count towards site health; optionally measured automatically after every crawl. |
 | **Rankings** | Where am I found, where am I losing ground? Data from Google Search Console and Bing Webmaster Tools: visibility, winners and losers, “almost on page 1”, keyword cannibalization, daily import. |
 | **Keyword research** | What is worth writing about? Ideas from Google Autocomplete and your own Search Console data, clustering, search intent, questions, search volume via Bing, content gap against competitors. |
@@ -43,8 +43,8 @@ date, organization markup, based on the GEO study (Princeton, KDD 2024).
 ## What makes it different
 
 - **Tasks, not a wall of numbers.** Every issue becomes one sentence with an action, the effort involved
-  (“configure once”, “write text”), who does it (yourself in the CMS, or your developer/host) and the health points
-  it wins.
+  (“configure once”, “write text”), who does it (yourself in the CMS, or your developer/host) and its impact
+  (high / medium / low). No fake precision like “+4.2 points”: nobody can predict what a fix does to rankings.
 - **An honest health score.** The formula does not dilute problems across checks that never fire, and thin content
   on many pages weighs as much as an error (`app/core/score.py`).
 - **Plain language.** Urgent / Important / Polish instead of Error / Warning / Notice, technical terms explained.

@@ -12,7 +12,7 @@
       {% if a %}
       <span class="marke leise">{{ a.aufwand_text }}</span>
       <span class="marke leise">{{ 'machst du selbst' if a.wer == 'selbst' else 'für deine Technik' }}</span>
-      {% if d.schwere != 'notice' %}<span class="klein" style="align-self:center">+{{ a.gewinn|zahl(1) }} Punkte für den Website-Zustand</span>{% endif %}
+      {% if d.schwere != 'notice' %}<span class="wirkung {{ a.wirkung }}" style="align-self:center">Wirkung {{ a.wirkung }}</span>{% endif %}
       {% endif %}
     </div>
   </div>
