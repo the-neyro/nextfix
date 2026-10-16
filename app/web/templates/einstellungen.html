@@ -31,6 +31,10 @@
         </select></label>
       <label style="flex:1 1 260px">Kennung (User-Agent)<input name="user_agent" value="{{ e.user_agent }}"></label>
     </div>
+    <label style="margin-top:16px; display:flex; gap:8px; align-items:center">
+      <input type="checkbox" name="ladezeit_auto" value="1" {% if e.ladezeit_auto %}checked{% endif %}>
+      Nach jeder Prüfung auch die Ladezeit messen <span class="klein">(dauert 1–2 Minuten länger, zählt in den Website-Zustand)</span>
+    </label>
   </div>
 
   <details class="karte">

@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS einstellungen (
     erlauben       TEXT    NOT NULL DEFAULT '',   -- nur diese Pfad-Masken crawlen
     sperren        TEXT    NOT NULL DEFAULT '',   -- diese Pfad-Masken nicht crawlen
     parameter_entfernen TEXT NOT NULL DEFAULT '', -- URL-Parameter, die ignoriert werden ("*" = alle)
-    checks_aus     TEXT    NOT NULL DEFAULT ''    -- Check-IDs, die nicht ausgewertet werden
+    checks_aus     TEXT    NOT NULL DEFAULT '',   -- Check-IDs, die nicht ausgewertet werden
+    ladezeit_auto  INTEGER NOT NULL DEFAULT 0     -- 1 = nach jedem Crawl Ladezeit messen (app/core/vitals.py)
 );
 
 CREATE TABLE IF NOT EXISTS crawls (

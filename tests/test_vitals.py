@@ -155,3 +155,30 @@ def test_ohne_messung_keine_ladezeit_probleme(crawl):
     audit.neu_auswerten(conn, c)
     assert not {"ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"} & set(audit._treffer_pro_check(conn, c))
     assert audit._bezug(conn, c) == {}
+
+
+def test_automatisch_nach_dem_crawl(testseite, monkeypatch):
+    from app.core import audit
+    monkeypatch.setattr(vitals, "MESSER_FABRIK", FakeMesser)
+    conn = verbinden()
+    p = projekte.anlegen(conn, "127.0.0.1").id
+    assert audit.einstellungen_setzen(conn, p, start_url=testseite, crawl_delay=0, ladezeit_auto=True)["ladezeit_auto"]
+    c = audit.crawl_starten(conn, p, warten=True)["id"]
+    e = vitals.ergebnis(conn, c)
+    assert e["lauf"]["status"] == "fertig" and e["zusammenfassung"]["mobile"]["seiten"] >= 1
+    assert "ladezeit_lcp" in audit._treffer_pro_check(conn, c)   # FakeMesser: Unterseiten mobil langsam
+
+
+def test_einstellung_in_der_oberflaeche():
+    from app.core import audit
+    from app.web import app
+    conn = verbinden()
+    p = projekte.anlegen(conn, "ex.de").id
+    client = TestClient(app)
+    assert 'name="ladezeit_auto"' in client.get(f"/projekte/{p}/einstellungen").text
+    daten = {"start_url": "https://ex.de/", "seitenlimit": "50", "crawl_delay": "0.5", "user_agent": "x",
+             "robots_beachten": "1", "ladezeit_auto": "1"}
+    assert "Gespeichert" in client.post(f"/projekte/{p}/einstellungen", data=daten).text
+    assert audit.einstellungen_holen(conn, p)["ladezeit_auto"] is True
+    client.post(f"/projekte/{p}/einstellungen", data={k: v for k, v in daten.items() if k != "ladezeit_auto"})
+    assert audit.einstellungen_holen(conn, p)["ladezeit_auto"] is False
