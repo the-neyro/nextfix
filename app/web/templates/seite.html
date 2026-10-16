@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 {% block titel %}Seite · {{ projekt.name }}{% endblock %}
 {% block inhalt %}
-<div class="brotkrumen"><a href="/crawls/{{ crawl.id }}/seiten">Geprüfte Seiten</a></div><div class="kopf"><div><h1 class="url" style="font-family:var(--schrift)">{{ s.url|pfad }}</h1><div class="unter">{{ s.url }}</div></div><a class="knopf zweit" href="/projekte/{{ projekt.id }}/onpage?url={{ s.url|urlencode }}">Seite optimieren</a></div>
+<div class="brotkrumen"><a href="/crawls/{{ crawl.id }}/seiten">Geprüfte Seiten</a></div><div class="kopf"><div><h1 class="url" style="font-family:var(--schrift)">{{ s.url|pfad }}</h1><div class="unter">{{ s.url }}</div></div><div style="display:flex; gap:8px; flex-wrap:wrap">
+  <form method="post" action="/projekte/{{ projekt.id }}/{{ 'einblenden' if s.ausgeblendet else 'ausblenden' }}">
+    {% if s.ausgeblendet %}<input type="hidden" name="ausblendung_id" value="{{ s.ausgeblendet }}">{% else %}<input type="hidden" name="url" value="{{ s.url }}">{% endif %}
+    <input type="hidden" name="zurueck" value="/crawls/{{ crawl.id }}/seite?url={{ s.url|urlencode }}">
+    <button class="zweit">{{ 'Seite wieder einblenden' if s.ausgeblendet else 'Bewusst so – Seite ausblenden' }}</button>
+  </form>
+  <a class="knopf zweit" href="/projekte/{{ projekt.id }}/onpage?url={{ s.url|urlencode }}">Seite optimieren</a></div></div>
+{% if s.ausgeblendet %}<p class="klein">Bewusst so: Die Probleme dieser Seite zählen nicht in Website-Zustand und Aufgabenliste.</p>{% endif %}
 <p><a href="/crawls/{{ crawl.id }}/seiten">← Gecrawlte Seiten</a></p>
 <div class="karte">
   <h2>Issues ({{ s.issues|length }})</h2>
   {% if s.issues %}
   <table>
     {% for i in s.issues %}
-    <tr><td><span class="badge {{ i.schwere }}">{{ STUFE[i.schwere][1] }}</span></td><td><strong>{{ i.name }}</strong><br><span class="klein">{{ i.beheben }}</span></td><td>{{ i.detail or '' }}</td></tr>
+    <tr{% if i.ausgeblendet %} class="ausgeblendet" title="Bewusst so – zählt nicht mit"{% endif %}><td><span class="badge {{ i.schwere }}">{{ STUFE[i.schwere][1] }}</span></td><td><strong>{{ i.name }}</strong><br><span class="klein">{{ i.beheben }}</span></td><td>{{ i.detail or '' }}</td></tr>
     {% endfor %}
   </table>
   {% else %}<p class="gut">Keine Probleme auf dieser Seite.</p>{% endif %}

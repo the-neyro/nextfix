@@ -43,4 +43,25 @@
 {% else %}
 <div class="leer"><h2>Keine Probleme für diesen Filter</h2><p>Wähle eine andere Dringlichkeit oder einen anderen Bereich.</p></div>
 {% endif %}
+
+{% if ausgeblendet %}
+<section class="karte">
+  <h2>Bewusst so <span class="klein" style="font-weight:400">{{ ausgeblendet|length }} ausgeblendet · zählen nicht in den Website-Zustand</span></h2>
+  <div class="tabelle"><table>
+    <thead><tr><th>Problem</th><th>Seite</th><th>Grund</th><th></th></tr></thead>
+    <tbody>
+    {% for a in ausgeblendet %}
+    <tr>
+      <td>{% if a.check_id %}<a href="/crawls/{{ crawl.id }}/issues/{{ a.check_id }}/seite">{{ a.check_name or a.check_id }}</a>{% else %}alle Probleme{% endif %}</td>
+      <td class="url">{% if a.url %}<a href="/crawls/{{ crawl.id }}/seite?url={{ a.url|urlencode }}">{{ a.url|pfad }}</a>{% else %}alle Seiten{% endif %}</td>
+      <td class="klein">{{ a.grund }}</td>
+      <td class="zahl"><form method="post" action="/projekte/{{ projekt.id }}/einblenden">
+        <input type="hidden" name="ausblendung_id" value="{{ a.id }}"><input type="hidden" name="zurueck" value="/crawls/{{ crawl.id }}/issues">
+        <button class="leise klein-knopf">einblenden</button></form></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endif %}
 {% endblock %}

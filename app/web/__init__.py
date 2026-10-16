@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from app import checks, gsc
 from app.api import router as api_router
-from app.core import audit, aufgaben, export, teilnoten, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
+from app.core import audit, aufgaben, ausblenden, export, teilnoten, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import sitzung, verbinden
 from app.gsc.laender import land_name
 
@@ -220,7 +220,7 @@ def issues_seite(request: Request, crawl_id: int, schwere: str = "", kategorie: 
     crawl = _crawl(conn, crawl_id)
     return _seite(request, "issues.html", crawl=crawl, projekt=_projekt(conn, crawl["projekt_id"]),
                   issues=audit.issues_liste(conn, crawl_id, schwere or None, kategorie or None),
-                  schwere=schwere, kategorie=kategorie,
+                  schwere=schwere, kategorie=kategorie, ausgeblendet=ausblenden.liste(conn, crawl["projekt_id"]),
                   schweregrade=checks.SCHWEREGRADE, kategorien=checks.KATEGORIEN)
 
 
@@ -257,6 +257,32 @@ def issue_treffer(request: Request, crawl_id: int, check_id: str, conn: Conn = D
     except audit.AuditFehler as e:
         raise HTTPException(404, str(e))
     return _seite(request, "_issue_treffer.html", d=d, crawl_id=crawl_id)
+
+
+def _zurueck(zurueck: str, projekt_id: int) -> str:
+    """Nur interne Ziele zulassen (kein Sprung auf fremde Seiten)."""
+    return zurueck if zurueck.startswith(("/crawls/", "/projekte/")) else f"/projekte/{projekt_id}"
+
+
+@app.post("/projekte/{projekt_id}/ausblenden")
+def ausblenden_speichern(projekt_id: int, check_id: str = Form(""), url: str = Form(""), grund: str = Form(""),
+                         zurueck: str = Form(""), conn: Conn = Depends(sitzung)):
+    """„Bewusst so“: Problem, Seite oder Fundstelle ausblenden."""
+    try:
+        ausblenden.ausblenden(conn, projekt_id, check_id, url, grund)
+    except (ausblenden.AusblendenFehler, projekte.ProjektFehler) as e:
+        raise HTTPException(400, str(e))
+    return RedirectResponse(_zurueck(zurueck, projekt_id), status_code=303)
+
+
+@app.post("/projekte/{projekt_id}/einblenden")
+def einblenden(projekt_id: int, ausblendung_id: int = Form(...), zurueck: str = Form(""),
+               conn: Conn = Depends(sitzung)):
+    try:
+        ausblenden.einblenden(conn, projekt_id, ausblendung_id)
+    except ausblenden.AusblendenFehler as e:
+        raise HTTPException(400, str(e))
+    return RedirectResponse(_zurueck(zurueck, projekt_id), status_code=303)
 
 
 @app.get("/crawls/{crawl_id}/seiten", response_class=HTMLResponse)

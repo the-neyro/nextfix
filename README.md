@@ -18,7 +18,7 @@ wie viel es bringt.**
 
 | Modul | Frage, die es beantwortet |
 |---|---|
-| **Website-Check** | Was ist kaputt, und was zuerst? Crawler (Links, Sitemap oder beides, robots.txt), 101 Prüfungen in 8 Bereichen, Website-Zustand 0–100, Aufgaben nach gewinnbaren Punkten, Verlauf zwischen Prüfungen, CSV und PDF-Bericht. |
+| **Website-Check** | Was ist kaputt, und was zuerst? Crawler (Links, Sitemap oder beides, robots.txt), 101 Prüfungen in 8 Bereichen, Website-Zustand 0–100, Aufgaben nach gewinnbaren Punkten, „Bewusst so“ zum Ausblenden absichtlicher Fälle, Verlauf zwischen Prüfungen, CSV und PDF-Bericht. |
 | **Ladezeit** | Ist die Seite schnell genug? Core Web Vitals (LCP, CLS, TBT) im Labor mit echtem Chromium, mobil und Desktop, Score nach Lighthouse-Formel – gegen PageSpeed Insights abgeglichen. |
 | **Positionen** | Wo werde ich gefunden, wo verliere ich? Daten aus Google Search Console und Bing Webmaster Tools: Sichtbarkeit, Aufsteiger und Absteiger, „fast auf Seite 1“, mehrere Seiten für einen Suchbegriff, täglicher Import. |
 | **Suchbegriffe finden** | Worüber lohnt es sich zu schreiben? Ideen aus Google-Vorschlägen und eigenen Search-Console-Daten, Gruppen, Suchabsicht, Fragen, Suchvolumen über Bing, Themen-Lücke zu Mitbewerbern. |
@@ -72,7 +72,7 @@ Testdaten ausprobieren.
 .venv/bin/python -m app.mcp_server             # MCP-Server (stdio)
 ```
 
-Für Claude Code `.mcp.json.example` nach `.mcp.json` kopieren und den Projektpfad eintragen. 46 Tools, z. B. `crawl_starten`, `issues_liste`, `onpage_pruefen`,
+Für Claude Code `.mcp.json.example` nach `.mcp.json` kopieren und den Projektpfad eintragen. 49 Tools, z. B. `crawl_starten`, `issues_liste`, `onpage_pruefen`,
 `positionen_uebersicht`, `keyword_recherche_starten`, `vitals_messen`, `pdf_bericht`.
 
 ### Google Search Console und Bing

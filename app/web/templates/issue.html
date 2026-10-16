@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block titel %}{{ a.was if a else d.name }} · {{ projekt.name }}{% endblock %}
 {% block inhalt %}
+{% set zurueck = '/crawls/' ~ crawl.id ~ '/issues/' ~ d.id ~ '/seite' %}
 <div class="brotkrumen"><a href="/projekte/{{ projekt.id }}">Übersicht</a> / <a href="/crawls/{{ crawl.id }}/issues">Probleme</a></div>
 <div class="kopf">
   <div>
     <h1>{{ a.was if a else d.name }}</h1>
     <div class="info" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px">
       <span class="marke {{ STUFE[d.schwere][0] }}">{{ STUFE[d.schwere][1] }}</span>
+      {% if d.ausgeblendet %}<span class="marke leise">Bewusst so · zählt nicht mit</span>{% endif %}
       {% if a %}
       <span class="marke leise">{{ a.aufwand_text }}</span>
       <span class="marke leise">{{ 'machst du selbst' if a.wer == 'selbst' else 'für deine Technik' }}</span>
@@ -14,7 +16,18 @@
       {% endif %}
     </div>
   </div>
-  <a class="knopf zweit" href="/api/crawls/{{ crawl.id }}/export/issues.csv">Alle Probleme als CSV</a>
+  <div style="display:flex; gap:8px; flex-wrap:wrap">
+    {% if d.ausgeblendet %}
+    <form method="post" action="/projekte/{{ projekt.id }}/einblenden">
+      <input type="hidden" name="ausblendung_id" value="{{ d.ausgeblendet }}"><input type="hidden" name="zurueck" value="{{ zurueck }}">
+      <button class="zweit">Wieder einblenden</button></form>
+    {% else %}
+    <form method="post" action="/projekte/{{ projekt.id }}/ausblenden">
+      <input type="hidden" name="check_id" value="{{ d.id }}"><input type="hidden" name="zurueck" value="{{ zurueck }}">
+      <button class="zweit">Bewusst so – ausblenden</button></form>
+    {% endif %}
+    <a class="knopf zweit" href="/api/crawls/{{ crawl.id }}/export/issues.csv">Alle Probleme als CSV</a>
+  </div>
 </div>
 
 <div class="raster" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
@@ -51,10 +64,17 @@
     <thead><tr><th>Seite</th><th>Befund</th><th></th></tr></thead>
     <tbody>
     {% for t in treffer %}
-    <tr>
+    <tr{% if t.ausgeblendet %} class="ausgeblendet" title="Bewusst so – zählt nicht mit"{% endif %}>
       <td class="url">{% if t.url %}<a href="/crawls/{{ crawl.id }}/seite?url={{ t.url|urlencode }}">{{ t.url|pfad }}</a>{% else %}ganze Website{% endif %}</td>
       <td>{{ t.detail or '' }}</td>
-      <td class="zahl">{% if t.url %}<a class="klein" href="/projekte/{{ projekt.id }}/onpage?url={{ t.url|urlencode }}">Seite optimieren</a>{% endif %}</td>
+      <td class="zahl" style="white-space:nowrap">{% if t.url %}<a class="klein" href="/projekte/{{ projekt.id }}/onpage?url={{ t.url|urlencode }}">Seite optimieren</a>
+        {% if not d.ausgeblendet %}
+        <form method="post" action="/projekte/{{ projekt.id }}/{{ 'einblenden' if t.ausgeblendet else 'ausblenden' }}" style="display:inline">
+          {% if t.ausgeblendet %}<input type="hidden" name="ausblendung_id" value="{{ t.ausgeblendet }}">
+          {% else %}<input type="hidden" name="check_id" value="{{ d.id }}"><input type="hidden" name="url" value="{{ t.url }}">{% endif %}
+          <input type="hidden" name="zurueck" value="{{ zurueck }}">
+          <button class="leise klein-knopf">{{ 'einblenden' if t.ausgeblendet else 'bewusst so' }}</button>
+        </form>{% endif %}{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>

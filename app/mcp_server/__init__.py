@@ -10,7 +10,7 @@ from contextlib import closing
 from mcp.server import MCPServer
 
 from app import berichte, config
-from app.core import audit, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
+from app.core import audit, ausblenden, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import verbinden
 
 server = MCPServer(
@@ -20,6 +20,7 @@ server = MCPServer(
         "(http://localhost:8000). Ablauf: projekt_anlegen → einstellungen_setzen (optional) → "
         "crawl_starten → uebersicht / issues_liste / issue_details / seiten_liste. "
         "Nach mehreren Crawls: verlauf, crawl_vergleich, treffer_vergleich. "
+        "Absichtlich so (z. B. Login-Seite ohne Text)? ausblenden → zählt nicht mehr im Zustand; einblenden nimmt es zurück. "
         "Position Tracking: gsc_status / gsc_test (Zugang prüfen) → positionen_import (quelle gsc oder mock) → "
         "positionen_uebersicht / "
         "positionen_keywords / keyword_verlauf. Tracking-Liste (tracking_*): ist sie gefüllt, zählen nur "
@@ -155,6 +156,29 @@ def issue_details(check_id: str, crawl_id: int | None = None, projekt_id: int | 
     """Betroffene URLs eines Checks mit Detail, plus Erklärung und Lösungsvorschlag."""
     with _db() as conn:
         return audit.issue_details(conn, _crawl_id(conn, crawl_id, projekt_id), check_id, limit)
+
+
+@server.tool()
+def ausblenden_setzen(projekt_id: int, check_id: str | None = None, url: str | None = None, grund: str = "") -> dict:
+    """„Bewusst so“: Problem (check_id), ganze Seite (url) oder ein Problem auf einer Seite (beides) ausblenden.
+    Zählt danach nicht mehr in Website-Zustand, Teilnoten und Aufgabenliste – für alle Crawls des Projekts."""
+    with _db() as conn:
+        return ausblenden.ausblenden(conn, projekt_id, check_id, url, grund)
+
+
+@server.tool()
+def ausblenden_liste(projekt_id: int) -> list[dict]:
+    """Alle Ausblendungen („Bewusst so“) eines Projekts mit ID, Problem, Seite und Grund."""
+    with _db() as conn:
+        return ausblenden.liste(conn, projekt_id)
+
+
+@server.tool()
+def einblenden(projekt_id: int, ausblendung_id: int) -> dict:
+    """Ausblendung zurücknehmen (ID aus ausblenden_liste). Problem zählt wieder mit."""
+    with _db() as conn:
+        ausblenden.einblenden(conn, projekt_id, ausblendung_id)
+        return {"ok": True, "ausblendungen": ausblenden.liste(conn, projekt_id)}
 
 
 @server.tool()

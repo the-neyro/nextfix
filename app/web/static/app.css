@@ -296,3 +296,5 @@ svg text { fill: var(--gedaempft); font: 12px var(--schmal); }
 
 /* ---------- Druck ---------- */
 @media print { .leiste { display: none; } .app { display: block; } body { background: #fff; } }
+tr.ausgeblendet td { opacity: .5; }
+tr.ausgeblendet td:last-child { opacity: 1; }
