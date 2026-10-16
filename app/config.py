@@ -16,3 +16,7 @@ GSC_SCHLUESSEL = Path(os.environ.get("SEO_GSC_SCHLUESSEL",
 # API-Schlüssel für Bing Webmaster Tools (Textdatei mit nur dem Schlüssel), ebenfalls außerhalb des Repos.
 BING_SCHLUESSEL = Path(os.environ.get("SEO_BING_SCHLUESSEL",
                                       Path.home() / ".config" / "seo-tool" / "bing-api-key.txt"))
+
+# API-Schlüssel für Open PageRank (Domain-Autorität, kostenlos 30 000 Domains/Monat), außerhalb des Repos.
+OPR_SCHLUESSEL = Path(os.environ.get("SEO_OPR_SCHLUESSEL",
+                                     Path.home() / ".config" / "seo-tool" / "openpagerank-api-key.txt"))

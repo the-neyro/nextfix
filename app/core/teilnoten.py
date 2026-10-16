@@ -7,7 +7,7 @@ jeweils 0–100, damit schwache Positionen nicht hinter guter Technik verschwind
 
 import sqlite3
 
-from app.core import audit, positionen, vitals
+from app.core import audit, autoritaet, positionen, projekte, vitals
 
 TECHNIK = {"crawlbarkeit", "https", "technik", "performance", "international", "links"}
 
@@ -23,7 +23,20 @@ def liste(conn: sqlite3.Connection, projekt_id: int, crawl_id: int) -> list[dict
     noten.append({"name": "Ladezeit mobil", "wert": mobil.get("score"), "link": f"/crawls/{crawl_id}/vitals",
                   "hinweis": None if mobil.get("score") is not None else "noch nicht gemessen"})
     noten.append(_sichtbarkeit(conn, projekt_id))
+    noten.append(_autoritaet(conn, projekt_id))
     return noten
+
+
+def _autoritaet(conn: sqlite3.Connection, projekt_id: int) -> dict:
+    """Open PageRank 0–10, ohne Ampel (kleine Websites liegen normal bei 1–3), Vergleich in der Projektliste."""
+    note = {"name": "Autorität", "wert": None, "skala": 10, "link": "/#autoritaet"}
+    domain = projekte.holen(conn, projekt_id).domain
+    w = autoritaet.werte(conn, [domain]).get(domain)
+    if w and w["wert"] is not None:
+        return {**note, "wert": w["wert"], "hinweis": "von 10 · Links anderer Websites"}
+    if not autoritaet.verfuegbar():
+        return {**note, "hinweis": "Open PageRank nicht verbunden"}
+    return {**note, "hinweis": "noch keine Daten" if not w else "Domain dort unbekannt"}
 
 
 def _sichtbarkeit(conn: sqlite3.Connection, projekt_id: int) -> dict:

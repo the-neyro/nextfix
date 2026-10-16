@@ -1,0 +1,25 @@
+<section class="karte" id="autoritaet">
+  <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap">
+    <h2>Autorität im Vergleich</h2>
+    {% if autoritaet_verfuegbar %}
+    <button class="zweit klein-knopf" hx-post="/autoritaet" hx-target="#autoritaet" hx-swap="outerHTML">Werte abrufen</button>
+    {% endif %}
+  </div>
+  <p class="klein" style="max-width:72ch">Wie stark andere Websites auf die Domain verlinken (Open PageRank, 0–10, logarithmisch).
+    Kleine lokale Websites liegen meist bei 1–3. Aussagekräftig ist der Vergleich mit Mitbewerbern, nicht der Wert allein.</p>
+  {% if fehler %}<p class="fehler">{{ fehler }}</p>{% endif %}
+  {% if not autoritaet_verfuegbar %}
+  <p>Nicht verbunden. Kostenlosen Schlüssel bei <a href="https://openpagerank.keywordseverywhere.com/dashboard">Open PageRank</a> holen
+    und in <code>~/.config/seo-tool/openpagerank-api-key.txt</code> speichern.</p>
+  {% elif vergleich %}
+  <div class="bereiche">
+    {% for z in vergleich %}
+    <a class="bereich" href="/projekte/{{ z.projekt_id }}" style="grid-template-columns:minmax(0, 1fr) 140px 64px">
+      <span class="name">{{ z.name }}{% if z.name != z.domain %} <span class="klein">{{ z.domain }}</span>{% endif %}</span>
+      <span class="balken" aria-hidden="true"><div class="neutral" style="width:{{ 10 * (z.wert or 0) }}%"></div></span>
+      <span class="wert">{{ '–' if z.wert is none else z.wert|zahl(1) }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>

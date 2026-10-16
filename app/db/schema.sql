@@ -339,3 +339,13 @@ CREATE TABLE IF NOT EXISTS ausblendungen (
     CHECK (check_id IS NOT NULL OR url IS NOT NULL)
 );
 CREATE INDEX IF NOT EXISTS idx_ausblendungen_projekt ON ausblendungen(projekt_id);
+
+-- Domain-Autorität (Open PageRank, app/core/autoritaet.py): Zwischenspeicher je Domain, ca. monatlich neu
+CREATE TABLE IF NOT EXISTS autoritaet (
+    domain       TEXT PRIMARY KEY,
+    wert         REAL,             -- 0–10, NULL = Domain unbekannt
+    rang         INTEGER,          -- weltweiter Rang laut Open PageRank
+    stand        TEXT,             -- Datenstand laut API, z. B. "1st Sep 2026"
+    fehler       TEXT,
+    abgerufen_am TEXT NOT NULL DEFAULT (datetime('now'))
+);
