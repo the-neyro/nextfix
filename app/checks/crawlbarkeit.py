@@ -118,7 +118,8 @@ def klicktiefe(conn, crawl_id):
        "HTML ausliefern (Server-Rendering oder statische Seiten).")
 def js_app_ohne_rendern(conn, crawl_id):
     return abfrage(conn, """
-        SELECT s.id, 'leerer Container ' || s.js_app || ', ' || s.woerter || ' Wörter im HTML'
+        SELECT s.id, 'leerer Container ' || s.js_app || ', ' || s.woerter || CASE s.woerter WHEN 1 THEN ' Wort' ELSE ' Wörter' END
+               || ' im HTML'
         FROM seiten s JOIN crawls c ON c.id = s.crawl_id
         WHERE s.crawl_id=? AND c.js_rendern = 0 AND s.status_code = 200 AND s.js_app IS NOT NULL
           AND s.woerter < 100""", crawl_id)
@@ -133,6 +134,7 @@ def js_app_ohne_rendern(conn, crawl_id):
 def inhalt_nur_per_js(conn, crawl_id):
     # Nur bei Crawls mit „JavaScript ausführen“ ist woerter_roh gefüllt
     return abfrage(conn, f"""
-        SELECT id, 'ohne JavaScript ' || woerter_roh || ' Wörter, mit JavaScript ' || woerter
+        SELECT id, 'ohne JavaScript ' || woerter_roh || CASE woerter_roh WHEN 1 THEN ' Wort' ELSE ' Wörter' END
+               || ', mit JavaScript ' || woerter
         FROM seiten WHERE crawl_id=? AND {HTML} AND woerter_roh IS NOT NULL
           AND woerter >= 50 AND woerter_roh * 2 < woerter""", crawl_id)
