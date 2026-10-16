@@ -321,3 +321,16 @@ CREATE TABLE IF NOT EXISTS onpage_pruefungen (
     ergebnis    TEXT    NOT NULL,
     angelegt_am TEXT    NOT NULL DEFAULT (datetime('now'))
 );
+
+-- „Bewusst so“: Probleme oder Seiten, die der Nutzer absichtlich so lässt. Zählen nicht in Zustand und Liste.
+-- check_id NULL = alle Prüfungen (ganze Seite ausblenden), url NULL = alle Seiten (ganzes Problem ausblenden).
+CREATE TABLE IF NOT EXISTS ausblendungen (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    projekt_id INTEGER NOT NULL REFERENCES projekte(id) ON DELETE CASCADE,
+    check_id   TEXT,
+    url        TEXT,
+    grund      TEXT NOT NULL DEFAULT '',
+    angelegt_am TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (check_id IS NOT NULL OR url IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_ausblendungen_projekt ON ausblendungen(projekt_id);

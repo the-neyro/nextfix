@@ -7,7 +7,7 @@ from contextlib import closing
 from urllib.parse import urlsplit
 
 from app import checks
-from app.core import linkrank, projekte, score
+from app.core import ausblenden, linkrank, projekte, score
 from app.crawler.crawler import CrawlEinstellungen, Crawler
 from app.crawler.filter import liste
 from app.db import verbinden
@@ -197,12 +197,13 @@ def _geprueft(conn: sqlite3.Connection, crawl_id: int) -> int:
 
 
 def _treffer_pro_check(conn: sqlite3.Connection, crawl_id: int) -> dict[str, tuple[int, int, bool]]:
-    """check_id → (issues, betroffene Seiten, betrifft ganze Site)."""
+    """check_id → (issues, betroffene Seiten, betrifft ganze Site). Ausgeblendetes („Bewusst so“) zählt nicht."""
     return {
         z[0]: (z[1], z[2], bool(z[3]))
-        for z in conn.execute("""
-            SELECT check_id, COUNT(*), COUNT(DISTINCT seite_id), MAX(seite_id IS NULL)
-            FROM issues WHERE crawl_id=? GROUP BY check_id""", (crawl_id,))
+        for z in conn.execute(f"""
+            SELECT i.check_id, COUNT(*), COUNT(DISTINCT i.seite_id), MAX(i.seite_id IS NULL)
+            FROM issues i LEFT JOIN seiten s ON s.id = i.seite_id
+            WHERE i.crawl_id=? AND {ausblenden.NICHT_AUSGEBLENDET} GROUP BY i.check_id""", (crawl_id,))
     }
 
 
@@ -250,7 +251,7 @@ def uebersicht(conn: sqlite3.Connection, crawl_id: int) -> dict:
     relevante = [c.id for c in checks.REGISTER.values() if c.schwere != "notice"]
     mit_problemen = conn.execute(f"""
         SELECT COUNT(DISTINCT i.seite_id) FROM issues i JOIN seiten s ON s.id = i.seite_id
-        WHERE i.crawl_id=? AND s.status_code = 200 AND s.blockiert = 0
+        WHERE i.crawl_id=? AND s.status_code = 200 AND s.blockiert = 0 AND {ausblenden.NICHT_AUSGEBLENDET}
           AND i.check_id IN ({','.join('?' * len(relevante))})""", (crawl_id, *relevante)).fetchone()[0]
     ok = aufteilung.get("ok", 0)
     seiten = {
@@ -304,7 +305,10 @@ def issue_details(conn: sqlite3.Connection, crawl_id: int, check_id: str, limit:
     zeilen = conn.execute("""
         SELECT s.url, i.detail FROM issues i LEFT JOIN seiten s ON s.id = i.seite_id
         WHERE i.crawl_id=? AND i.check_id=? ORDER BY s.url LIMIT ?""", (crawl_id, check_id, limit)).fetchall()
-    return {**c.als_dict(), "treffer": [{"url": z[0], "detail": z[1]} for z in zeilen]}
+    regeln = ausblenden.regeln(conn, crawl_id)
+    return {**c.als_dict(), "ausgeblendet": ausblenden.genau(regeln, check_id, None),
+            "treffer": [{"url": z[0], "detail": z[1], "ausgeblendet": ausblenden.trifft(regeln, check_id, z[0])}
+                        for z in zeilen]}
 
 
 def seiten_liste(conn: sqlite3.Connection, crawl_id: int, suche: str | None = None,
@@ -318,7 +322,7 @@ def seiten_liste(conn: sqlite3.Connection, crawl_id: int, suche: str | None = No
     zeilen = conn.execute(f"""
         SELECT s.id, s.url, s.status_code, s.tiefe, s.title, s.ladezeit_ms, s.woerter, s.blockiert, s.link_rank,
                COUNT(i.id) AS issues
-        FROM seiten s LEFT JOIN issues i ON i.seite_id = s.id
+        FROM seiten s LEFT JOIN issues i ON i.seite_id = s.id AND {ausblenden.NICHT_AUSGEBLENDET}
         WHERE {' AND '.join(bedingungen)}
         GROUP BY s.id {having} ORDER BY s.tiefe, s.url LIMIT ? OFFSET ?""",
         (*params, limit, offset)).fetchall()
@@ -330,8 +334,10 @@ def seite_details(conn: sqlite3.Connection, crawl_id: int, url: str) -> dict:
     if z is None:
         raise AuditFehler(f"Seite nicht im Crawl {crawl_id}: {url}")
     seite = dict(z)
+    regeln = ausblenden.regeln(conn, crawl_id)
+    seite["ausgeblendet"] = ausblenden.genau(regeln, None, url)
     seite["issues"] = [
-        {**checks.REGISTER[i[0]].als_dict(), "detail": i[1]}
+        {**checks.REGISTER[i[0]].als_dict(), "detail": i[1], "ausgeblendet": ausblenden.trifft(regeln, i[0], url)}
         for i in conn.execute("SELECT check_id, detail FROM issues WHERE seite_id=?", (seite["id"],))
         if i[0] in checks.REGISTER
     ]
