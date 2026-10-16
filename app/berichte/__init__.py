@@ -12,7 +12,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app import checks
-from app.core import audit, aufgaben, projekte, themen, vergleich
+from app.core import audit, aufgaben, projekte, themen, vergleich, vitals
 
 VORLAGEN = Environment(loader=FileSystemLoader(Path(__file__).with_name("vorlagen")), autoescape=select_autoescape())
 
@@ -70,6 +70,7 @@ def site_audit_daten(conn: sqlite3.Connection, crawl_id: int) -> dict:
         "ue": ue,
         "themen": [themen.thema(conn, crawl_id, k) for k in checks.KATEGORIEN],
         "vergleich": v,
+        "ladezeit": vitals.ergebnis(conn, crawl_id)["zusammenfassung"],
         "datum": _datum(date.today()),
     }
 

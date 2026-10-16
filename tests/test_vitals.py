@@ -182,3 +182,12 @@ def test_einstellung_in_der_oberflaeche():
     assert audit.einstellungen_holen(conn, p)["ladezeit_auto"] is True
     client.post(f"/projekte/{p}/einstellungen", data={k: v for k, v in daten.items() if k != "ladezeit_auto"})
     assert audit.einstellungen_holen(conn, p)["ladezeit_auto"] is False
+
+
+def test_pdf_zeigt_ladezeit(crawl):
+    from app import berichte
+    conn, c = crawl
+    assert "nicht gemessen" in berichte.site_audit_html(conn, c)
+    vitals.starten(conn, c, anzahl=2, warten=True)
+    html = berichte.site_audit_html(conn, c)
+    assert "Core Web Vitals bestanden" in html and "1 von 2 Seiten" in html and "sowie die gemessene Ladezeit" in html
