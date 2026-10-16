@@ -212,6 +212,19 @@ def _ausgeschlossen(conn: sqlite3.Connection, crawl_id: int) -> set[str]:
     return set(liste(z[0])) if z else set()
 
 
+def _bezug(conn: sqlite3.Connection, crawl_id: int) -> dict[str, int]:
+    """Checks mit eigener Bezugsgröße: Ladezeit zählt gegen die gemessene Stichprobe, nicht gegen alle Seiten."""
+    n = checks.ladezeit.gemessen(conn, crawl_id)
+    return dict.fromkeys(checks.ladezeit.STICHPROBE, n) if n else {}
+
+
+def neu_auswerten(conn: sqlite3.Connection, crawl_id: int) -> None:
+    """Checks erneut anwenden und Zustand neu speichern, z. B. wenn nach dem Crawl die Ladezeit gemessen wurde."""
+    checks.ausfuehren(conn, crawl_id, _ausgeschlossen(conn, crawl_id))
+    conn.execute("UPDATE crawls SET health=? WHERE id=?", (_health(conn, crawl_id), crawl_id))
+    conn.commit()
+
+
 def _health(conn: sqlite3.Connection, crawl_id: int, kategorie: str | set[str] | None = None) -> float | None:
     """Health des ganzen Crawls oder nur eines Bereichs (bzw. mehrerer Bereiche).
 
@@ -222,9 +235,10 @@ def _health(conn: sqlite3.Connection, crawl_id: int, kategorie: str | set[str] |
     feinschliff = kategorie == {"ki"}
     treffer = _treffer_pro_check(conn, crawl_id)
     aus = _ausgeschlossen(conn, crawl_id)
+    bezug = _bezug(conn, crawl_id)
     eingaben = [
         ("warning" if feinschliff and c.schwere == "notice" else c.schwere,
-         treffer.get(c.id, (0, 0, False))[1], treffer.get(c.id, (0, 0, False))[2], c.id)
+         treffer.get(c.id, (0, 0, False))[1], treffer.get(c.id, (0, 0, False))[2], c.id, bezug.get(c.id))
         for c in checks.REGISTER.values()
         if (kategorie is None or c.kategorie in kategorie) and c.id not in aus
     ]

@@ -36,10 +36,12 @@ def aus_abzug(abzug: float) -> float:
 
 
 def berechnen(checks: list[tuple], seiten_gesamt: int) -> float | None:
-    """checks: (schwere, betroffene_seiten, betrifft_ganze_site[, check_id]) je durchgeführtem Check.
+    """checks: (schwere, betroffene_seiten, betrifft_ganze_site[, check_id[, bezug]]) je durchgeführtem Check.
 
+    bezug: eigene Bezugsgröße statt seiten_gesamt (z. B. gemessene Seiten bei der Ladezeit-Stichprobe).
     Gibt None zurück, wenn keine gewichteten Checks dabei sind.
     """
     if not any(gewicht(c[0], c[3] if len(c) > 3 else None) for c in checks):
         return None
-    return aus_abzug(sum(strafe(*c[:3], seiten_gesamt, c[3] if len(c) > 3 else None) for c in checks))
+    return aus_abzug(sum(strafe(*c[:3], (c[4] if len(c) > 4 and c[4] else seiten_gesamt), c[3] if len(c) > 3 else None)
+                         for c in checks))

@@ -1,5 +1,6 @@
 """Core Web Vitals: Formeln, Service mit Fake-Messer, eine echte Chromium-Messung auf der Testseite."""
 
+import math
 import time
 
 import pytest
@@ -124,3 +125,33 @@ def test_echte_messung_auf_testseite(testseite):
         pytest.skip(f"Chromium fehlt: {fehler}")
     assert e.fehler is None, e.fehler
     assert e.fcp is not None and e.ttfb is not None and e.cls == 0 and e.anfragen >= 1 and e.score is not None
+
+
+# ---------- Ladezeit im Website-Zustand ----------
+
+def test_messung_wird_zu_problemen(crawl):
+    from app.core import audit, aufgaben, score
+    conn, c = crawl
+    audit.neu_auswerten(conn, c)
+    vorher = audit._health(conn, c, "performance")
+    vitals.starten(conn, c, anzahl=2, warten=True)   # misst / (schnell) und /a (mobil langsam)
+    treffer = {cid: audit.issue_details(conn, c, cid)["treffer"] for cid in ("ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt")}
+    assert {cid: [t["url"] for t in t_] for cid, t_ in treffer.items()} == {
+        "ladezeit_lcp": ["https://ex.de/a"], "ladezeit_cls": ["https://ex.de/a"], "ladezeit_tbt": ["https://ex.de/a"]}
+    assert treffer["ladezeit_lcp"][0]["detail"] == "LCP 5,0 s (mobil)"
+    # Anteil zählt gegen die 2 gemessenen Seiten, nicht gegen alle 4 HTML-Seiten
+    assert audit._bezug(conn, c)["ladezeit_lcp"] == 2
+    abzug = lambda h: -score.K * math.log(h / 100)  # noqa: E731
+    neu = abzug(audit._health(conn, c, "performance")) - abzug(vorher)
+    assert neu == pytest.approx(3 * score.strafe("warning", 1, False, 2), abs=0.01)
+    assert audit.crawl_holen(conn, c)["health"] is not None   # gespeicherter Zustand neu berechnet
+    ids = {a["id"] for a in aufgaben.liste(conn, c)["aufgaben"]}
+    assert {"ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"} <= ids
+
+
+def test_ohne_messung_keine_ladezeit_probleme(crawl):
+    from app.core import audit
+    conn, c = crawl
+    audit.neu_auswerten(conn, c)
+    assert not {"ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"} & set(audit._treffer_pro_check(conn, c))
+    assert audit._bezug(conn, c) == {}

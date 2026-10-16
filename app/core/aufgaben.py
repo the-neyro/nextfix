@@ -51,6 +51,9 @@ HANDLUNG = {
     "markup_fehlerhaft": "Korrigiere fehlerhafte strukturierte Daten auf {n}",
     "viewport_fehlt": "Mach {n} handytauglich (Viewport-Tag)",
     "langsame_seite": "Mach {n} schneller (Server antwortet über 1 s)",
+    "ladezeit_lcp": "Lass den Hauptinhalt auf {n} schneller laden (Handy)",
+    "ladezeit_cls": "Verhindere, dass das Layout auf {n} beim Laden springt",
+    "ladezeit_tbt": "Mach {n} reaktionsschneller (weniger JavaScript)",
     "mixed_content": "Lade Bilder und Skripte auf {n} über https://",
     "https_verlinkt_http": "Stell Links auf {n} von http:// auf https:// um",
     "sitemap_fehlt": "Leg eine sitemap.xml an",
@@ -109,7 +112,8 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
     aus = audit._ausgeschlossen(conn, crawl_id)
     geprueft = audit._geprueft(conn, crawl_id)
     aktiv = [c for c in checks.REGISTER.values() if c.id not in aus]
-    abzug = {c.id: score.strafe(c.schwere, treffer[c.id][1], treffer[c.id][2], geprueft, c.id)
+    bezug = audit._bezug(conn, crawl_id)
+    abzug = {c.id: score.strafe(c.schwere, treffer[c.id][1], treffer[c.id][2], bezug.get(c.id, geprueft), c.id)
              for c in aktiv if c.id in treffer}
     gesamt = sum(abzug.values())
 
