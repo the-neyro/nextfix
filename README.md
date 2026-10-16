@@ -1,115 +1,125 @@
 # Nextfix
 
-**SEO-Tool, das sagt, was als Nächstes zu tun ist.** Läuft lokal, kostet nichts, und Claude kann es über MCP
-komplett bedienen.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-HTMX-009688.svg)
+![MCP](https://img.shields.io/badge/MCP-49%20tools-6E56CF.svg)
 
-Große SEO-Suiten zeigen Hunderte Zahlen – Errors, Warnings, Notices – und lassen offen, womit man anfangen soll.
-Nextfix prüft eine Website ähnlich gründlich und macht daraus eine kurze Liste: **was zuerst, warum, wie, und
-wie viel es bringt.**
+**An SEO tool that tells you what to fix next.** Runs locally, costs nothing, and can be fully operated by Claude
+via MCP.
+
+Large SEO suites show hundreds of numbers (errors, warnings, notices) and leave it to you to decide where to start.
+Nextfix audits a website just as thoroughly and turns the result into a short list: **what to do first, why, how,
+and how much it will help.**
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/uebersicht-dunkel.png">
-  <img alt="Projekt-Übersicht: Website-Zustand als Messskala, Teilnoten und die Liste „Was jetzt tun“" src="docs/screenshots/uebersicht-hell.png">
+  <img alt="Project overview: site health gauge, sub-scores and the “what to do now” task list" src="docs/screenshots/uebersicht-hell.png">
 </picture>
 
-<sub>Alle Screenshots zeigen die erfundene Demo-Website „Radhaus Elbe“ (`scripts/demo_website.py`).</sub>
+<sub>All screenshots show the fictional demo website “Radhaus Elbe” (`scripts/demo_website.py`). The user interface
+is in German.</sub>
 
-## Was es kann
+## Features
 
-| Modul | Frage, die es beantwortet |
+| Module | Question it answers |
 |---|---|
-| **Website-Check** | Was ist kaputt, und was zuerst? Crawler (Links, Sitemap oder beides, robots.txt), 101 Prüfungen in 8 Bereichen, Website-Zustand 0–100, Aufgaben nach gewinnbaren Punkten, „Bewusst so“ zum Ausblenden absichtlicher Fälle, Verlauf zwischen Prüfungen, CSV und PDF-Bericht. |
-| **Ladezeit** | Ist die Seite schnell genug? Core Web Vitals (LCP, CLS, TBT) im Labor mit echtem Chromium, mobil und Desktop, Score nach Lighthouse-Formel – gegen PageSpeed Insights abgeglichen. |
-| **Positionen** | Wo werde ich gefunden, wo verliere ich? Daten aus Google Search Console und Bing Webmaster Tools: Sichtbarkeit, Aufsteiger und Absteiger, „fast auf Seite 1“, mehrere Seiten für einen Suchbegriff, täglicher Import. |
-| **Suchbegriffe finden** | Worüber lohnt es sich zu schreiben? Ideen aus Google-Vorschlägen und eigenen Search-Console-Daten, Gruppen, Suchabsicht, Fragen, Suchvolumen über Bing, Themen-Lücke zu Mitbewerbern. |
-| **Seite optimieren** | Was ändere ich an dieser Seite? Seiten-Score für einen Suchbegriff (20 Regeln) plus KI-Score (12 Regeln für ChatGPT, Perplexity & Co.), „Zuerst diese 3“ mit konkretem Vorschlag zum Kopieren. |
+| **Site audit** | What is broken, and what comes first? Crawler (links, sitemap or both, robots.txt), 101 checks in 8 areas, site health 0–100, tasks ranked by the points they win, “intentional” flag to hide deliberate cases, history between audits, CSV and PDF report. |
+| **Page speed** | Is the site fast enough? Core Web Vitals (LCP, CLS, TBT) measured in the lab with real Chromium, mobile and desktop, scored with the Lighthouse formula and checked against PageSpeed Insights. |
+| **Rankings** | Where am I found, where am I losing ground? Data from Google Search Console and Bing Webmaster Tools: visibility, winners and losers, “almost on page 1”, keyword cannibalization, daily import. |
+| **Keyword research** | What is worth writing about? Ideas from Google Autocomplete and your own Search Console data, clustering, search intent, questions, search volume via Bing, content gap against competitors. |
+| **Page optimization** | What should I change on this page? Page score for a target keyword (20 rules) plus an AI score (12 rules for ChatGPT, Perplexity and similar), “top 3 first” with a concrete, copy-ready suggestion. |
 
-Dazu Prüfungen für die **KI-Suche (GEO)**: llms.txt, gesperrte KI-Crawler, Belege, FAQ-Markup, Autor und Datum,
-Organisations-Markup – angelehnt an die GEO-Studie (Princeton, KDD 2024).
+On top of that, checks for **AI search (GEO)**: llms.txt, blocked AI crawlers, citations, FAQ markup, author and
+date, organization markup, based on the GEO study (Princeton, KDD 2024).
 
 | | |
 |---|---|
-| ![Problem im Detail: warum, wie beheben, Fundstellen nach Bereich](docs/screenshots/problem-hell.png) | ![Seite optimieren: Zuerst diese 3 mit Vorschlag](docs/screenshots/seite-optimieren-hell.png) |
-| **Ein Problem im Detail** – warum es zählt, wie man es behebt, Fundstellen gruppiert nach Vorlage | **Seite optimieren** – Seiten- und KI-Score, die drei wirksamsten Änderungen mit Vorschlag |
-| ![Positionen mit Testdaten](docs/screenshots/positionen-dunkel.png) | ![Projektliste](docs/screenshots/projekte-dunkel.png) |
-| **Positionen** – Kennzahlen und Chancen „fast auf Seite 1“ (hier Testdaten) | **Projekte** – alle Websites mit ihrem Zustand |
+| ![Issue detail: why it matters, how to fix it, affected pages grouped by section](docs/screenshots/problem-hell.png) | ![Page optimization: top 3 changes with suggestions](docs/screenshots/seite-optimieren-hell.png) |
+| **Issue detail**: why it matters, how to fix it, affected pages grouped by template | **Page optimization**: page and AI score, the three most effective changes with a suggestion |
+| ![Rankings with test data](docs/screenshots/positionen-dunkel.png) | ![Project list](docs/screenshots/projekte-dunkel.png) |
+| **Rankings**: key metrics and “almost on page 1” opportunities (test data shown) | **Projects**: all websites with their health |
 
-## Was anders ist
+## What makes it different
 
-- **Aufgaben statt Zahlenwand.** Jedes Problem bekommt einen Satz mit Handlung, Aufwand („einmal einstellen“,
-  „Text schreiben“), wer es macht (selbst im CMS oder Technik) und die Punkte, die der Website-Zustand gewinnt.
-- **Ehrlicher Zustand.** Die Formel verdünnt Probleme nicht über Prüfungen, die nie anschlagen; dünner Inhalt auf
-  vielen Seiten wiegt wie ein Fehler (`app/core/score.py`).
-- **Klartext.** Dringend / Wichtig / Feinschliff statt Error / Warning / Notice, Fachbegriffe mit Erklärung.
-- **Null Kosten.** Keine bezahlten APIs, keine Google-Suchergebnisse abgefragt (Nutzungsbedingungen). Rankings
-  kommen nur aus Search Console und Bing – den Quellen, die dem Website-Besitzer ohnehin gehören.
-- **Drei Zugänge, ein Kern.** Web-UI, REST-API (`/docs`) und MCP-Server für Claude nutzen dieselben Funktionen.
-- **Hell und dunkel**, auf dem Handy bedienbar, läuft offline (Schrift und HTMX liegen im Projekt).
+- **Tasks, not a wall of numbers.** Every issue becomes one sentence with an action, the effort involved
+  (“configure once”, “write text”), who does it (yourself in the CMS, or your developer/host) and the health points
+  it wins.
+- **An honest health score.** The formula does not dilute problems across checks that never fire, and thin content
+  on many pages weighs as much as an error (`app/core/score.py`).
+- **Plain language.** Urgent / Important / Polish instead of Error / Warning / Notice, technical terms explained.
+- **Zero cost.** No paid APIs and no scraping of Google results (terms of service). Rankings come only from Search
+  Console and Bing, the sources website owners already have access to.
+- **Three interfaces, one core.** Web UI, REST API (`/docs`) and an MCP server for Claude share the same functions.
+- **Light and dark mode**, mobile-friendly, works offline (font and HTMX are bundled).
 
-## Schnellstart
+## Quick start
 
-Voraussetzung: Python 3.12 oder neuer.
+Requires Python 3.12 or newer.
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/playwright install chromium          # für Ladezeit und PDF-Bericht
+.venv/bin/playwright install chromium          # for page speed and PDF reports
 .venv/bin/uvicorn app.web:app --reload         # http://localhost:8000
 ```
 
-Dann eine Domain anlegen und „Website prüfen“ klicken. Ohne eigene Website zum Ausprobieren:
+Then add a domain and click “Website prüfen” (audit website). No website of your own? Start the demo site:
 
 ```bash
-.venv/bin/python -m scripts.demo_website 8798  # Demo-Website „Radhaus Elbe“ auf http://127.0.0.1:8798/
+.venv/bin/python -m scripts.demo_website 8798  # demo website “Radhaus Elbe” at http://127.0.0.1:8798/
 ```
 
-Im Tool ein Projekt mit Start-Adresse `http://127.0.0.1:8798/` anlegen. Positionen lassen sich ohne Zugang mit
-Testdaten ausprobieren.
+Create a project with the start URL `http://127.0.0.1:8798/`. Rankings can be tried out without access using test
+data.
 
-### Mit Claude (MCP)
+### With Claude (MCP)
 
 ```bash
-.venv/bin/python -m app.mcp_server             # MCP-Server (stdio)
+.venv/bin/python -m app.mcp_server             # MCP server (stdio)
 ```
 
-Für Claude Code `.mcp.json.example` nach `.mcp.json` kopieren und den Projektpfad eintragen. 49 Tools, z. B. `crawl_starten`, `issues_liste`, `onpage_pruefen`,
-`positionen_uebersicht`, `keyword_recherche_starten`, `vitals_messen`, `pdf_bericht`.
+For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 49 tools, e.g.
+`crawl_starten`, `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`, `keyword_recherche_starten`,
+`vitals_messen`, `pdf_bericht`.
 
-### Google Search Console und Bing
+### Google Search Console and Bing
 
-Anleitungen: [`docs/anleitung-gsc.md`](docs/anleitung-gsc.md), [`docs/anleitung-bing.md`](docs/anleitung-bing.md).
-Schlüssel liegen außerhalb des Projekts unter `~/.config/seo-tool/` und gelangen nie ins Git.
+Setup guides (German): [`docs/anleitung-gsc.md`](docs/anleitung-gsc.md),
+[`docs/anleitung-bing.md`](docs/anleitung-bing.md). Credentials live outside the project in `~/.config/seo-tool/`
+and never end up in Git.
 
-## Entwicklung
+## Development
 
 ```bash
-.venv/bin/python -m pytest -q                  # Tests (ohne Netz)
-.venv/bin/python -m scripts.screenshots        # Screenshots neu erzeugen (eigene Demo-Datenbank)
+.venv/bin/python -m pytest -q                  # tests (no network needed)
+.venv/bin/python -m scripts.screenshots        # regenerate screenshots (separate demo database)
 ```
 
-| Ordner | Inhalt |
+| Folder | Contents |
 |---|---|
-| `app/core/` | Services, die ganze Logik |
-| `app/checks/` | Prüf-Katalog: ein `@check` pro Prüfung, ein Modul je Bereich |
-| `app/crawler/` | Crawler, Parser, Labor-Messung der Ladezeit |
-| `app/onpage/` | Seiten-Check gegen einen Suchbegriff, KI-Score |
-| `app/gsc/`, `app/keywords/` | Search Console, Bing, Google-Vorschläge |
-| `app/web/` | Web-UI (Jinja + HTMX), Design-System in `static/app.css` |
-| `app/api/`, `app/mcp_server/` | REST-API und MCP-Tools |
-| `app/berichte/` | PDF-Bericht (Playwright) |
-| `scripts/` | Demo-Website und Screenshot-Skript |
-| `docs/` | Architektur, Anleitungen, UI-Konzept (`docs/ui/`) |
+| `app/core/` | Services, all business logic |
+| `app/checks/` | Check catalog: one `@check` per check, one module per area |
+| `app/crawler/` | Crawler, parser, lab measurement of page speed |
+| `app/onpage/` | Page check against a target keyword, AI score |
+| `app/gsc/`, `app/keywords/` | Search Console, Bing, Google Autocomplete |
+| `app/web/` | Web UI (Jinja + HTMX), design system in `static/app.css` |
+| `app/api/`, `app/mcp_server/` | REST API and MCP tools |
+| `app/berichte/` | PDF report (Playwright) |
+| `scripts/` | Demo website and screenshot script |
+| `docs/` | Architecture, guides, UI concept (`docs/ui/`) |
 
-Regel: Neue Funktion zuerst in `app/core/`, dann in API, UI **und** MCP anbinden, plus Test.
-Daten liegen in `data/seo.db` (SQLite, nicht im Git); anderer Pfad über `SEO_DB`.
+Convention: a new feature starts in `app/core/`, then gets wired into the API, the UI **and** MCP, plus a test.
+Data is stored in `data/seo.db` (SQLite, not in Git); set a different path with `SEO_DB`. Code and UI are written
+in German.
 
-## Grenzen
+## Limitations
 
-- Keine Backlink-Daten und keine Positionen von Mitbewerbern – dafür bräuchte es bezahlte Datenbanken.
-- Der Crawler führt kein JavaScript aus; Inhalte, die nur per JS entstehen, sieht er nicht.
-- Ladezeit ist eine Labor-Messung, keine Felddaten echter Nutzer (CrUX).
+- No backlink data and no competitor rankings. Both would require paid databases.
+- The crawler does not execute JavaScript, so content rendered only by JS is not seen.
+- Page speed is a lab measurement, not field data from real users (CrUX).
 
-## Lizenz
+## License
 
-[MIT](LICENSE). Schrift: [Fira Sans](https://github.com/mozilla/Fira) (SIL Open Font License, `app/web/static/fonts/OFL.txt`).
-HTMX 2.0.4 (BSD-2-Clause).
+[MIT](LICENSE). Font: [Fira Sans](https://github.com/mozilla/Fira) (SIL Open Font License,
+`app/web/static/fonts/OFL.txt`). HTMX 2.0.4 (BSD-2-Clause).
