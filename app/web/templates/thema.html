@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titel %}{{ t.name }} · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>{{ t.name }}</h1><div class="unter">Bereich der Prüfung vom {{ crawl.beendet_am|datum }}</div></div></div>
+<nav class="tabs klein">
+  {% for k, name in kategorien.items() %}<a {% if k == t.id %}class="aktiv"{% endif %} href="/crawls/{{ crawl.id }}/themen/{{ k }}">{{ name }}</a>{% endfor %}
+</nav>
+
+<div class="raster">
+  <div class="karte">
+    <div class="klein">{{ t.name }}</div>
+    <div class="gross {% if t.health is none %}{% elif t.health >= 80 %}gut{% elif t.health >= 50 %}warning{% else %}error{% endif %}">
+      {{ '–' if t.health is none else t.health|round|int }}%</div>
+    <div class="klein">{{ t.issues|sum(attribute='anzahl') }} Issues in {{ t.issues|length }} Checks</div>
+  </div>
+  {% for kz in t.kennzahlen %}
+  {% set zahlen = kz.zeilen|map(attribute='wert')|select('number')|list %}
+  {% set maximum = zahlen|max if zahlen else 0 %}
+  <div class="karte">
+    <div class="klein"><strong>{{ kz.titel }}</strong></div>
+    <table>
+      {% for z in kz.zeilen %}
+      <tr><td>{{ z.label }}</td>
+          <td style="width:40%">{% if z.wert is number and maximum %}<div class="balken"><div style="width:{{ 100 * z.wert / maximum }}%"></div></div>{% endif %}</td>
+          <td style="text-align:right">{{ z.wert }}</td></tr>
+      {% else %}<tr><td class="klein">keine Daten</td></tr>{% endfor %}
+    </table>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="karte">
+  <h2>Probleme</h2>
+  {% for i in t.issues %}
+  <details style="border-bottom:1px solid var(--line); padding:.6rem 0"
+           hx-get="/crawls/{{ crawl.id }}/issues/{{ i.id }}" hx-trigger="toggle once" hx-target="find .treffer">
+    <summary><span class="badge {{ i.schwere }}">{{ STUFE[i.schwere][1] }}</span>
+      <strong>{{ i.name }}</strong> – {{ 'ganze Site' if i.ganze_site else i.anzahl ~ ' Treffer auf ' ~ i.seiten ~ (' Seite' if i.seiten == 1 else ' Seiten') }}</summary>
+    <p><strong>Warum:</strong> {{ i.warum }}<br><strong>Beheben:</strong> {{ i.beheben }}</p>
+    <div class="treffer klein">lädt …</div>
+  </details>
+  {% else %}<p class="gut">Keine Probleme in diesem Bereich.</p>{% endfor %}
+</div>
+{% endblock %}

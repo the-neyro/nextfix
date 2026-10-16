@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block titel %}Positionen · {{ projekt.name }}{% endblock %}
+
+{% macro delta(jetzt, vorher, besser_wenn_kleiner=False, einheit='') -%}
+  {%- if jetzt is not none and vorher is not none and jetzt != vorher -%}
+    {%- set d = jetzt - vorher -%}
+    {%- set gut = (d < 0) if besser_wenn_kleiner else (d > 0) -%}
+    <span class="{{ 'gut' if gut else 'error' }}">{{ ('%+.1f'|format(d))|replace('.', ',') if d is float else '%+d'|format(d) }}{{ einheit }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro pos_aenderung(a) -%}
+  {%- if a is none %}<span class="klein">–</span>
+  {%- elif a > 0 %}<span class="gut">▲ {{ a }}</span>
+  {%- elif a < 0 %}<span class="error">▼ {{ -a }}</span>
+  {%- else %}<span class="klein">0</span>{% endif -%}
+{%- endmacro %}
+
+{% block inhalt %}
+{% set QUELLEN_NAMEN = {'gsc': 'Search Console', 'mock': 'Testdaten Google', 'bing': 'Bing Webmaster', 'bing_mock': 'Testdaten Bing'} %}
+{% set testdaten = bestand and ('mock' in bestand.quellen or 'bing_mock' in bestand.quellen) %}
+<div class="kopf">
+  <div><h1>Positionen</h1><div class="unter">Wo du bei Google und Bing gefunden wirst – und wo du Plätze gewinnst oder verlierst.</div></div>
+  {% if bestand %}<div class="klein" style="text-align:right">Daten vom {{ bestand.von|datum }} bis {{ bestand.bis|datum }}<br>
+    {% for q in bestand.quellen %}{{ QUELLEN_NAMEN.get(q, q) }}{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+</div>
+
+{% if testdaten %}
+<div class="band wichtig"><span><strong>Du siehst Testdaten.</strong> Die Zahlen sind ausgedacht und zeigen nur, wie das Modul funktioniert.
+  Echte Positionen bekommst du, wenn du unten die Search Console verbindest.</span></div>
+{% endif %}
+
+{% if not bestand %}
+<div class="leer" style="margin-bottom:16px">
+  <h2>Noch keine Platzierungen</h2>
+  <p>Google zeigt echte Positionen nur dem Besitzer einer Website – über die Search Console. Verbinde sie unten
+    oder lade zum Ausprobieren erst mal Testdaten laden: Quelle „Testdaten Google“ wählen und „Daten abrufen“.</p>
+</div>
+{% endif %}
+
+<details class="karte" {% if not bestand %}open{% endif %}>
+  <summary><h2 style="margin:0">Datenquelle und Zugang</h2>
+    <span class="klein">{% if bestand %}{{ bestand.zeilen|zahl }} Zeilen{% else %}noch nicht eingerichtet{% endif %}</span></summary>
+  <form class="zeile" hx-post="/projekte/{{ projekt.id }}/positionen/import" hx-target="#import-status" hx-swap="outerHTML">
+    <label>Quelle<select name="quelle">
+      {% for q in ['gsc', 'bing'] %}
+      <option value="{{ q }}" {% if not zugang[q].schluessel_da %}disabled{% elif q == 'gsc' %}selected{% endif %}>{{ QUELLEN_NAMEN[q] }}</option>
+      {% endfor %}
+      <option value="mock" {% if not zugang.gsc.schluessel_da %}selected{% endif %}>{{ QUELLEN_NAMEN.mock }}</option>
+      <option value="bing_mock">{{ QUELLEN_NAMEN.bing_mock }}</option>
+    </select></label>
+    <label>Tage<input name="tage" type="number" min="1" max="480" value="90" style="width:6rem"></label>
+    <button>Daten abrufen</button>
+    {% for q in ['mock', 'bing_mock'] if bestand and q in bestand.quellen %}
+    <button type="button" class="gefahr" hx-delete="/api/projekte/{{ projekt.id }}/positionen?quelle={{ q }}"
+            hx-confirm="Alle {{ QUELLEN_NAMEN[q] }} löschen? Das lässt sich nicht rückgängig machen." hx-swap="none"
+            hx-on::after-request="location.reload()">{{ QUELLEN_NAMEN[q] }} löschen</button>
+    {% endfor %}
+  </form>
+  <div class="zeile" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-top:12px">
+    {% for m, optionen in [('google', [('gsc', 'Search Console'), ('mock', 'Testdaten')]),
+                           ('bing', [('bing', 'Bing Webmaster'), ('bing_mock', 'Testdaten')])] %}
+    <form hx-post="/projekte/{{ projekt.id }}/positionen/auto" hx-target="#auto-meldung" hx-trigger="change">
+      <input type="hidden" name="suchmaschine" value="{{ m }}">
+      <label>Täglich automatisch: {{ 'Google' if m == 'google' else 'Bing' }}<select name="quelle">
+        <option value="" {% if not auto[m] %}selected{% endif %}>aus</option>
+        {% for q, n in optionen %}<option value="{{ q }}" {% if auto[m] == q %}selected{% endif %}>{{ n }}</option>{% endfor %}
+      </select></label>
+    </form>
+    {% endfor %}
+    <span id="auto-meldung" class="klein"></span>
+  </div>
+  <div style="margin-top:10px">{% include "_import_status.html" %}</div>
+
+  {% for z in zugang.values() %}
+  <div style="border-top:1px solid var(--linie); margin-top:16px; padding-top:14px">
+    <h3>Zugang {{ z.name }}
+      {% if z.schluessel_da %}<span class="marke gut">Schlüssel gefunden</span>{% else %}<span class="marke wichtig">noch kein Schlüssel</span>{% endif %}</h3>
+    {% if z.schluessel_da and z.quelle == 'gsc' %}
+    <p class="klein">Service-Account: <code>{{ z.client_email }}</code>. Diese Adresse in der Search Console
+      unter Einstellungen → Nutzer und Berechtigungen eintragen (Berechtigung „Eingeschränkt“ reicht).</p>
+    {% elif z.schluessel_da %}
+    <p class="klein">Der API-Schlüssel gilt für alle Websites im Bing-Konto. Die Website muss dort bestätigt sein.</p>
+    {% else %}
+    <p class="klein">{% if not z.fehler.startswith('Kein') %}<span class="fehler">{{ z.fehler }}</span><br>{% endif %}
+      {{ 'Schlüsseldatei des Service-Accounts' if z.quelle == 'gsc' else 'Textdatei mit dem API-Schlüssel' }} hier ablegen:
+      <code>{{ z.schluessel_pfad }}</code>. Schritt für Schritt: <code>docs/anleitung-{{ z.quelle }}.md</code></p>
+    {% endif %}
+    <form class="zeile" hx-post="/projekte/{{ projekt.id }}/gsc" hx-target="#{{ z.quelle }}-meldung">
+      <input type="hidden" name="quelle" value="{{ z.quelle }}">
+      <label>{{ 'Property' if z.quelle == 'gsc' else 'Website' }} (leer = automatisch)<input name="property" value="{{ z.property or '' }}" size="34"
+        placeholder="{{ 'sc-domain:' ~ projekt.domain if z.quelle == 'gsc' else 'https://' ~ projekt.domain ~ '/' }}"></label>
+      <button class="zweit">Speichern</button>
+      <button type="button" class="zweit" hx-post="/projekte/{{ projekt.id }}/gsc/test?quelle={{ z.quelle }}"
+              hx-target="#{{ z.quelle }}-meldung" {% if not z.schluessel_da %}disabled{% endif %}>Verbindung testen</button>
+    </form>
+    <div id="{{ z.quelle }}-meldung" class="klein" style="margin-top:8px"></div>
+  </div>
+  {% endfor %}
+</details>
+
+{% if bestand %}
+<nav class="tabs">
+  {% for m, n in [('google', 'Google'), ('bing', 'Bing')] %}
+  <a href="?suchmaschine={{ m }}&tage={{ tage }}" {% if m == suchmaschine %}class="aktiv"{% endif %}>{{ n }}
+    {% if m not in bestand.suchmaschinen %}<span class="klein">(keine Daten)</span>{% endif %}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+{% if fehler %}<div class="band dringend">{{ fehler }}</div>{% endif %}
+
+{% if u %}
+{% set k = u.kennzahlen %}
+<form class="zeile" method="get" style="margin-bottom:16px">
+  <input type="hidden" name="suchmaschine" value="{{ suchmaschine }}">
+  <label>Zeitraum<select name="tage" onchange="this.form.submit()">
+    {% for t in [7, 28, 90] %}<option value="{{ t }}" {% if t == tage %}selected{% endif %}>letzte {{ t }} Tage</option>{% endfor %}
+  </select></label>
+  <label>Suchbegriffe<select name="auswahl" onchange="this.form.submit()">
+    <option value="tracking" {% if u.auswahl == 'tracking' %}selected{% endif %}>beobachtete ({{ getrackt }})</option>
+    <option value="alle" {% if u.auswahl == 'alle' %}selected{% endif %}>alle mit Daten</option>
+  </select></label>
+  {% if tags %}<label>Tag<select name="tag" onchange="this.form.submit()">
+    <option value="">alle</option>
+    {% for t in tags %}<option {% if t.tag == tag %}selected{% endif %}>{{ t.tag }}</option>{% endfor %}
+  </select></label>{% endif %}
+  {% if suchmaschine == 'google' %}
+  {% if u.bestand.laender|length > 1 or land %}<label>Land<select name="land" onchange="this.form.submit()">
+    <option value="">alle</option>
+    {% for l in u.bestand.laender %}<option value="{{ l }}" {% if l == land %}selected{% endif %}>{{ l|land_name }}</option>{% endfor %}
+  </select></label>{% endif %}
+  <label>Gerät<select name="geraet" onchange="this.form.submit()">
+    <option value="">alle</option>
+    {% for g, n in [('MOBILE', 'Mobil'), ('DESKTOP', 'Desktop'), ('TABLET', 'Tablet')] %}
+    <option value="{{ g }}" {% if g == geraet %}selected{% endif %}>{{ n }}</option>{% endfor %}
+  </select></label>
+  {% endif %}
+  <span class="klein" style="margin-left:auto">{{ u.zeitraum.von|datum }} bis {{ u.zeitraum.bis|datum }}, verglichen mit {{ u.zeitraum.vorher_von|datum }} bis {{ u.zeitraum.vorher_bis|datum }}</span>
+  {% if suchmaschine == 'bing' %}<span class="klein" style="width:100%">Bing liefert nur Top-Suchbegriffe als
+    Wochenwerte, ohne Seiten, Länder und Geräte. Kurze Zeiträume enthalten daher nur 1–2 Messpunkte.</span>{% endif %}
+</form>
+
+<div class="kennzahlen">
+  <div><span class="klein erklaer" title="Wie präsent du bei deinen Suchbegriffen bist. 100 % = überall Platz 1.">Sichtbarkeit</span>
+    <span class="wert">{{ k.sichtbarkeit|zahl(1) }} %</span>
+    <span class="klein">{{ delta(k.sichtbarkeit, k.sichtbarkeit_vorher, einheit=' %') }} · {{ k.gezaehlt }} Suchbegriffe</span></div>
+  <div><span class="klein erklaer" title="Durchschnittlicher Platz im Suchergebnis. Kleiner ist besser.">Ø Platz</span>
+    <span class="wert">{{ k.position|zahl(1) if k.position else '–' }}</span>
+    <span class="klein">{{ delta(k.position, k.position_vorher, besser_wenn_kleiner=True) }} · kleiner = besser</span></div>
+  <div><span class="klein">Klicks</span>
+    <span class="wert">{{ k.klicks|zahl }}</span>
+    <span class="klein">{{ delta(k.klicks, k.klicks_vorher) }} zum Vorzeitraum</span></div>
+  <div><span class="klein erklaer" title="Wie oft du im Suchergebnis zu sehen warst.">Einblendungen</span>
+    <span class="wert">{{ k.impressionen|zahl }}</span>
+    <span class="klein">Klickrate {{ k.ctr|zahl(1) }} %</span></div>
+</div>
+
+<div class="spalten">
+  <section class="karte">
+    <h2>Fast auf Seite 1</h2>
+    <p class="klein">Platz 8 bis 20: Hier bringt eine Verbesserung der Seite am schnellsten mehr Besucher.</p>
+    <div class="tabelle"><table>
+      <thead><tr><th>Suchbegriff</th><th class="zahl">Platz</th><th class="zahl">Einblendungen</th><th></th></tr></thead>
+      <tbody>
+      {% for x in u.striking[:10] %}
+      <tr><td>{{ x.query }}</td><td class="zahl">{{ x.position|zahl(1) }}</td><td class="zahl">{{ x.impressionen|zahl }}</td>
+        <td class="zahl">{% if x.beste_seite %}<a class="klein" href="/projekte/{{ projekt.id }}/onpage?url={{ x.beste_seite|urlencode }}&keyword={{ x.query|urlencode }}">Seite optimieren</a>{% endif %}</td></tr>
+      {% else %}<tr><td colspan="4" class="klein">Gerade keine.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  <aside>
+    <section class="karte"><h2>Aufsteiger</h2>
+      <div class="bereiche">{% for x in u.gewinner[:5] %}<div class="bereich" style="grid-template-columns:minmax(0,1fr) 44px 48px"><span>{{ x.query }}</span><span class="wert">{{ x.position|zahl(1) }}</span><span class="zahl">{{ pos_aenderung(x.aenderung) }}</span></div>
+      {% else %}<p class="klein">Gerade keine.</p>{% endfor %}</div>
+    </section>
+    <section class="karte"><h2>Absteiger</h2>
+      <div class="bereiche">{% for x in u.verlierer[:5] %}<div class="bereich" style="grid-template-columns:minmax(0,1fr) 44px 48px"><span>{{ x.query }}</span><span class="wert">{{ x.position|zahl(1) }}</span><span class="zahl">{{ pos_aenderung(x.aenderung) }}</span></div>
+      {% else %}<p class="klein">Gerade keine.</p>{% endfor %}</div>
+    </section>
+  </aside>
+</div>
+
+<div class="raster">
+  <section class="karte"><h2>Klicks pro {{ 'Woche' if suchmaschine == 'bing' else 'Tag' }}</h2>
+    <svg viewBox="0 0 600 120" preserveAspectRatio="none" style="width:100%; height:120px" role="img" aria-label="Verlauf der Klicks">
+      <polyline class="reihe" points="{{ linie_klicks }}" vector-effect="non-scaling-stroke"/></svg>
+  </section>
+  <section class="karte"><h2>Ø Platz pro {{ 'Woche' if suchmaschine == 'bing' else 'Tag' }} <span class="klein" style="font-weight:400">oben = besser</span></h2>
+    <svg viewBox="0 0 600 120" preserveAspectRatio="none" style="width:100%; height:120px" role="img" aria-label="Verlauf des durchschnittlichen Platzes">
+      <polyline class="reihe" points="{{ linie_position }}" vector-effect="non-scaling-stroke"/></svg>
+  </section>
+  <section class="karte"><h2>Verteilung</h2>
+    <div class="tabelle"><table>
+      <thead><tr><th></th><th class="zahl">jetzt</th><th class="zahl">vorher</th></tr></thead>
+      {% for key, name in [('top3', 'Platz 1–3'), ('top10', 'Platz 1–10'), ('top20', 'Platz 1–20'), ('top100', 'Platz 1–100')] %}
+      <tr><td>{{ name }}</td><td class="zahl">{{ u.verteilung[key] }}</td><td class="zahl">{{ u.verteilung_vorher[key] }}
+        {{ delta(u.verteilung[key], u.verteilung_vorher[key]) }}</td></tr>
+      {% endfor %}
+    </table></div>
+    {% if u.neu %}<p class="klein" style="margin-top:8px">Neu: {{ u.neu|join(', ') }}</p>{% endif %}
+    {% if u.verloren %}<p class="klein error">Verloren: {{ u.verloren|join(', ') }}</p>{% endif %}
+  </section>
+</div>
+
+<details class="karte">
+  <summary><h2 style="margin:0">Mehrere Seiten für einen Suchbegriff</h2><span class="klein">{{ u.kannibalisierung|length }}</span></summary>
+  <p class="klein">Konkurrieren zwei eigene Seiten um denselben Begriff, weiß Google nicht, welche gemeint ist. Meist hilft es, eine davon zu stärken und die andere darauf zu verlinken.</p>
+  {% for x in u.kannibalisierung %}
+  <p style="margin:8px 0"><strong>{{ x.query }}</strong> <span class="klein">Platz {{ x.position|zahl(1) }}</span><br>
+    {% for s in x.seiten %}<span class="klein">{{ s.anteil }} % · Platz {{ s.position|zahl(1) }} · {{ s.seite|pfad }}</span><br>{% endfor %}</p>
+  {% else %}<p class="klein">Gut so: Jeder Suchbegriff hat eine klare Seite.</p>{% endfor %}
+</details>
+
+<details class="karte" {% if not getrackt %}open{% endif %}>
+  <summary><h2 style="margin:0">Beobachtete Suchbegriffe</h2><span class="klein">{{ getrackt }}
+    {%- if not getrackt %} · leer, darum zählen gerade alle Suchbegriffe mit Daten{% endif %}</span></summary>
+  <form class="zeile" method="post" action="/projekte/{{ projekt.id }}/tracking">
+    <input type="hidden" name="zurueck" value="{{ zurueck }}">
+    <label>Suchbegriffe (einer pro Zeile)<textarea name="neu" rows="3" cols="34" placeholder="seo tool&#10;website prüfen"></textarea></label>
+    <label>Tags (mit Komma)<input name="tags" placeholder="ratgeber, marke"></label>
+    <button name="aktion" value="neu">Beobachten</button>
+  </form>
+  <p class="klein" style="margin-top:8px">Oder unten in der Tabelle ankreuzen. Ist die Liste gefüllt, zählen nur diese Begriffe
+    in Sichtbarkeit und Kennzahlen – auch solche ohne Daten.</p>
+  {% if tags %}<p class="klein">Tags:
+    {% for t in tags %}<a href="?suchmaschine={{ suchmaschine }}&tage={{ tage }}&geraet={{ geraet }}&land={{ land }}&tag={{ t.tag|urlencode }}">{{ t.tag }}</a> ({{ t.anzahl }}){% if not loop.last %} · {% endif %}{% endfor %}
+  </p>{% endif %}
+</details>
+
+<section class="karte">
+  {% set filter = 'suchmaschine=' ~ suchmaschine ~ '&tage=' ~ tage ~ '&geraet=' ~ geraet ~ '&land=' ~ land ~ '&auswahl=' ~ u.auswahl
+                  ~ '&tag=' ~ (tag|urlencode) ~ '&suche=' ~ (suche|urlencode) %}
+  <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap">
+    <h2>Alle Suchbegriffe</h2>
+    <a class="knopf zweit klein-knopf" href="/projekte/{{ projekt.id }}/positionen/keywords.csv?{{ filter }}&sortierung={{ sortierung }}">Als CSV herunterladen</a>
+  </div>
+  <form class="zeile" method="get" style="margin-bottom:12px">
+    <input type="hidden" name="tage" value="{{ tage }}"><input type="hidden" name="geraet" value="{{ geraet }}">
+    <input type="hidden" name="land" value="{{ land }}"><input type="hidden" name="suchmaschine" value="{{ suchmaschine }}">
+    <input type="hidden" name="sortierung" value="{{ sortierung }}">
+    <input type="hidden" name="auswahl" value="{{ u.auswahl }}"><input type="hidden" name="tag" value="{{ tag }}">
+    <input name="suche" value="{{ suche }}" placeholder="Suchbegriff filtern" aria-label="Suchbegriff filtern"><button class="zweit">Filtern</button>
+  </form>
+  <div id="kw-verlauf"></div>
+  {% set basis = '?suchmaschine=' ~ suchmaschine ~ '&tage=' ~ tage ~ '&geraet=' ~ geraet ~ '&land=' ~ land ~ '&auswahl=' ~ u.auswahl ~ '&tag=' ~ (tag|urlencode)
+                 ~ '&suche=' ~ (suche|urlencode) ~ '&sortierung=' %}
+  <form id="kw-form" method="post" action="/projekte/{{ projekt.id }}/tracking" class="zeile" style="margin-bottom:12px">
+    <input type="hidden" name="zurueck" value="{{ zurueck }}">
+    <label>Tags für die Auswahl<input name="tags" placeholder="ratgeber, marke"></label>
+    <button name="aktion" value="hinzufuegen">Auswahl beobachten</button>
+    <button class="zweit" name="aktion" value="tag_weg">Tag entfernen</button>
+    <button class="zweit" name="aktion" value="entfernen">Nicht mehr beobachten</button>
+  </form>
+  <div class="tabelle"><table>
+    <thead><tr>
+      <th><input type="checkbox" aria-label="alle auswählen" onclick="document.querySelectorAll('input[form=kw-form][name=query]').forEach(c => c.checked = this.checked)"></th>
+      {% for key, name, rechts in [('query', 'Suchbegriff', False), ('position', 'Platz', True), ('aenderung', 'Änderung', True),
+                                   ('klicks', 'Klicks', True), ('impressionen', 'Einblendungen', True)] %}
+      <th class="{{ 'zahl' if rechts }}"><a href="{{ basis }}{{ key }}" style="color:inherit{% if key == sortierung %}; font-weight:600{% endif %}">{{ name }}{% if key == sortierung %} ↓{% endif %}</a></th>
+      {% endfor %}
+      <th class="zahl">Klickrate</th><th>Seite</th>
+    </tr></thead>
+    <tbody>
+    {% for x in kw %}
+    <tr>
+      <td><input type="checkbox" form="kw-form" name="query" value="{{ x.query }}" aria-label="{{ x.query }} auswählen"></td>
+      <td>{% if x.getrackt %}<span title="wird beobachtet" class="symbol gut">●</span> {% endif %}<a href="#kw-verlauf" hx-get="/projekte/{{ projekt.id }}/positionen/verlauf?query={{ x.query|urlencode }}&geraet={{ geraet }}&land={{ land }}&suchmaschine={{ suchmaschine }}"
+             hx-target="#kw-verlauf">{{ x.query }}</a>
+        {% if x.status %}<span class="badge {{ 'notice' if x.status == 'neu' else 'warning' if x.status == 'keine Daten' else 'error' }}">{{ x.status }}</span>{% endif %}
+        {% if x.seiten|length > 1 %}<span class="klein">({{ x.seiten|length }} Seiten)</span>{% endif %}
+        {% for t in x.tags %}<span class="marke leise">{{ t }}</span>{% endfor %}</td>
+      <td class="zahl">{{ x.position|zahl(1) if x.position else '–' }}</td><td class="zahl">{{ pos_aenderung(x.aenderung) }}</td>
+      <td class="zahl">{{ x.klicks|zahl }}</td><td class="zahl">{{ x.impressionen|zahl }}</td><td class="zahl">{{ x.ctr|zahl(1) }} %</td>
+      <td class="url klein">{{ x.beste_seite|pfad if x.beste_seite else '' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <p class="klein" style="margin-top:10px">Plätze sind Durchschnitte laut Google, gewichtet nach Einblendungen – keine täglichen
+    Momentaufnahmen wie bei Semrush. Plätze von Mitbewerbern fehlen.</p>
+</section>
+{% endif %}
+{% endblock %}

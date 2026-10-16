@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}Themen-Lücke · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Themen-Lücke</h1><div class="unter">Worüber schreiben Mitbewerber, du aber nicht?</div></div></div>
+{% if fehler %}<div class="karte fehler">{{ fehler }}</div>{% endif %}
+{% if l %}
+<div class="karte">
+  <h2>Themen-Lücke: {{ l.mitbewerber }}</h2>
+  <p class="klein">{{ l.luecken_gesamt }} Themen kommen bei {{ l.mitbewerber }} in mindestens zwei Titles/H1 vor, bei
+    {{ l.projekt }} in keinem. Gemeinsame Wortgruppen: {{ l.gemeinsam }}. Grundlage: letzte Crawls
+    ({{ l.seiten_eigen }} bzw. {{ l.seiten_mitbewerber }} Seiten). Zeigt Themen, keine Rankings oder Suchvolumen.</p>
+  <table>
+    <tr><th>Thema</th><th>Texte beim Mitbewerber</th><th>Beispiel</th><th></th></tr>
+    {% for t in l.luecken %}
+    <tr>
+      <td>{{ t.begriff }}</td><td>{{ t.seiten_mitbewerber }}</td>
+      <td class="url klein"><a href="{{ t.beispiel }}" rel="noopener noreferrer" target="_blank">{{ t.beispiel }}</a></td>
+      <td><form method="post" action="/projekte/{{ projekt.id }}/keywords/neu">
+        <input type="hidden" name="seed" value="{{ t.begriff }}"><button class="zweit" style="white-space:nowrap">Ideen suchen</button></form></td>
+    </tr>
+    {% else %}<tr><td colspan="4" class="klein">Keine Lücken gefunden.</td></tr>{% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

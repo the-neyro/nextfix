@@ -1,0 +1,9 @@
+{% if t.ok %}
+<div class="gut">Verbindung ok. Freigegebene Properties:</div>
+<ul class="klein" style="margin:.3rem 0">
+  {% for p in t.properties %}<li>{{ p.property }} <span class="klein">({{ p.berechtigung }})</span>
+    {% if p.property == t.passend %}<strong class="gut">← passt zu diesem Projekt</strong>{% endif %}</li>
+  {% else %}<li>keine – {{ 'Service-Account in der Search Console als Nutzer eintragen' if t.quelle == 'gsc' else 'Website in Bing Webmaster Tools hinzufügen und bestätigen' }}</li>{% endfor %}
+</ul>
+{% endif %}
+{% if t.fehler %}<div class="fehler">{{ t.fehler }}</div>{% endif %}

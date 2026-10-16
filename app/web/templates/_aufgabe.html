@@ -1,0 +1,16 @@
+<li class="aufgabe">
+  <div class="was">{{ a.was }}</div>
+  <div class="warum">{{ a.warum.split('. ')[0].rstrip('.') }}.</div>
+  <div class="info">
+    <span class="marke {{ a.stufe }}">{{ STUFE[a.schwere][1] }}</span>
+    <span class="marke leise">{{ a.aufwand_text }}</span>
+    <span class="marke leise">{{ 'machst du selbst' if a.wer == 'selbst' else 'für deine Technik' }}</span>
+    {% if a.verlauf == 'neu' %}<span class="klein">neu seit der letzten Prüfung</span>
+    {% elif a.verlauf == 'besser' %}<span class="klein gut">▼ besser: {{ a.vorher }} → {{ a.seiten }}</span>
+    {% elif a.verlauf == 'schlimmer' %}<span class="klein error">▲ mehr: {{ a.vorher }} → {{ a.seiten }}</span>{% endif %}
+  </div>
+  <div class="aktion">
+    <span class="gewinn" title="So viele Punkte gewinnt der Website-Zustand, wenn das behoben ist">+{{ a.gewinn|zahl(1) }} Punkte</span>
+    <a class="knopf zweit klein-knopf" style="margin-top:6px" href="/crawls/{{ c.id }}/issues/{{ a.id }}/seite">Ansehen</a>
+  </div>
+</li>

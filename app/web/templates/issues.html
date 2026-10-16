@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block titel %}Probleme · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Probleme</h1><div class="unter">Alles, was die Prüfung vom {{ crawl.beendet_am|datum }} gefunden hat, das Dringendste zuerst.</div></div></div>
+<form class="zeile" method="get" style="margin-bottom:16px">
+  <label>Dringlichkeit
+    <select name="schwere" onchange="this.form.submit()">
+      <option value="">alle</option>
+      {% for s in schweregrade %}<option value="{{ s }}" {% if s == schwere %}selected{% endif %}>{{ STUFE[s][1] }}</option>{% endfor %}
+    </select></label>
+  <label>Bereich
+    <select name="kategorie" onchange="this.form.submit()">
+      <option value="">alle</option>
+      {% for k, name in kategorien.items() %}<option value="{{ k }}" {% if k == kategorie %}selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select></label>
+  <noscript><button class="zweit">Filtern</button></noscript>
+  <a class="knopf zweit" style="margin-left:auto" href="/api/crawls/{{ crawl.id }}/export/issues.csv">Als CSV herunterladen</a>
+</form>
+
+{% if issues %}
+{% for stufe in schweregrade %}
+{% set gruppe = issues|selectattr('schwere', 'equalto', stufe)|list %}
+{% if gruppe %}
+<section class="karte">
+  <h2><span class="marke {{ STUFE[stufe][0] }}">{{ STUFE[stufe][1] }}</span>
+    <span class="klein" style="font-weight:400">{{ gruppe|length }} {{ 'Prüfung' if gruppe|length == 1 else 'Prüfungen' }}{% if stufe == 'notice' %} · zählen nicht in den Website-Zustand{% endif %}</span></h2>
+  <div class="tabelle"><table>
+    <thead><tr><th>Problem</th><th>Bereich</th><th class="zahl">Betroffen</th></tr></thead>
+    <tbody>
+    {% for i in gruppe %}
+    <tr id="{{ i.id }}">
+      <td><a href="/crawls/{{ crawl.id }}/issues/{{ i.id }}/seite">{{ i.name }}</a>
+        <div class="klein" style="margin-top:2px; max-width:72ch">{{ i.warum.split('. ')[0].rstrip('.') }}.</div></td>
+      <td class="klein">{{ kategorien[i.kategorie] }}</td>
+      <td class="zahl">{{ 'ganze Website' if i.ganze_site else (i.seiten ~ (' Seite' if i.seiten == 1 else ' Seiten')) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endif %}
+{% endfor %}
+{% else %}
+<div class="leer"><h2>Keine Probleme für diesen Filter</h2><p>Wähle eine andere Dringlichkeit oder einen anderen Bereich.</p></div>
+{% endif %}
+{% endblock %}

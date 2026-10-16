@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/*.db
+.env
+
+# Zugangsschlüssel nie committen
+*service-account*.json
+
+# Fremde Berichte (z. B. OpenSEO-Benchmark) – nur lokal, nie committen
+data/benchmark/
+
+# Persönliche Arbeitsnotizen und lokale Konfiguration – bleiben auf dem Rechner, nie ins öffentliche Repo
+STAND.md
+Projektplan.md
+docs/skills-kandidaten.md
+.mcp.json
+.claude/
+
+# Exporte (PDF/CSV) enthalten Kundendaten
+data/export/

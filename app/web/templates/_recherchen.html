@@ -1,0 +1,22 @@
+<div id="recherchen" class="karte"
+     {% if recherchen and recherchen[0].status == 'laeuft' %}hx-get="/projekte/{{ projekt.id }}/keywords/liste" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  {% if fehler %}<p class="fehler">{{ fehler }}</p>{% endif %}
+  <h2>Bisherige Suchen</h2>
+  <div class="tabelle"><table>
+    <tr><th>Hauptbegriff</th><th>Ideen</th><th>Status</th><th>Gestartet</th></tr>
+    {% for r in recherchen %}
+    <tr>
+      <td>{% if r.status != 'laeuft' %}<a href="/recherchen/{{ r.id }}">{{ r.seed }}</a>{% else %}{{ r.seed }}{% endif %}</td>
+      <td>{{ r.ideen }}</td>
+      <td>
+        {% if r.status == 'laeuft' %}läuft: {{ r.schritte_fertig }} / {{ r.schritte_gesamt }} Anfragen
+          <div class="balken" style="margin-top:.3rem"><div style="width:{{ (100 * r.schritte_fertig / (r.schritte_gesamt or 1))|round|int }}%"></div></div>
+        {% elif r.status == 'fertig' %}<span class="gut">fertig</span>
+        {% else %}<span class="fehler" title="{{ r.fehler_text }}">abgebrochen</span>
+          <span class="klein">{{ r.fehler_text }}</span>{% endif %}
+      </td>
+      <td class="klein">{{ r.angelegt_am|datum(true) }}</td>
+    </tr>
+    {% else %}<tr><td colspan="4" class="klein">Noch keine Recherche.</td></tr>{% endfor %}
+  </table></div>
+</div>

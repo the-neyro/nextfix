@@ -1,0 +1,10 @@
+<div class="karte" style="background:var(--bg)">
+  <strong>{{ v.query }}</strong>
+  <span class="klein">{{ v.zeitraum.von }} bis {{ v.zeitraum.bis }} · beste Ø-Position {{ beste }}, schlechteste {{ schlechteste }}</span>
+  <svg viewBox="0 0 600 120" preserveAspectRatio="none" style="width:100%; height:120px">
+    <polyline points="{{ linie }}" fill="none" stroke="var(--ok)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+  <div class="klein">Oben = bessere Position.
+    {% if v.seiten|length > 1 %}Rankende Seiten:
+      {% for s, tage in v.seiten.items() %}{{ s }} ({{ tage|length }} Tage){% if not loop.last %} · {% endif %}{% endfor %}
+    {% elif v.seiten|first %}Seite: {{ v.seiten|first }}{% endif %}</div>
+</div>

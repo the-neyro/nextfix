@@ -1,0 +1,112 @@
+{% set c = ue.crawl %}
+{% set h = ue.health %}
+{% set gezeigt = 5 %}
+
+<section class="messung" aria-label="Website-Zustand">
+  <div>
+    <div class="titel">Website-Zustand</div>
+    <div class="zahl">{{ '–' if h is none else h|round|int }}<small> von 100</small></div>
+    <p class="satz">
+      {% if h is none %}Noch kein Wert.
+      {% elif h >= 80 %}Gut gepflegt. Die Aufgaben unten holen die letzten Punkte.
+      {% elif h >= 50 %}Noch {{ (80 - h)|round(0, 'ceil')|int }} Punkte bis „gut“.
+      {% else %}Mehrere grobe Fehler. Fang oben in der Liste an.{% endif %}
+      {% if vorher_health is not none %}<br>Letzte Prüfung: {{ vorher_health|round|int }}
+        {% set d = (h - vorher_health)|round(1) %}{% if d > 0 %}<span class="gut">(▲ {{ d|zahl(1) }})</span>{% elif d < 0 %}<span class="error">(▼ {{ (-d)|zahl(1) }})</span>{% endif %}{% endif %}
+    </p>
+  </div>
+  <div class="skala {{ '' if h is none or h >= 80 else 'wichtig' if h >= 50 else 'dringend' }}" style="--wert: {{ h or 0 }}; --vorher: {{ vorher_health if vorher_health is not none else -10 }}">
+    {% if vorher_health is not none %}<span class="vorher" title="Letzte Prüfung: {{ vorher_health|round|int }}"></span>{% endif %}
+    <span class="zeiger" aria-hidden="true"></span>
+    <div class="band"></div>
+    <div class="zonen" aria-hidden="true"><span></span><span></span><span></span><div class="voll"></div></div>
+    <div class="marken" aria-hidden="true"><span style="left:0">0</span><span style="left:50%">50</span><span style="left:80%">80</span><span style="left:100%">100</span></div>
+  </div>
+</section>
+
+<div class="kennzahlen teilnoten" aria-label="Teilnoten">
+  {% for n in noten %}
+  {% set w = n.wert %}
+  <a href="{{ n.link }}">
+    <span class="klein">{{ n.name }}</span>
+    <span class="wert {{ '' if w is none else 'gut' if w >= 80 else 'warning' if w >= 50 else 'error' }}">{{ '–' if w is none else w|round|int }}</span>
+    <span class="balken" aria-hidden="true"><div class="{{ '' if w is none or w >= 80 else 'wichtig' if w >= 50 else 'dringend' }}" style="width:{{ w or 0 }}%"></div></span>
+    <span class="klein">{{ n.hinweis or '' }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="spalten">
+  <div>
+    <section class="karte" aria-labelledby="was-jetzt">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap">
+        <h2 id="was-jetzt">Was jetzt tun</h2>
+        <span class="klein">Sortiert nach Wirkung auf den Website-Zustand</span>
+      </div>
+      {% if aufg.aufgaben %}
+      <ol class="aufgaben">
+        {% for a in aufg.aufgaben[:gezeigt] %}{% include "_aufgabe.html" %}{% endfor %}
+      </ol>
+      {% if aufg.aufgaben|length > gezeigt %}
+      <details style="margin-top:4px">
+        <summary class="klein" style="padding:8px 0">Weitere {{ aufg.aufgaben|length - gezeigt }} Aufgaben anzeigen</summary>
+        <ol class="aufgaben" start="{{ gezeigt + 1 }}" style="counter-reset: aufgabe {{ gezeigt }}">
+          {% for a in aufg.aufgaben[gezeigt:] %}{% include "_aufgabe.html" %}{% endfor %}
+        </ol>
+      </details>
+      {% endif %}
+      {% else %}
+      <p><span class="marke gut">Alles erledigt</span> Keine dringenden oder wichtigen Probleme. Prüf die Website wieder, wenn du etwas geändert hast.</p>
+      {% endif %}
+
+      {% if aufg.erledigt %}
+      <p class="klein" style="margin:12px 0 0"><span class="symbol gut">✓</span> Seit der letzten Prüfung erledigt:
+        {% for e in aufg.erledigt %}{{ e.name }}{{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
+    </section>
+
+    {% if aufg.feinschliff %}
+    <details class="karte">
+      <summary><h2 style="margin:0">Feinschliff</h2><span class="klein">{{ aufg.feinschliff|length }} Hinweise · zählen nicht in den Zustand</span></summary>
+      <div class="tabelle"><table>
+        {% for a in aufg.feinschliff %}
+        <tr><td><span class="symbol feinschliff" aria-hidden="true">●</span> <a href="/crawls/{{ c.id }}/issues/{{ a.id }}/seite">{{ a.was }}</a></td>
+            <td class="zahl klein">{{ a.seiten_text }}</td></tr>
+        {% endfor %}
+      </table></div>
+    </details>
+    {% endif %}
+  </div>
+
+  <aside>
+    <section class="karte">
+      <h2>Bereiche</h2>
+      <div class="bereiche">
+      {% for k in ue.kategorien %}
+        {% set kh = k.health %}
+        <a class="bereich" href="/crawls/{{ c.id }}/themen/{{ k.id }}">
+          <span class="name">{{ k.name }}</span>
+          <span class="balken" aria-hidden="true"><div class="{{ '' if kh is none or kh >= 80 else 'wichtig' if kh >= 50 else 'dringend' }}" style="width:{{ kh or 0 }}%"></div></span>
+          <span class="wert">{{ '–' if kh is none else kh|round|int }}</span>
+          <span class="klein">{% if k.probleme %}{{ k.probleme }} {{ 'Problem' if k.probleme == 1 else 'Probleme' }}{% else %}keine Probleme{% endif %}{% if k.feinschliff %} · {{ k.feinschliff }} Feinschliff{% endif %}</span>
+        </a>
+      {% endfor %}
+      </div>
+    </section>
+
+    <section class="karte">
+      <h2>Geprüfte Seiten</h2>
+      <div class="bereiche">
+        <a class="bereich" href="/crawls/{{ c.id }}/seiten" style="grid-template-columns:1fr auto"><span class="name">Alle geprüften Seiten</span><span class="wert">{{ ue.seiten.gesamt|zahl }}</span></a>
+        <a class="bereich" href="/crawls/{{ c.id }}/seiten?nur_mit_problemen=1" style="grid-template-columns:1fr auto"><span class="name">Mit Problemen</span><span class="wert">{{ ue.seiten.mit_problemen|zahl }}</span></a>
+        <div class="bereich" style="grid-template-columns:1fr auto"><span>Nicht erreichbar oder Fehler</span><span class="wert {{ 'error' if ue.seiten.defekt }}">{{ ue.seiten.defekt }}</span></div>
+        <div class="bereich" style="grid-template-columns:1fr auto"><span>Weiterleitungen</span><span class="wert">{{ ue.seiten.weiterleitung }}</span></div>
+        <div class="bereich" style="grid-template-columns:1fr auto"><span>Für Google gesperrt</span><span class="wert">{{ ue.seiten.blockiert }}</span></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px">
+        <a class="knopf zweit klein-knopf" href="/api/crawls/{{ c.id }}/export/bericht.pdf">Bericht als PDF</a>
+        <a class="knopf zweit klein-knopf" href="/crawls/{{ c.id }}/issues">Alle Probleme</a>
+      </div>
+    </section>
+  </aside>
+</div>

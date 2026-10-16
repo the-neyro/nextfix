@@ -1,0 +1,17 @@
+{% if fehler %}<div class="band dringend">{{ fehler }}</div>{% endif %}
+{% if karten %}
+<div class="bereiche">
+  {% for k in karten %}
+  {% set h = k.health %}
+  <a class="bereich" href="/projekte/{{ k.p.id }}" style="grid-template-columns:minmax(0, 1fr) 140px 64px; padding:14px 4px">
+    <span><span class="name" style="font-weight:600">{{ k.p.name }}</span>
+      {% if k.p.name != k.p.domain %}<span class="klein"> {{ k.p.domain }}</span>{% endif %}<br>
+      <span class="klein">{% if k.datum %}Geprüft am {{ k.datum|datum }} · {{ k.aufgaben }} {{ 'Aufgabe' if k.aufgaben == 1 else 'Aufgaben' }} offen{% else %}Noch nicht geprüft{% endif %}</span></span>
+    <span class="balken" aria-hidden="true"><div class="{{ '' if h is none or h >= 80 else 'wichtig' if h >= 50 else 'dringend' }}" style="width:{{ h or 0 }}%"></div></span>
+    <span class="wert" style="font-size:18px">{{ '–' if h is none else h|round|int }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p>Noch keine Website angelegt. Trag oben deine Domain ein und starte die erste Prüfung.</p>
+{% endif %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Projekte</h1><div class="unter">Deine Websites und ihr Zustand nach der letzten Prüfung.</div></div></div>
+<div class="spalten">
+  <section class="karte" id="liste">{% include "_projektliste.html" %}</section>
+  <section class="karte">
+    <h2>Neue Website</h2>
+    <form hx-post="/projekte" hx-target="#liste" hx-swap="innerHTML" hx-on::after-request="this.reset()" style="display:grid; gap:12px">
+      <label>Domain<input name="domain" placeholder="beispiel.de" required></label>
+      <label>Name <span style="font-weight:400">(optional)</span><input name="name" placeholder="z. B. Kunde Müller"></label>
+      <button>Projekt anlegen</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block titel %}Verlauf · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Verlauf</h1><div class="unter">Was hat sich zwischen den Prüfungen verändert?</div></div></div>
+<div class="karte">
+  <h2>Verlauf</h2>
+  <table>
+    <tr><th>Prüfung</th><th>Datum</th><th>Seiten</th><th>Zustand</th><th>Dringend</th><th>Wichtig</th><th>Feinschliff</th></tr>
+    {% for z in verlauf|reverse %}
+    <tr {% if z.id == crawl.id %}style="font-weight:bold"{% endif %}>
+      <td><a href="/crawls/{{ z.id }}/vergleich">#{{ z.id }}</a></td><td>{{ z.gestartet_am|datum(true) }}</td><td>{{ z.seiten_anzahl }}</td>
+      <td>{{ '–' if z.health is none else z.health ~ '%' }}</td>
+      <td class="error">{{ z.error }}</td><td class="warning">{{ z.warning }}</td><td>{{ z.notice }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="karte">
+  {% if v %}
+  <h2>Änderungen seit Crawl #{{ v.vorher.id }}</h2>
+  <p class="klein">Health {{ v.vorher.health }}% → {{ v.jetzt.health }}% · Seiten {{ v.vorher.seiten }} → {{ v.jetzt.seiten }}</p>
+  {% for a in v.aenderungen %}
+  <details style="border-bottom:1px solid var(--line); padding:.6rem 0"
+           hx-get="/crawls/{{ crawl.id }}/vergleich/{{ a.id }}?vorher_id={{ v.vorher.id }}" hx-trigger="toggle once" hx-target="find .treffer">
+    <summary><span class="badge {{ a.schwere }}">{{ STUFE[a.schwere][1] }}</span> <strong>{{ a.name }}</strong>
+      – {{ a.vorher }} → {{ a.jetzt }}
+      <span class="{{ 'gut' if a.differenz < 0 else 'error' }}">({{ '%+d'|format(a.differenz) }}, {{ a.status }})</span></summary>
+    <div class="treffer klein">lädt …</div>
+  </details>
+  {% else %}<p class="gut">Keine Änderungen seit der vorherigen Prüfung.</p>{% endfor %}
+  {% else %}<p class="klein">Noch keine frühere Prüfung zum Vergleich. Prüf die Website erneut, dann siehst du hier, was sich verändert hat.</p>{% endif %}
+</div>
+{% endblock %}

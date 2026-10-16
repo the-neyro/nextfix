@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titel %}Geprüfte Seiten · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Geprüfte Seiten</h1><div class="unter">Jede Seite der Prüfung vom {{ crawl.beendet_am|datum }} – mit Status, Text und Problemen.</div></div></div>
+<div class="karte">
+  <form class="zeile" method="get">
+    <label>URL enthält<input name="suche" value="{{ suche or '' }}"></label>
+    <label>&nbsp;<span><input type="checkbox" name="nur_mit_problemen" value="1" {% if nur_mit_problemen %}checked{% endif %}> nur mit Problemen</span></label>
+    <button class="zweit">Filtern</button>
+    <label>&nbsp;<a href="/api/crawls/{{ crawl.id }}/export/seiten.csv">Alle Seiten als CSV</a></label>
+  </form>
+</div>
+<div class="karte">
+  <table>
+    <tr><th>URL</th><th>Status</th><th>Tiefe</th><th>Title</th><th>Ladezeit</th><th>Wörter</th><th title="Interne Link-Stärke 0–100">Link-Stärke</th><th>Probleme</th></tr>
+    {% for s in seiten %}
+    <tr>
+      <td class="url"><a href="/crawls/{{ crawl.id }}/seite?url={{ s.url|urlencode }}" title="{{ s.url }}">{{ s.url|pfad }}</a></td>
+      <td class="{% if not s.status_code or s.status_code >= 400 %}error{% elif s.status_code >= 300 %}warning{% endif %}">
+        {{ 'blockiert' if s.blockiert else (s.status_code or 'Fehler') }}</td>
+      <td>{{ s.tiefe }}</td>
+      <td>{{ s.title or '' }}</td>
+      <td>{{ s.ladezeit_ms ~ ' ms' if s.ladezeit_ms is not none else '' }}</td>
+      <td>{{ s.woerter if s.woerter is not none else '' }}</td>
+      <td>{{ s.link_rank if s.link_rank is not none else '' }}</td>
+      <td>{{ s.issues }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="klein">
+    {% if offset > 0 %}<a href="?suche={{ suche or '' }}&nur_mit_problemen={{ 1 if nur_mit_problemen else '' }}&offset={{ [offset - limit, 0]|max }}">← zurück</a>{% endif %}
+    {% if seiten|length == limit %}<a href="?suche={{ suche or '' }}&nur_mit_problemen={{ 1 if nur_mit_problemen else '' }}&offset={{ offset + limit }}">weiter →</a>{% endif %}
+  </p>
+</div>
+{% endblock %}

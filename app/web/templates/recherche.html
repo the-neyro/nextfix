@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block titel %}{{ d.recherche.seed }} · Suchbegriffe{% endblock %}
+{% set INTENT_NAMEN = {'informational': 'will wissen', 'navigational': 'sucht Marke', 'kommerziell': 'vergleicht', 'transaktional': 'will kaufen'} %}
+{% set INTENT_FARBE = {'informational': 'leise', 'navigational': 'leise', 'kommerziell': 'leise', 'transaktional': 'leise'} %}
+{% block inhalt %}
+<div class="brotkrumen"><a href="/projekte/{{ projekt.id }}/keywords">Suchbegriffe finden</a></div><div class="kopf"><div><h1>{{ d.recherche.seed }}</h1><div class="unter">{{ d.recherche.ideen }} Ideen rund um diesen Suchbegriff. Ankreuzen und beobachten, oder als CSV mitnehmen.</div></div></div>
+{% set filter = 'gruppe=' ~ (gruppe|urlencode) ~ '&intent=' ~ intent ~ '&suche=' ~ (suche|urlencode)
+                ~ '&nur_fragen=' ~ ('1' if nur_fragen else '') %}
+{% if d.recherche.status == 'fehler' %}<div class="band dringend">Suche unvollständig: {{ d.recherche.fehler_text }}</div>{% endif %}
+
+<div class="spalten" style="grid-template-columns:minmax(170px, 230px) minmax(0, 1fr)">
+  <nav class="karte leiste-gruppen" aria-label="Themen-Gruppen">
+    <h2>Gruppen</h2>
+    <p class="klein">Ideen, die zusammengehören. Eine Gruppe = oft eine Seite.</p>
+    <div class="bereiche">
+    <a class="bereich" style="grid-template-columns:1fr auto" href="?intent={{ intent }}&nur_fragen={{ '1' if nur_fragen else '' }}" {% if not gruppe %}aria-current="true"{% endif %}><span class="name">alle</span><span class="klein">{{ d.recherche.ideen }}</span></a>
+    {% for g in d.gruppen %}
+    <a class="bereich" style="grid-template-columns:1fr auto" href="?gruppe={{ g.gruppe|urlencode }}&intent={{ intent }}&nur_fragen={{ '1' if nur_fragen else '' }}"
+       {% if g.gruppe == gruppe %}aria-current="true"{% endif %}><span class="name">{{ g.gruppe }}</span><span class="klein">{{ g.anzahl }}</span></a>
+    {% endfor %}
+    </div>
+  </nav>
+
+  <div class="karte" style="min-width:0">
+    <form class="zeile" method="get" style="margin-bottom:.8rem">
+      <input type="hidden" name="gruppe" value="{{ gruppe }}"><input type="hidden" name="sortierung" value="{{ sortierung }}">
+      <label>Suchabsicht<select name="intent" onchange="this.form.submit()">
+        <option value="">alle</option>
+        {% for i, n in d.intents.items() %}<option value="{{ i }}" {% if i == intent %}selected{% endif %}>{{ INTENT_NAMEN[i] }} ({{ n }})</option>{% endfor %}
+      </select></label>
+      <label style="flex-direction:row; align-items:center; gap:.3rem"><input type="checkbox" name="nur_fragen" value="1"
+        {% if nur_fragen %}checked{% endif %} onchange="this.form.submit()"> nur Fragen ({{ d.fragen }})</label>
+      <input name="suche" value="{{ suche }}" placeholder="enthält …" aria-label="Ideen filtern"><button class="zweit">Filtern</button>
+      <a class="knopf zweit klein-knopf" style="margin-left:auto" href="/api/keywords/recherchen/{{ d.recherche.id }}/ideen.csv?{{ filter }}&sortierung={{ sortierung }}">Als CSV herunterladen</a>
+    </form>
+
+    <form id="kw-form" method="post" action="/projekte/{{ projekt.id }}/tracking" class="zeile" style="margin-bottom:.8rem">
+      <input type="hidden" name="zurueck" value="{{ zurueck }}">
+      <label>Tags<input name="tags" placeholder="z. B. {{ gruppe or d.recherche.seed }}"></label>
+      <button name="aktion" value="hinzufuegen">Auswahl beobachten</button>
+      <span class="klein">{{ d.gesamt }} Ideen{{ ' (gefiltert)' if gruppe or intent or suche or nur_fragen }}</span>
+    </form>
+
+    <form class="zeile" hx-post="/recherchen/{{ d.recherche.id }}/volumen" hx-target="#volumen-status" hx-swap="outerHTML"
+          style="margin-bottom:.8rem">
+      <label>Suchvolumen<select name="quelle">
+        <option value="bing" {% if bing_da %}selected{% else %}disabled{% endif %}>Bing Webmaster{{ '' if bing_da else ' (Schlüssel fehlt)' }}</option>
+        <option value="bing_mock" {% if not bing_da %}selected{% endif %}>Testwerte</option>
+      </select></label>
+      <button class="zweit">Suchvolumen abrufen (bis 200)</button>
+      {% with r=d.recherche, fehler=None %}{% include "_volumen_status.html" %}{% endwith %}
+    </form>
+
+    {% set basis = '?' ~ filter ~ '&sortierung=' %}
+    <div class="tabelle"><table>
+      <tr>
+        <th><input type="checkbox" title="alle" onclick="document.querySelectorAll('input[form=kw-form][name=query]').forEach(c => c.checked = this.checked)"></th>
+        <th><a href="{{ basis }}keyword" {% if sortierung == 'keyword' %}style="font-weight:700"{% endif %}>Suchbegriff</a></th>
+        <th>Suchabsicht</th><th>Gruppe</th>
+        <th><a href="{{ basis }}volumen" {% if sortierung == 'volumen' %}style="font-weight:700"{% endif %}
+               title="Bing-Impressionen pro Monat (Ø 13 Wochen), kein Google-Volumen">Bing/Monat</a></th>
+        <th><a href="{{ basis }}woerter" {% if sortierung == 'woerter' %}style="font-weight:700"{% endif %}>Wörter</a></th>
+        <th><a href="{{ basis }}impressionen" {% if sortierung == 'impressionen' %}style="font-weight:700"{% endif %}>Eigene Impr.</a></th>
+        <th><a href="{{ basis }}position" {% if sortierung == 'position' %}style="font-weight:700"{% endif %}>Eigene Pos.</a></th>
+      </tr>
+      {% for i in d.ideen %}
+      <tr>
+        <td><input type="checkbox" form="kw-form" name="query" value="{{ i.keyword }}"></td>
+        <td>{% if i.keyword in getrackt %}<span class="symbol gut" title="wird beobachtet">●</span> {% endif %}{{ i.keyword }}
+          {% if i.frage %}<span class="klein">?</span>{% endif %}
+          {% if 'gsc' in i.quellen %}<span class="klein" title="kommt in deinen Search-Console-Daten vor">GSC</span>{% endif %}</td>
+        <td><span class="badge {{ INTENT_FARBE[i.intent] }}">{{ INTENT_NAMEN[i.intent] }}</span></td>
+        <td class="klein">{{ i.gruppe }}</td>
+        <td style="white-space:nowrap">{% if i.volumen_quelle %}{{ '–' if i.volumen is none else i.volumen }}
+          {% if i.trend and i.trend|length > 1 %}<svg viewBox="0 0 60 16" style="width:60px; height:16px; vertical-align:middle">
+            <polyline points="{{ sparkline(i.trend) }}" fill="none" stroke="var(--akzent)" stroke-width="1.5"/></svg>{% endif %}
+          {% if i.volumen_quelle == 'bing_mock' %}<span class="klein" title="Testwert">T</span>{% endif %}
+          {% else %}<span class="klein">–</span>{% endif %}</td>
+        <td>{{ i.woerter }}</td>
+        <td>{{ '–' if i.gsc_impressionen is none else i.gsc_impressionen }}</td>
+        <td>{{ '–' if i.gsc_position is none else i.gsc_position }}</td>
+      </tr>
+      {% else %}<tr><td colspan="8" class="klein">Keine Vorschläge für diesen Filter. Lockere den Filter oder nimm einen allgemeineren Begriff.</td></tr>{% endfor %}
+    </table></div>
+    <p class="klein">
+      {% if offset > 0 %}<a href="{{ basis }}{{ sortierung }}&offset={{ [offset - 200, 0]|max }}">← zurück</a>{% endif %}
+      {% if offset + 200 < d.gesamt %}<a href="{{ basis }}{{ sortierung }}&offset={{ offset + 200 }}">weiter →</a>{% endif %}
+      Suchabsicht nach eigenen Regeln (Signalwörter). „Eigene Impr./Pos.“ = deine Google-Daten der letzten 90 Tage.
+      „Bing/Monat“ = Bing-Impressionen pro Monat (kein Google-Volumen), „T“ = Testwert. Keyword-Schwierigkeit fehlt noch.
+    </p>
+  </div>
+</div>
+{% endblock %}

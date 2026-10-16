@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Prüfbericht {{ projekt.domain }}</title>
+<style>
+  {{ schriften|safe }}
+  /* Prüfbericht im Nextfix-Stil „Prüfstand“ (siehe docs/ui/design-system.md): Fira Sans, Stempelviolett nur für
+     Marke und Nummern, Befundfarben nur für Status – immer mit Wort, nie nur Farbe. */
+  :root {
+    --text: #1B1F2A; --gedaempft: #596070; --linie: #DCDFE4; --flaeche-2: #F6F7F9; --akzent: #5B3FBF; --akzent-flaeche: #EEEAFA;
+    --kritisch: #C0261A; --wichtig: #985400; --hinweis: #2D6688; --gut: #1D7544;
+    --kritisch-flaeche: #FBEAE8; --wichtig-flaeche: #FBF0DF; --hinweis-flaeche: #E6F0F6; --gut-flaeche: #E5F3EA;
+  }
+  * { box-sizing: border-box; }
+  body { font: 9.5pt/1.5 "Fira Sans", -apple-system, "Helvetica Neue", Arial, sans-serif; color: var(--text); margin: 0;
+         font-variant-numeric: tabular-nums; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h1 { font-size: 40pt; line-height: 1; font-weight: 600; margin: 0; letter-spacing: -.015em; }
+  h2 { font-size: 18pt; line-height: 1.15; font-weight: 600; margin: 0 0 5mm; }
+  h3 { font-size: 11pt; line-height: 1.25; font-weight: 600; margin: 0 0 1.5mm; }
+  p { margin: 0 0 3mm; max-width: 150mm; }
+  .leise { color: var(--gedaempft); font-size: 8.5pt; }
+  .schmal { font-family: "Fira Sans Condensed", "Fira Sans", sans-serif; }
+  .neue-seite { break-before: page; }
+  .zusammen { break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 1.6mm 0; border-bottom: .5pt solid var(--linie); vertical-align: baseline; }
+  th { font-size: 8pt; font-weight: 500; color: var(--gedaempft); }
+  td.r, th.r { text-align: right; white-space: nowrap; }
+  td + td { padding-left: 3mm; }
+  .zahl { font-weight: 500; }
+  .gut { color: var(--gut); } .wichtig { color: var(--wichtig); } .dringend { color: var(--kritisch); }
+
+  /* Status-Marke: Form + Wort + Farbe */
+  .marke { display: inline-block; padding: .2mm 1.6mm; border-radius: .8mm; font-size: 8pt; font-weight: 500; white-space: nowrap; }
+  .marke::before { font-size: 6.5pt; margin-right: 1mm; }
+  .marke.dringend { background: var(--kritisch-flaeche); color: var(--text); } .marke.dringend::before { content: "◆"; color: var(--kritisch); }
+  .marke.wichtig { background: var(--wichtig-flaeche); color: var(--text); } .marke.wichtig::before { content: "▲"; color: var(--wichtig); }
+  .marke.feinschliff { background: var(--hinweis-flaeche); color: var(--text); } .marke.feinschliff::before { content: "●"; color: var(--hinweis); }
+  .marke.leise { border: .5pt solid var(--linie); color: var(--gedaempft); }
+
+  /* Bereichs-Leiste mit Grenzstrichen bei 50 und 80 */
+  .spur { position: relative; height: 1.8mm; background: var(--flaeche-2); border: .4pt solid var(--linie); }
+  .spur > div { height: 100%; }
+  .spur::before, .spur::after { content: ""; position: absolute; top: -.8mm; height: 3.4mm; width: .4pt; background: #868D9A; }
+  .spur::before { left: 50%; } .spur::after { left: 80%; }
+
+  /* Deckblatt */
+  .deckblatt { height: 258mm; display: flex; flex-direction: column; }
+  .marke-tool { display: flex; align-items: center; gap: 2.5mm; font-size: 11pt; font-weight: 600; }
+  .deckblatt .titelzeile { margin: 26mm 0 3mm; font-size: 12pt; color: var(--gedaempft); }
+  .deckblatt .zustand { margin-top: 20mm; }
+  .deckblatt .wert { font-size: 54pt; font-weight: 500; line-height: 1; letter-spacing: -.02em; }
+  .deckblatt .wert small { font-size: 16pt; color: var(--gedaempft); font-weight: 400; letter-spacing: 0; }
+  .deckblatt .befund { font-size: 12pt; line-height: 1.5; max-width: 140mm; margin-top: 10mm; }
+  .deckblatt .fuss { margin-top: auto; border-top: .5pt solid var(--linie); padding-top: 3mm; }
+
+  /* Seitenbilanz: ein gestapelter Balken */
+  .stapel { display: flex; height: 5mm; overflow: hidden; margin: 2mm 0 2.5mm; }
+  .legende { display: flex; flex-wrap: wrap; gap: 1mm 6mm; font-size: 8.5pt; }
+  .legende i { display: inline-block; width: 2.6mm; height: 2.6mm; margin-right: 1.2mm; vertical-align: -.2mm; }
+
+  /* Maßnahmen: echte Reihenfolge nach Wirkung, daher nummeriert */
+  .massnahme { display: grid; grid-template-columns: 10mm 1fr 24mm; gap: 0 3mm; padding: 3mm 0; border-bottom: .5pt solid var(--linie); }
+  .massnahme .nr { font-size: 20pt; font-weight: 500; line-height: 1; color: var(--akzent); }
+  .massnahme .gewinn { text-align: right; font-weight: 600; color: var(--gut); white-space: nowrap; }
+  .massnahme .info { display: flex; gap: 1.5mm; flex-wrap: wrap; margin: 1mm 0 1.5mm; }
+  .massnahme dl { margin: 0; display: grid; grid-template-columns: 22mm 1fr; gap: .6mm 2mm; line-height: 1.45; }
+  .massnahme dt { color: var(--gedaempft); font-size: 8.5pt; }
+  .massnahme dd { margin: 0; }
+  .url { font-family: "Fira Sans Condensed", "Fira Sans", sans-serif; font-size: 8.5pt; word-break: break-all; color: var(--gedaempft); }
+
+  /* Themen */
+  .thema { margin-bottom: 9mm; }
+  .thema-kopf { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1.2pt solid var(--text); padding-bottom: 1.5mm; margin-bottom: 3mm; }
+  .thema-kopf h2 { margin: 0; }
+  .thema-kopf .wert { font-size: 18pt; font-weight: 500; }
+  .zwei { display: grid; grid-template-columns: 1fr 1fr; gap: 0 9mm; }
+</style>
+</head>
+<body>
+{% set c = ue.crawl %}
+{% set STUFE = {'error': ('dringend', 'Dringend'), 'warning': ('wichtig', 'Wichtig'), 'notice': ('feinschliff', 'Feinschliff')} %}
+{% macro klasse(h) %}{% if h is none %}{% elif h >= 80 %}gut{% elif h >= 50 %}wichtig{% else %}dringend{% endif %}{% endmacro %}
+{% macro farbe(h) %}{{ '#1D7544' if (h or 0) >= 80 else '#985400' if (h or 0) >= 50 else '#C0261A' }}{% endmacro %}
+{% macro zahl(w, stellen=0) %}{{ ('{:,.' ~ stellen ~ 'f}').format(w).replace(',', ' ').replace('.', ',').replace(' ', '.') }}{% endmacro %}
+
+{# Messskala wie im Tool: Ticks, Zonen bis 50 / 80 / 100, Zeiger beim Wert #}
+{% macro skala(h, breite=170) %}
+{% set w = h or 0 %}
+<svg width="{{ breite }}mm" height="{{ breite * 0.13 }}mm" viewBox="0 0 400 52" role="img" aria-label="Website-Zustand {{ w|round|int }} von 100">
+  {% for i in range(51) %}
+  <line x1="{{ i * 8 }}" x2="{{ i * 8 }}" y1="{{ 6 if i % 5 == 0 else 13 }}" y2="20" stroke="#868D9A" stroke-width="{{ 0.9 if i % 5 == 0 else 0.5 }}"/>
+  {% endfor %}
+  <rect x="0" y="21" width="200" height="8" fill="#FBEAE8"/><rect x="200" y="21" width="120" height="8" fill="#FBF0DF"/><rect x="320" y="21" width="80" height="8" fill="#E5F3EA"/>
+  <rect x="0" y="23.5" width="{{ 4 * w }}" height="3" fill="{{ farbe(h) }}"/>
+  <line x1="{{ 4 * w }}" x2="{{ 4 * w }}" y1="2" y2="32" stroke="#1B1F2A" stroke-width="1.6"/>
+  <path d="M{{ 4 * w - 5 }} 0 h10 l-5 7 z" fill="#1B1F2A"/>
+  {% for v in [0, 50, 80, 100] %}
+  <text x="{{ 4 * v }}" y="45" font-family="Fira Sans Condensed, sans-serif" font-weight="500" font-size="10" fill="#596070"
+        text-anchor="{{ 'start' if v == 0 else 'end' if v == 100 else 'middle' }}">{{ v }}</text>
+  {% endfor %}
+</svg>
+{% endmacro %}
+
+{# ---------- Deckblatt ---------- #}
+{% set n_aufg = aufg.aufgaben|length %}
+<section class="deckblatt">
+  <div class="marke-tool">
+    <svg width="7mm" height="7mm" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5B3FBF"/>
+      <path d="M7.5 16.5l5.2 5.2L24.5 9.9M18.4 9.6h6.4v6.4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Nextfix
+  </div>
+  <div class="titelzeile">Prüfbericht Website</div>
+  <h1>{{ projekt.domain }}</h1>
+
+  <div class="zustand">
+    <div class="leise" style="font-size:9.5pt; margin-bottom:1mm">Website-Zustand</div>
+    <div class="wert">{{ '–' if ue.health is none else ue.health|round|int }}<small> von 100</small></div>
+    <div style="margin-top:5mm">{{ skala(ue.health) }}</div>
+  </div>
+
+  <div class="befund">
+    <p>Wir haben {{ zahl(ue.seiten.gesamt) }} Seiten geprüft.
+    {% if n_aufg %}
+      {{ n_aufg }} {{ 'Aufgabe bringt' if n_aufg == 1 else 'Aufgaben bringen' }} die Website weiter{% if aufg.aufgaben %} –
+      die wichtigste: <strong>{{ aufg.aufgaben[0].was }}</strong>{% endif %}. Die Reihenfolge steht unter „Maßnahmen“.
+    {% else %}
+      Es gibt keine dringenden oder wichtigen Probleme, nur Feinschliff.
+    {% endif %}</p>
+  </div>
+  <div class="fuss leise">
+    Erstellt am {{ datum }}. Grundlage: Prüfung vom {{ abgeschlossen }}, Start bei {{ c.start_url }}.
+    Der Website-Zustand bewertet Technik und Inhalt der geprüften Seiten (0–100, ab 80 gut). Platzierungen bei Google und Links von anderen Websites gehören nicht dazu.
+  </div>
+</section>
+
+{# ---------- Befund ---------- #}
+<section class="neue-seite">
+  <h2>Befund</h2>
+  {% set s = ue.seiten %}{% set gesamt = s.gesamt or 1 %}
+  <div class="zusammen" style="margin-bottom:8mm">
+    <h3>Seitenbilanz</h3>
+    {% set teile = [('Ohne Probleme', s.gesund, '#1D7544'), ('Mit Problemen', s.mit_problemen, '#985400'),
+                    ('Nicht erreichbar', s.defekt, '#C0261A'), ('Weiterleitung', s.weiterleitung, '#9BA2B1'), ('Für Google gesperrt', s.blockiert, '#DCDFE4')] %}
+    <div class="stapel">{% for label, wert, f in teile if wert %}<div style="width:{{ 100 * wert / gesamt }}%; background:{{ f }}"></div>{% endfor %}</div>
+    <div class="legende">{% for label, wert, f in teile %}<span><i style="background:{{ f }}"></i>{{ label }}: <span class="zahl">{{ wert }}</span></span>{% endfor %}</div>
+  </div>
+
+  <div class="zwei">
+    <div class="zusammen">
+      <h3>Bereiche</h3>
+      <table>
+        <tr><th>Bereich</th><th style="width:36%"></th><th class="r">Wert</th></tr>
+        {% for k in ue.kategorien %}
+        <tr><td>{{ k.name }}<br><span class="leise">{% if k.probleme %}{{ k.probleme }} {{ 'Problem' if k.probleme == 1 else 'Probleme' }}{% else %}keine Probleme{% endif %}</span></td>
+            <td><div class="spur"><div style="width:{{ k.health or 0 }}%; background:{{ farbe(k.health) }}"></div></div></td>
+            <td class="r zahl {{ klasse(k.health) }}">{{ '–' if k.health is none else k.health|round|int }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="zusammen">
+      <h3>Funde nach Dringlichkeit</h3>
+      <table>
+        <tr><th>Dringlichkeit</th><th class="r">Prüfungen</th><th class="r">Fundstellen</th></tr>
+        {% for k in ['error', 'warning', 'notice'] %}
+        <tr><td><span class="marke {{ STUFE[k][0] }}">{{ STUFE[k][1] }}</span></td>
+            <td class="r zahl">{{ ue.zaehler[k].checks }}</td><td class="r zahl">{{ zahl(ue.zaehler[k].issues) }}</td></tr>
+        {% endfor %}
+      </table>
+      <p class="leise" style="margin-top:2mm">Dringend kostet Sichtbarkeit, Wichtig schwächt sie, Feinschliff zählt nicht in den Zustand.</p>
+
+      {% if vergleich %}
+      <h3 style="margin-top:6mm">Seit der letzten Prüfung</h3>
+      {% if vergleich.aenderungen %}
+      <table>
+        {% for a in vergleich.aenderungen[:6] %}
+        <tr><td>{{ a.name }}</td><td class="r zahl">{{ a.vorher }} → {{ a.jetzt }}</td></tr>
+        {% endfor %}
+      </table>
+      {% else %}<p>Keine Veränderungen seit der vorherigen Prüfung.</p>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ---------- Maßnahmen ---------- #}
+<section class="neue-seite">
+  <h2>Maßnahmen</h2>
+  <p>Sortiert nach Wirkung: zuerst, was den Website-Zustand am meisten verbessert. Die Punkte gelten jeweils, wenn nur dieses Problem behoben wird.</p>
+  {% for i in aufg.aufgaben[:massnahmen_max] %}
+  <div class="massnahme zusammen">
+    <div class="nr">{{ loop.index }}</div>
+    <div>
+      <h3>{{ i.was }}</h3>
+      <div class="info">
+        <span class="marke {{ i.stufe }}">{{ STUFE[i.schwere][1] }}</span>
+        <span class="marke leise">{{ i.aufwand_text }}</span>
+        <span class="marke leise">{{ 'selbst im CMS' if i.wer == 'selbst' else 'für Technik / Hoster' }}</span>
+      </div>
+      <dl>
+        <dt>Warum</dt><dd>{{ i.warum }}</dd>
+        <dt>So beheben</dt><dd>{{ i.beheben }}</dd>
+        {% if i.beispiele %}<dt>Zum Beispiel</dt><dd>{% for u in i.beispiele %}<div class="url">{{ u }}</div>{% endfor %}</dd>{% endif %}
+      </dl>
+    </div>
+    <div class="gewinn">+{{ zahl(i.gewinn, 1) }} Punkte</div>
+  </div>
+  {% else %}<p class="gut">Keine dringenden oder wichtigen Probleme. Der Feinschliff in den Bereichen ist optional.</p>{% endfor %}
+  {% if aufg.aufgaben|length > massnahmen_max %}
+  <p class="leise" style="margin-top:3mm">Dazu {{ aufg.aufgaben|length - massnahmen_max }} weitere Aufgaben mit kleinerer Wirkung – siehe Bereiche.</p>
+  {% endif %}
+</section>
+
+{# ---------- Bereiche im Detail, zwei pro Seite ---------- #}
+{% for paar in themen|batch(2) %}
+<section class="neue-seite">
+  {% for t in paar %}
+  <div class="thema">
+    <div class="thema-kopf zusammen">
+      <h2>{{ t.name }}</h2>
+      <span class="wert {{ klasse(t.health) }}">{{ '–' if t.health is none else t.health|round|int }}<span class="leise" style="font-weight:400"> von 100</span></span>
+    </div>
+    <div class="zwei">
+      {% for kz in t.kennzahlen %}
+      {% set zahlen = kz.zeilen|map(attribute='wert')|select('number')|list %}
+      {% set maximum = zahlen|max if zahlen else 0 %}
+      <div class="zusammen" style="margin-bottom:4mm">
+        <table>
+          <tr><th colspan="3">{{ kz.titel }}</th></tr>
+          {% for z in kz.zeilen %}
+          {% if z.wert is number %}
+          <tr><td>{{ z.label }}</td>
+              <td style="width:32%">{% if maximum %}<div class="spur" style="border:0"><div style="width:{{ 100 * z.wert / maximum }}%; background:#5B3FBF; opacity:.7"></div></div>{% endif %}</td>
+              <td class="r zahl">{{ z.wert }}</td></tr>
+          {% else %}
+          <tr><td>{{ z.label }}</td><td class="r" colspan="2">{{ z.wert }}</td></tr>
+          {% endif %}
+          {% else %}<tr><td class="leise">Keine Daten</td></tr>{% endfor %}
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+    {% if t.issues %}
+    <table class="zusammen">
+      <tr><th>Gefunden</th><th>Dringlichkeit</th><th class="r">Umfang</th></tr>
+      {% for i in t.issues %}
+      <tr><td>{{ i.name }}</td><td><span class="marke {{ STUFE[i.schwere][0] }}">{{ STUFE[i.schwere][1] }}</span></td>
+          <td class="r">{{ 'ganze Website' if i.ganze_site else i.seiten ~ (' Seite' if i.seiten == 1 else ' Seiten') }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="gut">In diesem Bereich ist alles in Ordnung.</p>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endfor %}
+</body>
+</html>

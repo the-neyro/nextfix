@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titel %}{{ a.was if a else d.name }} · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="brotkrumen"><a href="/projekte/{{ projekt.id }}">Übersicht</a> / <a href="/crawls/{{ crawl.id }}/issues">Probleme</a></div>
+<div class="kopf">
+  <div>
+    <h1>{{ a.was if a else d.name }}</h1>
+    <div class="info" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px">
+      <span class="marke {{ STUFE[d.schwere][0] }}">{{ STUFE[d.schwere][1] }}</span>
+      {% if a %}
+      <span class="marke leise">{{ a.aufwand_text }}</span>
+      <span class="marke leise">{{ 'machst du selbst' if a.wer == 'selbst' else 'für deine Technik' }}</span>
+      {% if d.schwere != 'notice' %}<span class="klein" style="align-self:center">+{{ a.gewinn|zahl(1) }} Punkte für den Website-Zustand</span>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+  <a class="knopf zweit" href="/api/crawls/{{ crawl.id }}/export/issues.csv">Alle Probleme als CSV</a>
+</div>
+
+<div class="raster" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
+  <section class="karte">
+    <h2>Warum das wichtig ist</h2>
+    <p>{{ d.warum }}</p>
+    {% if a and a.verlauf %}
+    <p class="klein">{% if a.verlauf == 'neu' %}Neu seit der letzten Prüfung.
+      {% elif a.verlauf == 'besser' %}<span class="gut">Besser: vorher {{ a.vorher }}, jetzt {{ a.seiten }}.</span>
+      {% elif a.verlauf == 'schlimmer' %}<span class="error">Mehr geworden: vorher {{ a.vorher }}, jetzt {{ a.seiten }}.</span>
+      {% else %}Unverändert seit der letzten Prüfung.{% endif %}</p>
+    {% endif %}
+  </section>
+  <section class="karte">
+    <h2>So behebst du es</h2>
+    <p>{{ d.beheben }}</p>
+    {% if gruppen and gruppen[0][1] >= 5 and gruppen[0][0] != '/' %}
+    <p class="klein">{{ gruppen[0][1] }} Fundstellen liegen unter <strong>{{ gruppen[0][0] }}</strong>. Vermutlich steckt eine gemeinsame Vorlage dahinter – dann reicht eine Änderung für alle.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="karte">
+  <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap">
+    <h2>Fundstellen <span class="klein">{{ treffer|length }}{% if gruppe %} von {{ d.treffer|length }}{% endif %}</span></h2>
+    {% if gruppen %}
+    <nav class="tabs" style="margin:0; border:0" aria-label="Nach Bereich filtern">
+      <a href="?" class="{{ 'aktiv' if not gruppe }}">Alle</a>
+      {% for g, n in gruppen[:6] %}<a href="?gruppe={{ g|urlencode }}" class="{{ 'aktiv' if g == gruppe }}">{{ 'Hauptebene' if g == '/' else g }} <span class="klein">{{ n }}</span></a>{% endfor %}
+    </nav>
+    {% endif %}
+  </div>
+  <div class="tabelle"><table>
+    <thead><tr><th>Seite</th><th>Befund</th><th></th></tr></thead>
+    <tbody>
+    {% for t in treffer %}
+    <tr>
+      <td class="url">{% if t.url %}<a href="/crawls/{{ crawl.id }}/seite?url={{ t.url|urlencode }}">{{ t.url|pfad }}</a>{% else %}ganze Website{% endif %}</td>
+      <td>{{ t.detail or '' }}</td>
+      <td class="zahl">{% if t.url %}<a class="klein" href="/projekte/{{ projekt.id }}/onpage?url={{ t.url|urlencode }}">Seite optimieren</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

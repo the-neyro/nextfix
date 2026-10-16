@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titel %}Seite optimieren · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Seite optimieren</h1><div class="unter">Prüf eine Seite gegen einen Suchbegriff und bekomm konkrete Verbesserungen – für Google und KI-Suche.</div></div></div>
+<div class="karte">
+  <h2>Neue Prüfung</h2>
+  <form class="zeile" hx-post="/projekte/{{ projekt.id }}/onpage" hx-target="#ergebnis" hx-indicator="#prueft"
+        hx-disabled-elt="find button">
+    <label>Seite<input name="url" value="{{ url }}" size="44" list="seiten" required></label>
+    <datalist id="seiten">{% for s in seiten %}<option value="{{ s }}">{% endfor %}</datalist>
+    <label>Suchbegriff<input name="keyword" value="{{ keyword }}" size="24" required minlength="2" maxlength="80"
+      placeholder="z. B. seo check"></label>
+    <label>Mitbewerber-URLs (optional, bis 3, eine pro Zeile)<textarea name="mitbewerber" rows="2" cols="44"
+      placeholder="https://… (z. B. Top-Treffer aus deiner Google-Suche)"></textarea></label>
+    <button>Seite prüfen</button>
+    <span id="prueft" class="klein htmx-indicator">prüft … (bis ca. 25 s)</span>
+  </form>
+  <p class="klein">Prüft Title, H1, Meta-Description, URL, Textanfang, Häufigkeit, Zwischenüberschriften, Textlänge,
+    Alt-Texte, Indexierbarkeit, schema.org, Core Web Vitals und interne Links (aus Crawl und Messung, falls vorhanden).
+    Dazu Ideen aus Google Suggest und von Mitbewerbern. Die Google-Top-10 werden nicht automatisch abgefragt.</p>
+</div>
+
+<div id="ergebnis">{% if r %}{% include "_onpage_ergebnis.html" %}{% endif %}</div>
+
+{% if liste %}
+<div class="karte">
+  <h2>Bisherige Prüfungen</h2>
+  <table>
+    <tr><th>Seite</th><th>Suchbegriff</th><th>Score</th><th>Datum</th></tr>
+    {% for p in liste[:30] %}
+    <tr><td class="url klein"><a href="/onpage/{{ p.id }}">{{ p.url }}</a></td><td>{{ p.keyword }}</td>
+      <td class="{{ 'gut' if p.score >= 80 else 'warning' if p.score >= 50 else 'error' }}">{{ p.score }}</td>
+      <td class="klein">{{ p.angelegt_am|datum(true) }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

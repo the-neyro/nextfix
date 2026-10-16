@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titel %}Suchbegriffe · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Suchbegriffe finden</h1><div class="unter">Worüber lohnt es sich zu schreiben? Ideen aus Google-Vorschlägen und deinen eigenen Daten.</div></div></div>
+<div class="karte">
+  <h2>Neue Suche</h2>
+  <form class="zeile" hx-post="/projekte/{{ projekt.id }}/keywords" hx-target="#recherchen" hx-swap="outerHTML">
+    <label>Hauptbegriff<input name="seed" size="34" placeholder="z. B. seo tool" required minlength="2" maxlength="80"></label>
+    <button>Suchbegriffe finden</button>
+  </form>
+  <p class="klein" style="margin-top:10px">Ideen kommen aus Google-Vorschlägen (A–Z, W-Fragen, typische Zusätze; gedrosselt, 30 Tage gespeichert)
+    und aus deinen eigenen Search-Console-Daten. Dauer etwa eine Minute. Suchvolumen (Bing) holst du danach in der Recherche per Knopf.</p>
+</div>
+
+{% include "_recherchen.html" %}
+
+<div class="karte">
+  <h2>Themen-Lücke zu einem Mitbewerber</h2>
+  <p class="klein">Welche Themen hat ein Mitbewerber, du aber nicht? Vergleicht Titel und Überschriften der letzten Prüfungen.</p>
+  {% if andere %}
+  <form class="zeile" method="get" action="/projekte/{{ projekt.id }}/keywords/luecke">
+    <label>Mitbewerber (als Projekt angelegt und gecrawlt)<select name="mitbewerber_id">
+      {% for p in andere %}<option value="{{ p.id }}">{{ p.name }} ({{ p.domain }})</option>{% endfor %}
+    </select></label>
+    <button class="zweit">Vergleichen</button>
+  </form>
+  {% else %}<p class="klein">Leg den Mitbewerber als eigenes Projekt an und prüf seine Website, dann erscheint er hier.</p>{% endif %}
+</div>
+{% endblock %}

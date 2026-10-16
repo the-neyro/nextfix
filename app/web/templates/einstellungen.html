@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titel %}Einstellungen · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf">
+  <div>
+    <h1>Einstellungen</h1>
+    <div class="unter">So prüft das Tool {{ projekt.domain }}. Die Standards passen für die meisten Websites.</div>
+  </div>
+</div>
+
+<form hx-post="/projekte/{{ projekt.id }}/einstellungen" hx-target="#einst-meldung">
+  <div class="karte">
+    <h2>Website-Prüfung</h2>
+    <div class="zeile" style="display:flex; gap:16px; flex-wrap:wrap">
+      <label style="flex:2 1 320px">Start-Adresse<input name="start_url" value="{{ e.start_url }}"></label>
+      <label style="flex:0 1 140px">Höchstens Seiten<input name="seitenlimit" type="number" min="1" value="{{ e.seitenlimit }}"></label>
+      <label style="flex:0 1 160px">Pause je Seite (Sek.)<input name="crawl_delay" type="number" step="0.1" min="0" max="30" value="{{ e.crawl_delay }}"></label>
+    </div>
+    <p class="klein" style="margin-top:8px">Mehr Pause schont den Server. Liegen mehrere Websites auf einem Server, prüft das Tool sie nacheinander.</p>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:16px">
+      <label style="flex:1 1 280px">Welche Seiten prüfen
+        <select name="quelle">
+          <option value="website" {% if e.quelle == 'website' %}selected{% endif %}>Links auf der Website folgen</option>
+          <option value="sitemap" {% if e.quelle == 'sitemap' %}selected{% endif %}>Nur Seiten aus der Sitemap</option>
+          <option value="beides" {% if e.quelle == 'beides' %}selected{% endif %}>Beides (findet auch nicht verlinkte Seiten)</option>
+        </select></label>
+      <label style="flex:1 1 220px">robots.txt
+        <select name="robots_beachten">
+          <option value="1" {% if e.robots_beachten %}selected{% endif %}>beachten</option>
+          <option value="0" {% if not e.robots_beachten %}selected{% endif %}>ignorieren (nur eigene Websites)</option>
+        </select></label>
+      <label style="flex:1 1 260px">Kennung (User-Agent)<input name="user_agent" value="{{ e.user_agent }}"></label>
+    </div>
+  </div>
+
+  <details class="karte">
+    <summary><h2 style="margin:0">Nur bestimmte Bereiche prüfen</h2></summary>
+    <div style="display:flex; gap:16px; flex-wrap:wrap">
+      <label style="flex:1 1 200px">Nur diese Pfade<textarea name="erlauben" rows="3" placeholder="/blog/">{{ e.erlauben }}</textarea></label>
+      <label style="flex:1 1 200px">Diese Pfade auslassen<textarea name="sperren" rows="3" placeholder="/shop/*/details&#10;sort=">{{ e.sperren }}</textarea></label>
+      <label style="flex:1 1 200px">Diese URL-Parameter ignorieren<textarea name="parameter_entfernen" rows="3" placeholder="utm_source&#10;sessionid">{{ e.parameter_entfernen }}</textarea></label>
+    </div>
+    <p class="klein" style="margin-top:8px">Ein Eintrag pro Zeile. Wie in robots.txt: Anfang des Pfads, <code>*</code> = beliebig, <code>$</code> = Ende. Parameter <code>*</code> = alle entfernen.</p>
+  </details>
+
+  {% set aus = e.checks_aus.split('\n') %}
+  <details class="karte">
+    <summary><h2 style="margin:0">Prüfungen abschalten</h2> <span class="klein">{{ aus|select|list|length }} aus</span></summary>
+    <p class="klein">Abgeschaltete Prüfungen zählen nicht in den Website-Zustand. Sinnvoll, wenn etwas bewusst so ist.</p>
+    {% for k, name in kategorien.items() %}
+    <fieldset style="margin:12px 0 4px"><legend><strong>{{ name }}</strong></legend>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:4px 16px; margin-top:6px">
+      {% for c in katalog if c.kategorie == k %}
+        <label><input type="checkbox" name="checks_aus" value="{{ c.id }}" {% if c.id in aus %}checked{% endif %}>
+          <span class="symbol {{ STUFE[c.schwere][0] }}" aria-label="{{ STUFE[c.schwere][1] }}">{{ {'error': '◆', 'warning': '▲', 'notice': '●'}[c.schwere] }}</span> {{ c.name }}</label>
+      {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+  </details>
+
+  <div style="display:flex; gap:12px; align-items:center">
+    <button>Einstellungen speichern</button>
+    <span id="einst-meldung" class="klein"></span>
+  </div>
+</form>
+{% endblock %}

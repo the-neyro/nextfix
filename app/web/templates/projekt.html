@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}{{ projekt.name }} · Nextfix{% endblock %}
+{% block inhalt %}
+<div class="kopf">
+  <div>
+    <h1>{{ projekt.name }}</h1>
+    <div class="unter">{% if projekt.name != projekt.domain %}{{ projekt.domain }} · {% endif %}{% if ue %}Prüfung vom {{ ue.crawl.beendet_am|datum(true) }}, {{ ue.seiten.gesamt }} Seiten{% endif %}</div>
+  </div>
+  <div id="crawl-status">{% include "_crawl_status.html" %}</div>
+</div>
+
+{% if ue %}
+  {% include "_uebersicht.html" %}
+{% else %}
+<div class="leer">
+  <h2>Diese Website wurde noch nicht geprüft</h2>
+  <p>Die erste Prüfung dauert je nach Größe 2 bis 10 Minuten. Danach siehst du hier, was du zuerst verbessern solltest.</p>
+  <ol class="schritte" style="margin-top:20px">
+    <li><strong>Website prüfen</strong><span class="klein">Oben rechts starten. Die Standards passen; ändern kannst du sie in den <a href="/projekte/{{ projekt.id }}/einstellungen">Einstellungen</a>.</span></li>
+    <li><strong>Google-Daten verbinden</strong><span class="klein">Optional: Unter <a href="/projekte/{{ projekt.id }}/positionen">Positionen</a> die Search Console anbinden oder Testdaten laden.</span></li>
+    <li><strong>Erste Seite optimieren</strong><span class="klein">Unter <a href="/projekte/{{ projekt.id }}/onpage">Seite optimieren</a> eine Seite gegen einen Suchbegriff prüfen.</span></li>
+  </ol>
+</div>
+{% endif %}
+{% endblock %}

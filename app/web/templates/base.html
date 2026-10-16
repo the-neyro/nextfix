@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titel %}Nextfix{% endblock %}</title>
+  <script>
+    /* Theme vor dem ersten Zeichnen setzen (kein Aufblitzen) */
+    try { var t = localStorage.getItem("thema"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+  <script src="/static/htmx.min.js"></script>  <!-- htmx 2.0.4, BSD-2-Clause -->
+</head>
+<body>
+{% set p = projekt if projekt is defined and projekt else none %}
+{% set n = navi(p.id if p else none) %}
+{% set cid = crawl.id if crawl is defined and crawl and crawl.id is defined else n.crawl_id %}
+{% set pfad = request.url.path %}
+<div class="app">
+  <aside class="leiste" id="leiste">
+    <div class="leiste-oben">
+      <a class="marke-tool" href="/">
+        <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--akzent)"/>
+          <path d="M7.5 16.5l5.2 5.2L24.5 9.9M18.4 9.6h6.4v6.4" fill="none" stroke="var(--auf-akzent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Nextfix
+      </a>
+      <button class="zweit klein-knopf menue-knopf" type="button" aria-expanded="false" aria-controls="leiste"
+              onclick="var l=document.getElementById('leiste');var o=l.classList.toggle('offen');this.setAttribute('aria-expanded',o)">Menü</button>
+    </div>
+    <div class="menue-inhalt">
+      <details class="projektwahl">
+        <summary>
+          <span style="min-width:0">
+            {% if p %}<span class="name">{{ p.name }}</span>{% if p.name != p.domain %}<span class="domain">{{ p.domain }}</span>{% endif %}
+            {% else %}<span class="name">Projekt wählen</span><span class="domain">{{ n.projekte|length }} Websites</span>{% endif %}
+          </span>
+        </summary>
+        <ul>
+          {% for x in n.projekte %}
+          <li><a href="/projekte/{{ x.id }}" {% if p and x.id == p.id %}aria-current="true"{% endif %}>{{ x.name }}{% if x.name != x.domain %}<br><span class="klein">{{ x.domain }}</span>{% endif %}</a></li>
+          {% endfor %}
+          <li class="neu"><a href="/">Alle Projekte und neues anlegen</a></li>
+        </ul>
+      </details>
+
+      {% if p %}
+      <nav aria-label="Module">
+        <a href="/projekte/{{ p.id }}" {% if pfad == '/projekte/' ~ p.id %}aria-current="page"{% endif %}>Übersicht</a>
+        <div class="navgruppe">Website-Check</div>
+        {% if cid %}
+        <a href="/crawls/{{ cid }}/issues" {% if '/issues' in pfad or '/themen/' in pfad %}aria-current="page"{% endif %}>Probleme
+          {% if n.aufgaben %}<span class="zahl">{{ n.aufgaben }}</span>{% endif %}</a>
+        <a href="/crawls/{{ cid }}/seiten" {% if pfad.endswith('/seiten') or (pfad.endswith('/seite') and '/issues/' not in pfad) %}aria-current="page"{% endif %}>Geprüfte Seiten</a>
+        <a href="/crawls/{{ cid }}/vergleich" {% if '/vergleich' in pfad %}aria-current="page"{% endif %}>Verlauf</a>
+        <a href="/crawls/{{ cid }}/vitals" {% if '/vitals' in pfad %}aria-current="page"{% endif %}>Ladezeit</a>
+        {% else %}
+        <a aria-disabled="true">Probleme</a><a aria-disabled="true">Geprüfte Seiten</a><a aria-disabled="true">Ladezeit</a>
+        {% endif %}
+        <div class="navgruppe">Bei Google gefunden werden</div>
+        <a href="/projekte/{{ p.id }}/positionen" {% if '/positionen' in pfad %}aria-current="page"{% endif %}>Positionen</a>
+        <a href="/projekte/{{ p.id }}/keywords" {% if '/keywords' in pfad or pfad.startswith('/recherchen') %}aria-current="page"{% endif %}>Suchbegriffe finden</a>
+        <div class="navgruppe">Inhalt</div>
+        <a href="/projekte/{{ p.id }}/onpage" {% if '/onpage' in pfad %}aria-current="page"{% endif %}>Seite optimieren</a>
+        <div class="navgruppe"></div>
+        <a href="/projekte/{{ p.id }}/einstellungen" {% if pfad.endswith('/einstellungen') %}aria-current="page"{% endif %}>Einstellungen</a>
+      </nav>
+      {% endif %}
+
+      <div class="leiste-fuss">
+        <div class="thema" role="group" aria-label="Darstellung">
+          <button type="button" data-thema="system">System</button>
+          <button type="button" data-thema="light">Hell</button>
+          <button type="button" data-thema="dark">Dunkel</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <main class="inhalt">{% block inhalt %}{% endblock %}</main>
+</div>
+<script>
+  (function () {
+    var knoepfe = document.querySelectorAll("[data-thema]");
+    function zeigen() {
+      var t = document.documentElement.dataset.theme || "system";
+      knoepfe.forEach(function (k) { k.setAttribute("aria-pressed", k.dataset.thema === t); });
+    }
+    knoepfe.forEach(function (k) {
+      k.addEventListener("click", function () {
+        var t = k.dataset.thema;
+        if (t === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+        try { t === "system" ? localStorage.removeItem("thema") : localStorage.setItem("thema", t); } catch (e) {}
+        zeigen();
+      });
+    });
+    zeigen();
+    /* Projektwahl schließen beim Klick daneben */
+    document.addEventListener("click", function (e) {
+      var d = document.querySelector(".projektwahl[open]");
+      if (d && !d.contains(e.target)) d.removeAttribute("open");
+    });
+  })();
+</script>
+</body>
+</html>

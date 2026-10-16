@@ -1,0 +1,17 @@
+<div id="import-status" class="klein" style="width:100%"
+     {% if imp and imp.status == 'laeuft' %}hx-get="/projekte/{{ projekt.id }}/positionen/import-status" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  {% if fehler %}<div class="fehler">{{ fehler }}</div>{% endif %}
+  {% if imp %}
+    {% set quelle = 'Search Console' if imp.quelle == 'gsc' else 'Testdaten' %}
+    {% if imp.status == 'laeuft' %}
+      Import läuft ({{ quelle }}): Tag {{ imp.tage_fertig }} von {{ imp.tage_gesamt }} · {{ imp.zeilen }} Zeilen
+      <div class="balken" style="margin-top:.3rem"><div style="width:{{ (100 * imp.tage_fertig / imp.tage_gesamt)|round|int }}%"></div></div>
+    {% elif imp.status == 'fertig' %}
+      Letzter Import{{ ' (automatisch)' if imp.ausloeser == 'auto' }}: {{ imp.beendet_am|datum(true) }} · {{ quelle }}
+      · {{ imp.von }} bis {{ imp.bis }} · {{ imp.zeilen }} Zeilen
+    {% else %}
+      <span class="fehler">Letzter Import{{ ' (automatisch)' if imp.ausloeser == 'auto' }} fehlgeschlagen
+        ({{ imp.tage_fertig }} von {{ imp.tage_gesamt }} Tagen gespeichert): {{ imp.fehler_text }}</span>
+    {% endif %}
+  {% endif %}
+</div>

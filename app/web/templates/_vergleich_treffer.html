@@ -1,0 +1,4 @@
+{% for titel, liste, klasse in [('Neu betroffen', t.neu, 'error'), ('Behoben', t.behoben, 'gut')] if liste %}
+<p class="{{ klasse }}"><strong>{{ titel }} ({{ liste|length }})</strong></p>
+<ul>{% for url in liste[:200] %}<li class="url">{{ url or 'ganze Site' }}</li>{% endfor %}</ul>
+{% endfor %}

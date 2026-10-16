@@ -1,0 +1,126 @@
+"""Core Web Vitals: Formeln, Service mit Fake-Messer, eine echte Chromium-Messung auf der Testseite."""
+
+import time
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.core import projekte, vitals
+from app.crawler import vitals as messung
+from app.db import verbinden
+
+
+# ---------- Formeln ----------
+
+def test_lognormal_score_wie_lighthouse():
+    assert round(messung.lognormal_score(2500, 2500, 4000), 2) == 0.9   # p10 → 0,9
+    assert round(messung.lognormal_score(4000, 2500, 4000), 2) == 0.5   # Median → 0,5
+    assert messung.lognormal_score(0, 2500, 4000) == 1.0
+    assert messung.lognormal_score(60_000, 2500, 4000) < 0.01
+
+
+def test_score_und_ampel():
+    gut = {"fcp": 900, "lcp": 1200, "tbt": 0, "cls": 0}
+    schlecht = {"fcp": 6000, "lcp": 9000, "tbt": 2000, "cls": 0.6}
+    assert messung.score(gut, "mobile") == 100 and messung.score(schlecht, "mobile") < 10
+    assert messung.score({**gut, "lcp": None}, "mobile") is None
+    assert messung.score({"fcp": 1600, "lcp": 2400, "tbt": 350, "cls": 0.25}, "desktop") == 50
+    assert [messung.bewertung("lcp", w) for w in (2500, 2501, 4001)] == ["gut", "mittel", "schlecht"]
+    assert messung.bewertung("cls", 0.1) == "gut" and messung.bewertung("cls", None) is None
+
+
+# ---------- Service ----------
+
+class FakeMesser:
+    """Liefert feste Werte: Startseite schnell, alles andere langsam auf Mobil."""
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        pass
+
+    def messen(self, url, geraet):
+        langsam = geraet == "mobile" and not url.endswith("/")
+        m = messung.Messung(url, geraet, ttfb=100, fcp=800, lcp=5000 if langsam else 1200, cls=0.3 if langsam else 0,
+                            tbt=700 if langsam else 50, bytes=100_000, anfragen=10)
+        m.score = messung.score(m.als_dict(), geraet)
+        return m
+
+
+@pytest.fixture
+def crawl(monkeypatch):
+    monkeypatch.setattr(vitals, "MESSER_FABRIK", FakeMesser)
+    conn = verbinden()
+    p = projekte.anlegen(conn, "ex.de").id
+    c = conn.execute("INSERT INTO crawls (projekt_id, start_url, status) VALUES (?, 'https://ex.de/', 'fertig')",
+                     (p,)).lastrowid
+    for url, rank in [("https://ex.de/", 10), ("https://ex.de/a", 90), ("https://ex.de/b", 50), ("https://ex.de/c", 5)]:
+        conn.execute("INSERT INTO seiten (crawl_id, url, tiefe, status_code, woerter, link_rank) VALUES (?, ?, 1, 200, 300, ?)",
+                     (c, url, rank))
+    conn.execute("INSERT INTO seiten (crawl_id, url, tiefe, status_code) VALUES (?, 'https://ex.de/404', 1, 404)", (c,))
+    conn.commit()
+    return conn, c
+
+
+def test_auswahl_startseite_dann_link_staerke(crawl):
+    conn, c = crawl
+    assert vitals.seiten_auswahl(conn, c, 3) == ["https://ex.de/", "https://ex.de/a", "https://ex.de/b"]
+
+
+def test_messlauf_und_zusammenfassung(crawl):
+    conn, c = crawl
+    lauf = vitals.starten(conn, c, anzahl=2, warten=True)
+    assert lauf["gesamt"] == 4
+    e = vitals.ergebnis(conn, c)
+    assert e["lauf"]["status"] == "fertig" and e["lauf"]["fertig"] == 4 and len(e["messungen"]) == 4
+    mobil, desktop = e["zusammenfassung"]["mobile"], e["zusammenfassung"]["desktop"]
+    assert mobil["bestanden"] == 1 and desktop["bestanden"] == 2
+    assert mobil["lcp_median"] == (1200 + 5000) / 2
+    langsam = next(m for m in e["messungen"] if m["url"].endswith("/a") and m["geraet"] == "mobile")
+    assert langsam["bewertung"] == {"lcp": "schlecht", "cls": "schlecht", "tbt": "schlecht", "fcp": "gut", "ttfb": "gut"}
+
+
+def test_eingaben(crawl):
+    conn, c = crawl
+    with pytest.raises(vitals.VitalsFehler, match="anzahl"):
+        vitals.starten(conn, c, anzahl=0)
+    with pytest.raises(vitals.VitalsFehler, match="Geräte"):
+        vitals.starten(conn, c, geraete=("tv",))
+    conn.execute("INSERT INTO vitals_laeufe (crawl_id, gesamt, lebenszeichen) VALUES (?, 1, datetime('now'))", (c,))
+    conn.commit()
+    with pytest.raises(vitals.VitalsFehler, match="läuft schon"):
+        vitals.starten(conn, c)
+    conn.execute("UPDATE vitals_laeufe SET lebenszeichen = datetime('now', '-10 minutes')")
+    conn.commit()
+    assert vitals.starten(conn, c, anzahl=1, warten=True)["status"] == "fertig"  # verwaister Lauf blockiert nicht
+
+
+def test_ui_und_api(crawl):
+    conn, c = crawl
+    from app.web import app
+    client = TestClient(app)
+    assert "Ladezeit messen" in client.get(f"/crawls/{c}/vitals").text
+    r = client.post(f"/crawls/{c}/vitals", data={"anzahl": "2"})
+    assert r.status_code == 200 and 'id="vitals-status"' in r.text
+    ende = time.time() + 10
+    while "HX-Refresh" not in client.get(f"/crawls/{c}/vitals-status").headers:
+        assert time.time() < ende
+        time.sleep(0.05)
+    seite = client.get(f"/crawls/{c}/vitals").text
+    assert "Je Seite" in seite and "5.0 s" in seite and "Mobil" in seite
+    api = client.get(f"/api/crawls/{c}/vitals").json()
+    assert api["zusammenfassung"]["desktop"]["score"] == 97  # LCP 1,2 s liegt genau auf p10 (0,9)
+    assert client.post(f"/api/crawls/{c}/vitals", json={"anzahl": 99}).status_code == 400
+
+
+# ---------- echte Messung ----------
+
+def test_echte_messung_auf_testseite(testseite):
+    pytest.importorskip("playwright")
+    try:
+        with messung.Messer(drosseln=False, nachlauf_ms=300) as m:
+            e = m.messen(testseite + "gut", "mobile")
+    except Exception as fehler:  # Chromium nicht installiert
+        pytest.skip(f"Chromium fehlt: {fehler}")
+    assert e.fehler is None, e.fehler
+    assert e.fcp is not None and e.ttfb is not None and e.cls == 0 and e.anfragen >= 1 and e.score is not None

@@ -1,0 +1,10 @@
+<span id="vitals-status" class="klein"
+      {% if lauf and lauf.status == 'laeuft' %}hx-get="/crawls/{{ crawl.id }}/vitals-status" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  {% if fehler %}<span class="fehler">{{ fehler }}</span>{% endif %}
+  {% if lauf %}
+    {% if lauf.status == 'laeuft' %}Messung läuft: {{ lauf.fertig }} / {{ lauf.gesamt }}
+      <span class="balken" style="display:inline-block; width:120px; vertical-align:middle"><div style="width:{{ (100 * lauf.fertig / lauf.gesamt)|round|int }}%"></div></span>
+    {% elif lauf.status == 'fehler' %}<span class="fehler">Messung abgebrochen: {{ lauf.fehler_text }}</span>
+    {% else %}Gemessen am {{ lauf.beendet_am|datum(true) }} ({{ lauf.gesamt }} Messungen){% endif %}
+  {% endif %}
+</span>

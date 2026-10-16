@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titel %}Seite · {{ projekt.name }}{% endblock %}
+{% block inhalt %}
+<div class="brotkrumen"><a href="/crawls/{{ crawl.id }}/seiten">Geprüfte Seiten</a></div><div class="kopf"><div><h1 class="url" style="font-family:var(--schrift)">{{ s.url|pfad }}</h1><div class="unter">{{ s.url }}</div></div><a class="knopf zweit" href="/projekte/{{ projekt.id }}/onpage?url={{ s.url|urlencode }}">Seite optimieren</a></div>
+<p><a href="/crawls/{{ crawl.id }}/seiten">← Gecrawlte Seiten</a></p>
+<div class="karte">
+  <h2>Issues ({{ s.issues|length }})</h2>
+  {% if s.issues %}
+  <table>
+    {% for i in s.issues %}
+    <tr><td><span class="badge {{ i.schwere }}">{{ STUFE[i.schwere][1] }}</span></td><td><strong>{{ i.name }}</strong><br><span class="klein">{{ i.beheben }}</span></td><td>{{ i.detail or '' }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="gut">Keine Probleme auf dieser Seite.</p>{% endif %}
+</div>
+<div class="karte">
+  <h2>Gemessene Daten</h2>
+  <table>
+    {% for k, v in s.items() if k not in ('issues', 'id', 'crawl_id') %}
+    <tr><th>{{ k }}</th><td class="url">{{ v if v is not none else '–' }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

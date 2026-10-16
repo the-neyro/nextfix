@@ -1,0 +1,18 @@
+{% if aktuell and aktuell.status == 'laeuft' %}
+<div hx-get="/projekte/{{ projekt.id }}/status" hx-trigger="every 2s" hx-target="#crawl-status"
+     style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+  <span><strong>Prüfe Seite {{ aktuell.seiten_anzahl + 1 }} …</strong>
+    <span class="klein">Du kannst die Seite verlassen, die Prüfung läuft weiter.</span></span>
+  <button class="zweit" hx-post="/crawls/{{ aktuell.id }}/abbrechen" hx-target="#crawl-status">Prüfung abbrechen</button>
+</div>
+{% else %}
+<form hx-post="/projekte/{{ projekt.id }}/crawls" hx-target="#crawl-status" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:flex-end">
+  {% if fehler %}<span class="fehler">{{ fehler }}</span>{% endif %}
+  {% if aktuell and aktuell.status == 'abgebrochen' %}<span class="klein">Letzte Prüfung abgebrochen nach {{ aktuell.seiten_anzahl }} Seiten.</span>{% endif %}
+  {% if aktuell and aktuell.fehler_text %}<span class="fehler">{{ aktuell.fehler_text }}</span>{% endif %}
+  {% if aktuell and aktuell.status == 'fertig' and request.url.path.endswith('/crawls') %}
+    <span class="gut">Prüfung fertig: {{ aktuell.seiten_anzahl }} Seiten. <a href="/projekte/{{ projekt.id }}">Ergebnis ansehen</a></span>
+  {% endif %}
+  <button>{{ 'Erneut prüfen' if aktuell else 'Website prüfen' }}</button>
+</form>
+{% endif %}

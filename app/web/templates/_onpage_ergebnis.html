@@ -1,0 +1,113 @@
+{% set STUFE_P = {'hoch': 'dringend', 'mittel': 'wichtig', 'niedrig': 'feinschliff'} %}
+{% macro farbe(w) %}{{ 'gut' if w >= 80 else 'warning' if w >= 50 else 'error' }}{% endmacro %}
+{% set ki_offen = r.ki.pruefungen|selectattr('ok', 'false')|list if r.ki else [] %}
+
+<div class="kennzahlen" style="margin-top:8px">
+  <div><span class="klein">Seiten-Score für „{{ r.keyword }}“</span>
+    <span class="wert {{ farbe(r.score) }}">{{ r.score }}<span class="klein"> / 100</span></span>
+    <span class="klein">{{ r.ideen|length }} Verbesserungen offen</span></div>
+  {% if r.ki %}
+  <div><span class="klein">KI-Score</span>
+    <span class="wert {{ farbe(r.ki.score) }}">{{ r.ki.score }}<span class="klein"> / 100</span></span>
+    <span class="klein">Wie gut ChatGPT &amp; Co. die Seite zitieren können</span></div>
+  {% endif %}
+  <div style="min-width:0"><span class="klein">Geprüfte Seite</span>
+    <span class="url" style="display:block; margin:6px 0 2px">{{ r.end_url|pfad }}</span>
+    <span class="klein">{{ r.seite.woerter|zahl }} Wörter · {{ r.seite.zwischen }} Zwischenüberschriften · {{ r.seite.bilder }} Bilder</span></div>
+</div>
+{% for h in r.hinweise %}<div class="band wichtig">{{ h }}</div>{% endfor %}
+
+<section class="karte">
+  <h2>Zuerst diese {{ [r.ideen|length, 3]|min if r.ideen else '' }}</h2>
+  {% if r.ideen %}
+  <ol class="aufgaben">
+    {% for i in r.ideen[:3] %}
+    <li class="aufgabe" style="grid-template-columns:28px minmax(0, 1fr)">
+      <div class="was">{{ i.titel }}</div>
+      <div class="warum">{{ i.tipp }}</div>
+      {% if i.detail or i.vorschlag %}
+      <div class="info" style="display:grid; gap:4px; margin-top:8px">
+        {% if i.detail %}<div><span class="klein">Jetzt:</span> {{ i.detail }}</div>{% endif %}
+        {% if i.vorschlag %}<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><span class="klein">Vorschlag:</span>
+          <strong>{{ i.vorschlag }}</strong>
+          <button type="button" class="leise klein-knopf" onclick="navigator.clipboard.writeText(this.dataset.text).then(() => { this.textContent = 'Kopiert' })" data-text="{{ i.vorschlag }}">Kopieren</button></div>{% endif %}
+      </div>
+      {% endif %}
+      <div class="info"><span class="marke {{ STUFE_P[i.prioritaet] }}">Wirkung {{ i.prioritaet }}</span><span class="klein">{{ i.kategorie }}</span></div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% if r.ideen|length > 3 %}
+  <details style="margin-top:4px">
+    <summary class="klein" style="padding:8px 0">Weitere {{ r.ideen|length - 3 }} Verbesserungen</summary>
+    <ol class="aufgaben" style="counter-reset: aufgabe 3">
+      {% for i in r.ideen[3:] %}
+      <li class="aufgabe" style="grid-template-columns:28px minmax(0, 1fr)">
+        <div class="was">{{ i.titel }}</div>
+        <div class="warum">{{ i.tipp }}{% if i.detail %} <span class="klein">(jetzt: {{ i.detail }})</span>{% endif %}</div>
+        <div class="info"><span class="marke {{ STUFE_P[i.prioritaet] }}">Wirkung {{ i.prioritaet }}</span><span class="klein">{{ i.kategorie }}</span></div>
+      </li>
+      {% endfor %}
+    </ol>
+  </details>
+  {% endif %}
+  {% else %}
+  <p><span class="marke gut">Alles erledigt</span> Die Seite ist für „{{ r.keyword }}“ gut aufgestellt.</p>
+  {% endif %}
+</section>
+
+{% if r.ki %}
+<details class="karte">
+  <summary><h2 style="margin:0">KI-Suche</h2><span class="klein">{{ ki_offen|length }} offen · Score {{ r.ki.score }}</span></summary>
+  <p class="klein">Zahlen, Quellen und klare Gliederung erhöhen laut GEO-Studie (Princeton 2024) die Chance, in KI-Antworten zitiert zu werden.</p>
+  <div class="bereiche">
+  {% for p in r.ki.pruefungen if p.ok is not none %}
+    <div class="bereich" style="grid-template-columns:20px minmax(0, 1fr)">
+      <span class="symbol {{ 'gut' if p.ok else 'dringend' }}" aria-label="{{ 'erfüllt' if p.ok else 'offen' }}">{{ '✓' if p.ok else '◆' }}</span>
+      <span>{{ p.titel }}{% if p.detail %} <span class="klein">({{ p.detail }})</span>{% endif %}
+        {% if not p.ok %}<br><span class="klein">{{ p.tipp }}</span>{% endif %}</span>
+    </div>
+  {% endfor %}
+  </div>
+</details>
+{% endif %}
+
+{% set fehlend = r.begriffe_suggest|rejectattr('auf_seite')|list %}
+<details class="karte">
+  <summary><h2 style="margin:0">Begriffe, die fehlen</h2><span class="klein">{{ fehlend|length }} von {{ r.begriffe_suggest|length }}</span></summary>
+  <p class="klein">Wörter, die Leute laut Google-Vorschlägen zusammen mit „{{ r.keyword }}“ suchen.</p>
+  {% for b in r.begriffe_suggest %}
+  <span class="marke {{ 'gut' if b.auf_seite else 'leise' }}" style="margin:2px">{{ b.begriff }} <span class="klein">{{ b.vorkommen }}×</span></span>
+  {% else %}<p class="klein">Keine – die Google-Vorschläge waren zu dünn.</p>{% endfor %}
+</details>
+
+<details class="karte">
+  <summary><h2 style="margin:0">Fragen für einen FAQ-Block</h2><span class="klein">{{ r.fragen|rejectattr('beantwortet')|list|length }} offen</span></summary>
+  {% for f in r.fragen %}
+  <div style="padding:4px 0"><span class="symbol {{ 'gut' if f.beantwortet else 'feinschliff' }}">{{ '✓' if f.beantwortet else '●' }}</span> {{ f.frage }}</div>
+  {% else %}<p class="klein">Keine Fragen gefunden.</p>{% endfor %}
+  <p class="klein" style="margin-top:8px">✓ = eine Zwischenüberschrift greift die Frage schon auf.</p>
+</details>
+
+<details class="karte">
+  <summary><h2 style="margin:0">Mitbewerber</h2><span class="klein">{{ r.mitbewerber|length }} geprüft</span></summary>
+  {% for m in r.mitbewerber %}
+  <div class="klein url">{{ m.url }} – {% if m.fehler %}<span class="fehler">{{ m.fehler }}</span>{% else %}{{ m.woerter|zahl }} Wörter{% endif %}</div>
+  {% else %}<p class="klein">Keine angegeben. Trag oben bis zu 3 Adressen ein, die für den Suchbegriff gut ranken.</p>{% endfor %}
+  {% if r.begriffe_mitbewerber %}<p class="klein" style="margin-top:10px">Begriffe, die Mitbewerber nutzen, du aber nicht:</p>
+  {% for b in r.begriffe_mitbewerber %}<span class="marke leise" style="margin:2px">{{ b.begriff }} <span class="klein">{{ b.mitbewerber }}</span></span>{% endfor %}{% endif %}
+</details>
+
+{% set erfuellt = r.pruefungen|selectattr('ok')|list|length %}
+<details class="karte">
+  <summary><h2 style="margin:0">Alle Prüfungen</h2><span class="klein">{{ erfuellt }} von {{ r.pruefungen|rejectattr('ok', 'none')|list|length }} erfüllt</span></summary>
+  <div class="tabelle"><table>
+    <thead><tr><th></th><th>Prüfung</th><th>Bereich</th><th>Befund</th></tr></thead>
+    <tbody>
+    {% for p in r.pruefungen %}
+    <tr><td><span class="symbol {{ 'gut' if p.ok else 'dringend' if p.ok is not none else '' }}">{{ '✓' if p.ok else '–' if p.ok is none else '◆' }}</span></td>
+      <td>{{ p.titel }}</td><td class="klein">{{ p.kategorie }}</td><td class="klein">{{ p.detail }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</details>

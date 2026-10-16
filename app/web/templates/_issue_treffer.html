@@ -1,0 +1,7 @@
+<table>
+  <tr><th>URL</th><th>Detail</th></tr>
+  {% for t in d.treffer %}
+  <tr><td class="url">{% if t.url %}<a href="/crawls/{{ crawl_id }}/seite?url={{ t.url|urlencode }}">{{ t.url }}</a>{% else %}ganze Site{% endif %}</td>
+      <td>{{ t.detail or '' }}</td></tr>
+  {% endfor %}
+</table>

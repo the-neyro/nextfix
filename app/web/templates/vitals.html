@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titel %}Ladezeit · {{ projekt.name }}{% endblock %}
+{% set NAMEN = {'mobile': 'Mobil', 'desktop': 'Desktop'} %}
+{% macro wert(m, k, einheit='ms') -%}
+  {%- set w = m[k] -%}
+  {%- if w is none %}<span class="klein">–</span>
+  {%- else %}<span class="{{ {'gut': 'gut', 'mittel': 'warning', 'schlecht': 'error'}.get(m.bewertung[k], '') }}">
+    {%- if k == 'cls' %}{{ '%.3f'|format(w) }}{% elif w >= 1000 %}{{ '%.1f'|format(w / 1000) }} s{% else %}{{ w }} {{ einheit }}{% endif %}</span>
+  {%- endif -%}
+{%- endmacro %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Ladezeit</h1><div class="unter">Wie schnell laden deine wichtigsten Seiten? Gemessen wie bei Googles Lighthouse (Core Web Vitals).</div></div></div>
+<div class="karte">
+  {% if not v.lauf %}
+  <h2>Noch nicht gemessen</h2>
+  <p>Das Tool lädt die Startseite und deine wichtigsten Seiten in einem echten Browser, einmal wie auf dem Handy und einmal am Rechner. Pro Seite dauert das etwa 30 Sekunden.</p>
+  {% endif %}
+  <form class="zeile" hx-post="/crawls/{{ crawl.id }}/vitals" hx-target="#vitals-status" hx-swap="outerHTML">
+    <label>Wie viele Seiten<input name="anzahl" type="number" min="1" max="30" value="10" style="width:6rem"></label>
+    <button>{{ 'Neu messen' if v.lauf else 'Ladezeit messen' }}</button>
+    {% with lauf=v.lauf %}{% include "_vitals_status.html" %}{% endwith %}
+  </form>
+  <details style="margin-top:12px"><summary class="klein">Wie wird gemessen?</summary>
+  <p class="klein" style="margin-top:8px">Labor-Messung mit Chromium: Startseite und die Seiten mit der höchsten internen Link-Stärke,
+    mobil (4× langsamere CPU, langsames Netz) und Desktop, je mit leerem Cache – wie Lighthouse. TBT ersetzt INP
+    (ohne echte Klicks nicht messbar). Score nach Lighthouse-Formel ohne Speed Index. Echte Nutzerdaten (CrUX) fehlen.</p></details>
+</div>
+
+{% if v.zusammenfassung %}
+<div class="raster">
+  {% for g, z in v.zusammenfassung.items() %}
+  <div class="karte">
+    <div class="klein">{{ NAMEN[g] }} · {{ z.seiten }} Seiten</div>
+    <div class="gross {% if z.score is none %}{% elif z.score >= 90 %}gut{% elif z.score >= 50 %}warning{% else %}error{% endif %}">
+      {{ '–' if z.score is none else z.score }}</div>
+    <div class="klein">Performance-Score (Median) · {{ z.bestanden }} von {{ z.seiten }} Seiten bestehen LCP, CLS und TBT</div>
+    <div class="klein">LCP {{ wert({'lcp': z.lcp_median, 'bewertung': {'lcp': none}}, 'lcp') }} ·
+      CLS {{ '–' if z.cls_median is none else '%.3f'|format(z.cls_median) }} · TBT {{ z.tbt_median }} ms (Median)</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if v.messungen %}
+<div class="karte">
+  <h2>Je Seite</h2>
+  <table>
+    <tr><th>Seite</th><th>Gerät</th><th>Score</th><th>LCP</th><th>CLS</th><th>TBT</th><th>FCP</th><th>TTFB</th><th>Gewicht</th></tr>
+    {% for m in v.messungen %}
+    <tr>
+      <td class="url klein">{{ m.url }}</td><td>{{ NAMEN[m.geraet] }}</td>
+      {% if m.fehler and m.lcp is none %}<td colspan="7" class="fehler klein">{{ m.fehler }}</td>
+      {% else %}
+      <td>{{ '–' if m.score is none else m.score }}</td>
+      <td>{{ wert(m, 'lcp') }}</td><td>{{ wert(m, 'cls') }}</td><td>{{ wert(m, 'tbt') }}</td>
+      <td>{{ wert(m, 'fcp') }}</td><td>{{ wert(m, 'ttfb') }}</td>
+      <td class="klein">{{ (m.bytes / 1024)|round|int }} KB · {{ m.anfragen }} Anfr.</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="klein">Ampel nach Google: LCP gut ≤ 2,5 s, schlecht > 4 s · CLS gut ≤ 0,1, schlecht > 0,25 · TBT gut ≤ 200 ms,
+    schlecht > 600 ms · FCP gut ≤ 1,8 s · TTFB gut ≤ 0,8 s.</p>
+</div>
+{% endif %}
+{% endblock %}

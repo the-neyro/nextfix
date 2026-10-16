@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "seo-tool": {
+      "command": "/PFAD/ZUM/PROJEKT/.venv/bin/python",
+      "args": ["-m", "app.mcp_server"],
+      "env": {
+        "PYTHONPATH": "/PFAD/ZUM/PROJEKT"
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<span id="volumen-status" class="klein"
+      {% if r.volumen_status == 'laeuft' %}hx-get="/recherchen/{{ r.id }}/volumen-status" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  {% if fehler %}<span class="fehler">{{ fehler }}</span>{% endif %}
+  {% if r.volumen_status == 'laeuft' %}Volumen wird geholt: {{ r.volumen_fertig }} / {{ r.volumen_gesamt }}
+  {% elif r.volumen_status == 'fehler' %}<span class="fehler">Volumen unvollständig: {{ r.volumen_fehler }}</span>
+  {% elif r.volumen_status == 'fertig' %}Volumen für {{ r.volumen_fertig }} Ideen geholt.{% endif %}
+</span>
