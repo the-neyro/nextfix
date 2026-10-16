@@ -3,15 +3,18 @@
 import sqlite3
 
 from app import checks
-from app.core import projekte
+from app.core import ausblenden, projekte
 from app.core.audit import AuditFehler, crawl_holen
 
 FERTIG = "status IN ('fertig', 'abgebrochen')"
+# Treffer je Check ohne Ausgeblendetes („Bewusst so“)
+TREFFER_JE_CHECK = f"""SELECT i.check_id, COUNT(*) FROM issues i LEFT JOIN seiten s ON s.id = i.seite_id
+    WHERE i.crawl_id=? AND {ausblenden.NICHT_AUSGEBLENDET} GROUP BY i.check_id"""
 
 
 def _anzahl_je_schwere(conn: sqlite3.Connection, crawl_id: int) -> dict[str, int]:
     zaehler = dict.fromkeys(checks.SCHWEREGRADE, 0)
-    for check_id, anzahl in conn.execute("SELECT check_id, COUNT(*) FROM issues WHERE crawl_id=? GROUP BY check_id", (crawl_id,)):
+    for check_id, anzahl in conn.execute(TREFFER_JE_CHECK, (crawl_id,)):
         if check_id in checks.REGISTER:
             zaehler[checks.REGISTER[check_id].schwere] += anzahl
     return zaehler
@@ -45,7 +48,7 @@ def _vorher(conn: sqlite3.Connection, crawl_id: int, vorher_id: int | None) -> t
 
 
 def _treffer(conn: sqlite3.Connection, crawl_id: int) -> dict[str, int]:
-    return dict(conn.execute("SELECT check_id, COUNT(*) FROM issues WHERE crawl_id=? GROUP BY check_id", (crawl_id,)))
+    return dict(conn.execute(TREFFER_JE_CHECK, (crawl_id,)))
 
 
 def vergleich(conn: sqlite3.Connection, crawl_id: int, vorher_id: int | None = None) -> dict:
@@ -78,8 +81,8 @@ def treffer_vergleich(conn: sqlite3.Connection, crawl_id: int, check_id: str, vo
 
     def urls(cid: int) -> set[str | None]:
         return {z[0] for z in conn.execute(
-            "SELECT s.url FROM issues i LEFT JOIN seiten s ON s.id = i.seite_id WHERE i.crawl_id=? AND i.check_id=?",
-            (cid, check_id))}
+            "SELECT s.url FROM issues i LEFT JOIN seiten s ON s.id = i.seite_id WHERE i.crawl_id=? AND i.check_id=?"
+            f" AND {ausblenden.NICHT_AUSGEBLENDET}", (cid, check_id))}
 
     alt, neu = urls(vorher["id"]), urls(jetzt["id"])
     sortiert = lambda m: sorted(m, key=lambda u: u or "")  # noqa: E731
