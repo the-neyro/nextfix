@@ -60,6 +60,7 @@ class Einstellungen(BaseModel):
     parameter_entfernen: list[str] | None = None  # URL-Parameter ignorieren ("*" = alle)
     checks_aus: list[str] | None = None           # Check-IDs nicht auswerten
     ladezeit_auto: bool | None = None             # nach jedem Crawl Ladezeit messen
+    js_rendern: bool | None = None                # JavaScript ausführen (Chromium)
 
 
 @router.get("/projekte/{projekt_id}/einstellungen")

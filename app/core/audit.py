@@ -18,7 +18,7 @@ class AuditFehler(ValueError):
 
 
 CRAWLER_FELDER = ("start_url", "seitenlimit", "crawl_delay", "user_agent", "robots_beachten", "quelle",
-                  "erlauben", "sperren", "parameter_entfernen")
+                  "erlauben", "sperren", "parameter_entfernen", "js_rendern")
 EINSTELLUNGS_FELDER = (*CRAWLER_FELDER, "checks_aus", "ladezeit_auto")
 LISTEN_FELDER = ("erlauben", "sperren", "parameter_entfernen", "checks_aus")
 
@@ -32,6 +32,7 @@ def einstellungen_holen(conn: sqlite3.Connection, projekt_id: int) -> dict:
     z["start_url"] = z["start_url"] or f"https://{p.domain}/"
     z["robots_beachten"] = bool(z["robots_beachten"])
     z["ladezeit_auto"] = bool(z["ladezeit_auto"])
+    z["js_rendern"] = bool(z["js_rendern"])
     return z
 
 
@@ -49,7 +50,7 @@ def einstellungen_setzen(conn: sqlite3.Connection, projekt_id: int, **werte) -> 
         raise AuditFehler("crawl_delay muss zwischen 0 und 30 Sekunden liegen")
     if "quelle" in werte and werte["quelle"] not in ("website", "sitemap", "beides"):
         raise AuditFehler("quelle muss 'website', 'sitemap' oder 'beides' sein")
-    for feld in ("robots_beachten", "ladezeit_auto"):
+    for feld in ("robots_beachten", "ladezeit_auto", "js_rendern"):
         if feld in werte:
             werte[feld] = int(bool(werte[feld]))
     for feld in LISTEN_FELDER:
@@ -103,8 +104,9 @@ def crawl_starten(conn: sqlite3.Connection, projekt_id: int, warten: bool = Fals
             raise AuditFehler(f"Crawl {laufend_id} läuft schon auf demselben Server ({ziel_ip}). Nacheinander "
                               "crawlen, sonst sperrt der Hoster womöglich deine IP.")
     cur = conn.execute(
-        "INSERT INTO crawls (projekt_id, start_url, quelle, checks_aus, lebenszeichen) VALUES (?, ?, ?, ?, datetime('now'))",
-        (projekt_id, e["start_url"], e["quelle"], e["checks_aus"]))
+        "INSERT INTO crawls (projekt_id, start_url, quelle, checks_aus, js_rendern, lebenszeichen)"
+        " VALUES (?, ?, ?, ?, ?, datetime('now'))",
+        (projekt_id, e["start_url"], e["quelle"], e["checks_aus"], int(e["js_rendern"])))
     conn.commit()
     crawl_id = cur.lastrowid
     einst = CrawlEinstellungen(**{k: e[k] for k in CRAWLER_FELDER})

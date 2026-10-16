@@ -35,6 +35,10 @@
       <input type="checkbox" name="ladezeit_auto" value="1" {% if e.ladezeit_auto %}checked{% endif %}>
       Nach jeder Prüfung auch die Ladezeit messen <span class="klein">(dauert 1–2 Minuten länger, zählt in den Website-Zustand)</span>
     </label>
+    <label style="margin-top:8px; display:flex; gap:8px; align-items:center">
+      <input type="checkbox" name="js_rendern" value="1" {% if e.js_rendern %}checked{% endif %}>
+      JavaScript ausführen <span class="klein">(für Websites mit React, Vue o. Ä.; deutlich langsamer, zeigt auch, was Crawler ohne JavaScript sehen)</span>
+    </label>
   </div>
 
   <details class="karte">

@@ -31,6 +31,11 @@ ROUTEN = {
 <url><loc>{basis}gut?variante=2</loc></url><url><loc>{basis}verwaist</loc></url>
 </urlset>"""),
     "/verwaist": (200, "text/html; charset=utf-8", seite("Verwaiste Seite")),
+    # Inhalt entsteht erst per JavaScript (nicht verlinkt, nur für den Render-Test)
+    "/js": (200, "text/html; charset=utf-8", """<!doctype html><html lang="de"><head><meta charset="utf-8">
+<title>JavaScript-Seite</title></head><body><h1>App</h1><div id="app"></div>
+<script>document.getElementById('app').innerHTML = '<p>' + Array.from({length: 300}, (_, i) => 'inhalt' + i).join(' ')
+  + '</p><a href="/gut">Gute Seite</a>';</script></body></html>"""),
     "/llms.txt": (200, "text/plain", "Kein Markdown-Titel\n- Link\n"),
     "/": (200, "text/html; charset=utf-8", seite(
         "Startseite der Testseite", links="""

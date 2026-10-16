@@ -35,6 +35,9 @@ NACHTRAEGE = [
     ("einstellungen", "checks_aus", "TEXT NOT NULL DEFAULT ''"),
     ("crawls", "checks_aus", "TEXT NOT NULL DEFAULT ''"),
     ("einstellungen", "ladezeit_auto", "INTEGER NOT NULL DEFAULT 0"),
+    ("einstellungen", "js_rendern", "INTEGER NOT NULL DEFAULT 0"),
+    ("crawls", "js_rendern", "INTEGER NOT NULL DEFAULT 0"),
+    ("seiten", "woerter_roh", "INTEGER"),
     ("seiten", "link_rank", "INTEGER"),
     ("seiten", "geo", "TEXT"),                          # JSON: Signale für KI-Suche (app/crawler/geo.py)
     ("seiten", "blockierend", "TEXT"),                  # JSON: render-blockierende Skripte im <head>
