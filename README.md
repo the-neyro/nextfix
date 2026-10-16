@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-HTMX-009688.svg)
-![MCP](https://img.shields.io/badge/MCP-49%20tools-6E56CF.svg)
+![MCP](https://img.shields.io/badge/MCP-50%20tools-6E56CF.svg)
 
 **An SEO tool that tells you what to fix next.** Runs locally, costs nothing, and can be fully operated by Claude
 via MCP.
@@ -27,6 +27,7 @@ is in German.</sub>
 | **Site audit** | What is broken, and what comes first? Crawler (links, sitemap or both, robots.txt, optional JavaScript rendering), 106 checks in 8 areas, site health 0–100, tasks ranked by impact (high / medium / low), “intentional” flag to hide deliberate cases, history between audits, CSV and PDF report. |
 | **Page speed** | Is the site fast enough? Core Web Vitals (LCP, CLS, TBT) measured in the lab with real Chromium, mobile and desktop, scored with the Lighthouse formula and checked against PageSpeed Insights. Poor values count towards site health; optionally measured automatically after every crawl. |
 | **Rankings** | Where am I found, where am I losing ground? Data from Google Search Console and Bing Webmaster Tools: visibility, winners and losers, “almost on page 1”, keyword cannibalization, daily import. |
+| **Authority** | How strong is my domain compared to competitors? Open PageRank value (0–10) for every project and any competitor domain, cached for 30 days, free API key. |
 | **Keyword research** | What is worth writing about? Ideas from Google Autocomplete and your own Search Console data, clustering, search intent, questions, search volume via Bing, content gap against competitors. |
 | **Page optimization** | What should I change on this page? Page score for a target keyword (20 rules) plus an AI score (12 rules for ChatGPT, Perplexity and similar), “top 3 first” with a concrete, copy-ready suggestion. |
 
@@ -79,14 +80,16 @@ data.
 .venv/bin/python -m app.mcp_server             # MCP server (stdio)
 ```
 
-For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 49 tools, e.g.
+For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 50 tools, e.g.
 `crawl_starten`, `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`, `keyword_recherche_starten`,
 `vitals_messen`, `pdf_bericht`.
 
-### Google Search Console and Bing
+### Google Search Console, Bing and Open PageRank
 
 Setup guides (German): [`docs/anleitung-gsc.md`](docs/anleitung-gsc.md),
-[`docs/anleitung-bing.md`](docs/anleitung-bing.md). Credentials live outside the project in `~/.config/seo-tool/`
+[`docs/anleitung-bing.md`](docs/anleitung-bing.md). For domain authority, get a free key at
+[openpagerank.keywordseverywhere.com](https://openpagerank.keywordseverywhere.com/dashboard) and save it as
+`~/.config/seo-tool/openpagerank-api-key.txt`. Credentials live outside the project in `~/.config/seo-tool/`
 and never end up in Git.
 
 ## Development
@@ -115,7 +118,8 @@ in German.
 
 ## Limitations
 
-- No backlink data and no competitor rankings. Both would require paid databases.
+- No individual backlinks and no competitor rankings; both would require paid databases. Domain authority (one value
+  per domain) comes from Open PageRank.
 - JavaScript rendering is optional and slower (Chromium per page); without it, content rendered only by JS is not seen.
 - Page speed is a lab measurement, not field data from real users (CrUX).
 
