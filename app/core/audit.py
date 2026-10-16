@@ -185,8 +185,8 @@ def crawl_abbrechen(conn: sqlite3.Connection, crawl_id: int) -> dict:
 
 def crawl_holen(conn: sqlite3.Connection, crawl_id: int) -> dict:
     z = conn.execute(
-        "SELECT id, projekt_id, status, gestartet_am, beendet_am, start_url, seiten_anzahl, health, fehler_text"
-        " FROM crawls WHERE id=?", (crawl_id,)).fetchone()
+        "SELECT id, projekt_id, status, gestartet_am, beendet_am, start_url, seiten_anzahl, health, fehler_text,"
+        " js_rendern FROM crawls WHERE id=?", (crawl_id,)).fetchone()
     if z is None:
         raise AuditFehler(f"Crawl {crawl_id} nicht gefunden")
     return dict(z)
