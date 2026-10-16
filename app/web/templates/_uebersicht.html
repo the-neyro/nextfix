@@ -2,6 +2,15 @@
 {% set h = ue.health %}
 {% set gezeigt = 5 %}
 
+{% if ue.js_hinweis %}
+<div class="hinweis-kasten" role="note">
+  <strong>Diese Website baut sich per JavaScript auf.</strong>
+  {{ ue.js_hinweis }} {{ 'Seite hat' if ue.js_hinweis == 1 else 'Seiten haben' }} einen leeren App-Container und kaum Text im HTML.
+  Die Prüfung lief ohne JavaScript, Inhalte und Links fehlen daher womöglich.
+  <a href="/projekte/{{ c.projekt_id }}/einstellungen">„JavaScript ausführen“ einschalten</a> und erneut prüfen.
+</div>
+{% endif %}
+
 <section class="messung" aria-label="Website-Zustand">
   <div>
     <div class="titel">Website-Zustand</div>

@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS seiten (
     geo              TEXT,             -- JSON: Signale für KI-Suche (app/crawler/geo.py)
     blockierend      TEXT,             -- JSON: externe Skripte im <head> ohne async/defer
     woerter_roh      INTEGER,          -- Wörter ohne JavaScript (nur wenn gerendert wurde, sonst NULL)
+    js_app           TEXT,             -- leerer App-Container (#root, #app …): Seite baut sich per JavaScript auf
     UNIQUE (crawl_id, url)
 );
 

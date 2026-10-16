@@ -232,6 +232,7 @@ class Crawler:
             meta_robots=inhalt.meta_robots,
             woerter=inhalt.woerter,
             woerter_roh=woerter_roh,
+            js_app=inhalt.js_app,
             text_anteil=inhalt.text_anteil,
             hat_viewport=int(inhalt.hat_viewport),
             viewport_ok=int(inhalt.viewport_ok),

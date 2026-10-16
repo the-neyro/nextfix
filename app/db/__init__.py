@@ -38,6 +38,7 @@ NACHTRAEGE = [
     ("einstellungen", "js_rendern", "INTEGER NOT NULL DEFAULT 0"),
     ("crawls", "js_rendern", "INTEGER NOT NULL DEFAULT 0"),
     ("seiten", "woerter_roh", "INTEGER"),
+    ("seiten", "js_app", "TEXT"),
     ("seiten", "link_rank", "INTEGER"),
     ("seiten", "geo", "TEXT"),                          # JSON: Signale für KI-Suche (app/crawler/geo.py)
     ("seiten", "blockierend", "TEXT"),                  # JSON: render-blockierende Skripte im <head>

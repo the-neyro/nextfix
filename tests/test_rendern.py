@@ -89,3 +89,36 @@ def test_echtes_chromium_fuehrt_javascript_aus(testseite):
     s = _seite(conn, c, testseite + "js")
     assert s["woerter_roh"] < 10 and s["woerter"] >= 300
     assert audit.issue_details(conn, c, "inhalt_nur_per_js")["treffer"]
+
+
+# ---------- Hinweis: Seite sieht nach JavaScript-App aus ----------
+
+def test_parser_erkennt_leeren_app_container():
+    from app.crawler.parser import zerlegen
+    skript = "<script src='/app.js'></script>"
+    assert zerlegen(f"<html><body><div id='root'></div>{skript}</body></html>", "https://ex.de/").js_app == "#root"
+    assert zerlegen(f"<html><body><app-root></app-root>{skript}</body></html>", "https://ex.de/").js_app == "app-root"
+    voll = " ".join(["Text"] * 50)   # Server-Rendering (z. B. Next.js): Container schon gefüllt
+    assert zerlegen(f"<html><body><div id='__next'><p>{voll}</p></div>{skript}</body></html>", "https://ex.de/").js_app is None
+    assert zerlegen("<html><body><div id='app'></div></body></html>", "https://ex.de/").js_app is None   # ohne Skript
+
+
+def test_hinweis_ohne_js_rendern(testseite):
+    from fastapi.testclient import TestClient
+    from app.web import app
+    conn, c = _crawl(testseite + "js", seitenlimit=1)
+    treffer = audit.issue_details(conn, c, "js_app_ohne_rendern")["treffer"]
+    assert [t["url"] for t in treffer] == [testseite + "js"] and "#app" in treffer[0]["detail"]
+    assert audit.uebersicht(conn, c)["js_hinweis"] == 1
+    seite = TestClient(app).get(f"/projekte/{audit.crawl_holen(conn, c)['projekt_id']}").text
+    assert "Diese Website baut sich per JavaScript auf" in seite and "JavaScript ausführen" in seite
+
+
+def test_kein_hinweis_mit_js_rendern(testseite, monkeypatch):
+    class Gefuellt(FakeRenderer):
+        def rendern(self, url):
+            return f"<html><body><div id='app'><p>{ZUSATZ}</p></div><script></script></body></html>"
+    monkeypatch.setattr(crawler, "RENDERER_FABRIK", Gefuellt)
+    conn, c = _crawl(testseite + "js", seitenlimit=1, js_rendern=True)
+    assert not audit.issue_details(conn, c, "js_app_ohne_rendern")["treffer"]
+    assert audit.uebersicht(conn, c)["js_hinweis"] == 0

@@ -49,6 +49,7 @@ class SeitenInhalt:
     kaputte_links: list[str] = field(default_factory=list)  # hrefs mit ungültiger Syntax
     geo: dict = field(default_factory=dict)                 # Signale für KI-Suche, siehe geo.py
     blockierend: list[str] = field(default_factory=list)    # externe Skripte im <head> ohne async/defer
+    js_app: str | None = None   # leerer App-Container (z. B. "#root"): Inhalt entsteht erst per JavaScript
 
 
 def _text(node) -> str:
@@ -143,6 +144,22 @@ def _links(baum, inhalt: SeitenInhalt, basis_url: str) -> None:
         _anhaengen(inhalt, basis_url, s.attributes.get("src"), "script")
 
 
+# Container, in die React, Vue, Next.js, Nuxt, Gatsby, Angular, Quasar ihre Oberfläche schreiben
+APP_CONTAINER = ("#root", "#app", "#__next", "#__nuxt", "#___gatsby", "#q-app", "app-root")
+APP_LEER_WOERTER = 20
+
+
+def _js_app(baum) -> str | None:
+    """Selektor des ersten App-Containers ohne nennenswerten Text, falls die Seite Skripte hat."""
+    if not baum.css_first("script"):
+        return None
+    for selektor in APP_CONTAINER:
+        node = baum.css_first(selektor)
+        if node is not None and len(_text(node).split()) < APP_LEER_WOERTER:
+            return selektor
+    return None
+
+
 def _technik(baum, inhalt: SeitenInhalt) -> None:
     inhalt.hat_frames = bool(baum.css_first("frameset, frame"))
     inhalt.hat_passwort = bool(baum.css_first('input[type="password" i]'))
@@ -151,6 +168,7 @@ def _technik(baum, inhalt: SeitenInhalt) -> None:
         if PLUGIN_MUSTER.search(merkmale):
             inhalt.plugins.append(node.tag)
     inhalt.semantik = [t for t in SEMANTIK_TAGS if baum.css_first(t)]
+    inhalt.js_app = _js_app(baum)
     # Render-blockierend: Browser hält den Aufbau an, bis das Skript geladen und ausgeführt ist
     for s in baum.css("head script[src]"):
         a = {k.lower(): (v or "").lower() for k, v in s.attributes.items()}
