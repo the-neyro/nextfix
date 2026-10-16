@@ -1,5 +1,6 @@
 """Core Web Vitals: Formeln, Service mit Fake-Messer, eine echte Chromium-Messung auf der Testseite."""
 
+import math
 import time
 
 import pytest
@@ -124,3 +125,69 @@ def test_echte_messung_auf_testseite(testseite):
         pytest.skip(f"Chromium fehlt: {fehler}")
     assert e.fehler is None, e.fehler
     assert e.fcp is not None and e.ttfb is not None and e.cls == 0 and e.anfragen >= 1 and e.score is not None
+
+
+# ---------- Ladezeit im Website-Zustand ----------
+
+def test_messung_wird_zu_problemen(crawl):
+    from app.core import audit, aufgaben, score
+    conn, c = crawl
+    audit.neu_auswerten(conn, c)
+    vorher = audit._health(conn, c, "performance")
+    vitals.starten(conn, c, anzahl=2, warten=True)   # misst / (schnell) und /a (mobil langsam)
+    treffer = {cid: audit.issue_details(conn, c, cid)["treffer"] for cid in ("ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt")}
+    assert {cid: [t["url"] for t in t_] for cid, t_ in treffer.items()} == {
+        "ladezeit_lcp": ["https://ex.de/a"], "ladezeit_cls": ["https://ex.de/a"], "ladezeit_tbt": ["https://ex.de/a"]}
+    assert treffer["ladezeit_lcp"][0]["detail"] == "LCP 5,0 s (mobil)"
+    # Anteil zählt gegen die 2 gemessenen Seiten, nicht gegen alle 4 HTML-Seiten
+    assert audit._bezug(conn, c)["ladezeit_lcp"] == 2
+    abzug = lambda h: -score.K * math.log(h / 100)  # noqa: E731
+    neu = abzug(audit._health(conn, c, "performance")) - abzug(vorher)
+    assert neu == pytest.approx(3 * score.strafe("warning", 1, False, 2), abs=0.01)
+    assert audit.crawl_holen(conn, c)["health"] is not None   # gespeicherter Zustand neu berechnet
+    ids = {a["id"] for a in aufgaben.liste(conn, c)["aufgaben"]}
+    assert {"ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"} <= ids
+
+
+def test_ohne_messung_keine_ladezeit_probleme(crawl):
+    from app.core import audit
+    conn, c = crawl
+    audit.neu_auswerten(conn, c)
+    assert not {"ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"} & set(audit._treffer_pro_check(conn, c))
+    assert audit._bezug(conn, c) == {}
+
+
+def test_automatisch_nach_dem_crawl(testseite, monkeypatch):
+    from app.core import audit
+    monkeypatch.setattr(vitals, "MESSER_FABRIK", FakeMesser)
+    conn = verbinden()
+    p = projekte.anlegen(conn, "127.0.0.1").id
+    assert audit.einstellungen_setzen(conn, p, start_url=testseite, crawl_delay=0, ladezeit_auto=True)["ladezeit_auto"]
+    c = audit.crawl_starten(conn, p, warten=True)["id"]
+    e = vitals.ergebnis(conn, c)
+    assert e["lauf"]["status"] == "fertig" and e["zusammenfassung"]["mobile"]["seiten"] >= 1
+    assert "ladezeit_lcp" in audit._treffer_pro_check(conn, c)   # FakeMesser: Unterseiten mobil langsam
+
+
+def test_einstellung_in_der_oberflaeche():
+    from app.core import audit
+    from app.web import app
+    conn = verbinden()
+    p = projekte.anlegen(conn, "ex.de").id
+    client = TestClient(app)
+    assert 'name="ladezeit_auto"' in client.get(f"/projekte/{p}/einstellungen").text
+    daten = {"start_url": "https://ex.de/", "seitenlimit": "50", "crawl_delay": "0.5", "user_agent": "x",
+             "robots_beachten": "1", "ladezeit_auto": "1"}
+    assert "Gespeichert" in client.post(f"/projekte/{p}/einstellungen", data=daten).text
+    assert audit.einstellungen_holen(conn, p)["ladezeit_auto"] is True
+    client.post(f"/projekte/{p}/einstellungen", data={k: v for k, v in daten.items() if k != "ladezeit_auto"})
+    assert audit.einstellungen_holen(conn, p)["ladezeit_auto"] is False
+
+
+def test_pdf_zeigt_ladezeit(crawl):
+    from app import berichte
+    conn, c = crawl
+    assert "nicht gemessen" in berichte.site_audit_html(conn, c)
+    vitals.starten(conn, c, anzahl=2, warten=True)
+    html = berichte.site_audit_html(conn, c)
+    assert "Core Web Vitals bestanden" in html and "1 von 2 Seiten" in html and "sowie die gemessene Ladezeit" in html

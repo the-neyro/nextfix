@@ -59,6 +59,7 @@ class Einstellungen(BaseModel):
     sperren: list[str] | None = None              # Pfad-Masken, nicht crawlen
     parameter_entfernen: list[str] | None = None  # URL-Parameter ignorieren ("*" = alle)
     checks_aus: list[str] | None = None           # Check-IDs nicht auswerten
+    ladezeit_auto: bool | None = None             # nach jedem Crawl Ladezeit messen
 
 
 @router.get("/projekte/{projekt_id}/einstellungen")

@@ -131,7 +131,7 @@
   </div>
   <div class="fuss leise">
     Erstellt am {{ datum }}. Grundlage: Prüfung vom {{ abgeschlossen }}, Start bei {{ c.start_url }}.
-    Der Website-Zustand bewertet Technik und Inhalt der geprüften Seiten (0–100, ab 80 gut). Platzierungen bei Google und Links von anderen Websites gehören nicht dazu.
+    Der Website-Zustand bewertet Technik und Inhalt der geprüften Seiten{% if ladezeit %} sowie die gemessene Ladezeit{% endif %} (0–100, ab 80 gut). Platzierungen bei Google und Links von anderen Websites gehören nicht dazu.
   </div>
 </section>
 
@@ -181,6 +181,24 @@
       {% else %}<p>Keine Veränderungen seit der vorherigen Prüfung.</p>{% endif %}
       {% endif %}
     </div>
+  </div>
+
+  <div class="zusammen" style="margin-top:8mm">
+    <h3>Ladezeit</h3>
+    {% if ladezeit %}
+    <table>
+      <tr><th>Gerät</th><th class="r">Wert</th><th class="r">Hauptinhalt (LCP)</th><th class="r">Core Web Vitals bestanden</th></tr>
+      {% for g, name in [('mobile', 'Handy'), ('desktop', 'Computer')] if ladezeit[g] %}{% set l = ladezeit[g] %}
+      <tr><td>{{ name }}</td>
+          <td class="r zahl {{ klasse(l.score) }}">{{ '–' if l.score is none else l.score }}</td>
+          <td class="r zahl">{{ '–' if l.lcp_median is none else zahl(l.lcp_median / 1000, 1) ~ ' s' }}</td>
+          <td class="r zahl">{{ l.bestanden }} von {{ l.seiten }} Seiten</td></tr>
+      {% endfor %}
+    </table>
+    <p class="leise" style="margin-top:2mm">Labor-Messung der Startseite und der wichtigsten Seiten (mittlerer Wert), Handy mit gedrosseltem Netz. Langsame Seiten stehen unter den Maßnahmen.</p>
+    {% else %}
+    <p class="leise">Für diese Prüfung wurde die Ladezeit nicht gemessen.</p>
+    {% endif %}
   </div>
 </section>
 

@@ -3,7 +3,7 @@
 import sqlite3
 
 # Module importieren, damit sich alle Checks im REGISTER eintragen
-from app.checks import crawlbarkeit, duplikate, extern, inhalt, international, ki, links, ressourcen, site, sitemap, technik  # noqa: F401
+from app.checks import crawlbarkeit, duplikate, extern, inhalt, international, ki, ladezeit, links, ressourcen, site, sitemap, technik  # noqa: F401
 from app.checks.katalog import KATEGORIEN, REGISTER, SCHWEREGRADE, Check
 
 

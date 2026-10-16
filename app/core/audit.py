@@ -19,7 +19,7 @@ class AuditFehler(ValueError):
 
 CRAWLER_FELDER = ("start_url", "seitenlimit", "crawl_delay", "user_agent", "robots_beachten", "quelle",
                   "erlauben", "sperren", "parameter_entfernen")
-EINSTELLUNGS_FELDER = (*CRAWLER_FELDER, "checks_aus")
+EINSTELLUNGS_FELDER = (*CRAWLER_FELDER, "checks_aus", "ladezeit_auto")
 LISTEN_FELDER = ("erlauben", "sperren", "parameter_entfernen", "checks_aus")
 
 # ---------- Einstellungen ----------
@@ -31,6 +31,7 @@ def einstellungen_holen(conn: sqlite3.Connection, projekt_id: int) -> dict:
     z = dict(conn.execute("SELECT * FROM einstellungen WHERE projekt_id=?", (projekt_id,)).fetchone())
     z["start_url"] = z["start_url"] or f"https://{p.domain}/"
     z["robots_beachten"] = bool(z["robots_beachten"])
+    z["ladezeit_auto"] = bool(z["ladezeit_auto"])
     return z
 
 
@@ -48,8 +49,9 @@ def einstellungen_setzen(conn: sqlite3.Connection, projekt_id: int, **werte) -> 
         raise AuditFehler("crawl_delay muss zwischen 0 und 30 Sekunden liegen")
     if "quelle" in werte and werte["quelle"] not in ("website", "sitemap", "beides"):
         raise AuditFehler("quelle muss 'website', 'sitemap' oder 'beides' sein")
-    if "robots_beachten" in werte:
-        werte["robots_beachten"] = int(bool(werte["robots_beachten"]))
+    for feld in ("robots_beachten", "ladezeit_auto"):
+        if feld in werte:
+            werte[feld] = int(bool(werte[feld]))
     for feld in LISTEN_FELDER:
         if feld in werte:  # Listen einheitlich speichern: ein Eintrag pro Zeile
             eintraege = werte[feld] if isinstance(werte[feld], list) else liste(werte[feld])
@@ -107,15 +109,17 @@ def crawl_starten(conn: sqlite3.Connection, projekt_id: int, warten: bool = Fals
     crawl_id = cur.lastrowid
     einst = CrawlEinstellungen(**{k: e[k] for k in CRAWLER_FELDER})
 
+    args = (crawl_id, einst, e["ladezeit_auto"])
     if warten:
-        _crawl_ausfuehren(crawl_id, einst)
+        _crawl_ausfuehren(*args)
     else:
-        threading.Thread(target=_crawl_ausfuehren, args=(crawl_id, einst), daemon=True).start()
+        threading.Thread(target=_crawl_ausfuehren, args=args, daemon=True).start()
     return crawl_holen(conn, crawl_id)
 
 
-def _crawl_ausfuehren(crawl_id: int, einst: CrawlEinstellungen) -> None:
-    """Läuft im eigenen Thread mit eigener DB-Verbindung. Hinterlässt den Crawl nie in 'laeuft'."""
+def _crawl_ausfuehren(crawl_id: int, einst: CrawlEinstellungen, ladezeit: bool = False) -> None:
+    """Läuft im eigenen Thread mit eigener DB-Verbindung. Hinterlässt den Crawl nie in 'laeuft'.
+    ladezeit: danach im selben Thread die Ladezeit messen (nur bei vollständigem Crawl)."""
     try:
         with closing(verbinden()) as conn:
             try:
@@ -125,12 +129,23 @@ def _crawl_ausfuehren(crawl_id: int, einst: CrawlEinstellungen) -> None:
                 return
             abgebrochen = conn.execute("SELECT abbrechen FROM crawls WHERE id=?", (crawl_id,)).fetchone()[0]
             _abschliessen(conn, crawl_id, "abgebrochen" if abgebrochen else "fertig")
+            if ladezeit and not abgebrochen:
+                _ladezeit_messen(conn, crawl_id)
     except Exception as fehler:  # letzte Rettung, z. B. DB beim Öffnen gesperrt
         with closing(verbinden()) as conn:
             conn.execute(
                 "UPDATE crawls SET status='fehler', fehler_text=?, beendet_am=datetime('now')"
                 " WHERE id=? AND status='laeuft'", (f"{type(fehler).__name__}: {fehler}"[:500], crawl_id))
             conn.commit()
+
+
+def _ladezeit_messen(conn: sqlite3.Connection, crawl_id: int) -> None:
+    """Automatische Messung nach dem Crawl. Fehler (z. B. schon eine Messung aktiv) lassen den Crawl unberührt."""
+    from app.core import vitals   # zirkulären Import vermeiden
+    try:
+        vitals.starten(conn, crawl_id, warten=True)
+    except vitals.VitalsFehler:
+        pass
 
 
 def _abschliessen(conn: sqlite3.Connection, crawl_id: int, status: str, fehler_text: str | None = None) -> None:
@@ -212,6 +227,19 @@ def _ausgeschlossen(conn: sqlite3.Connection, crawl_id: int) -> set[str]:
     return set(liste(z[0])) if z else set()
 
 
+def _bezug(conn: sqlite3.Connection, crawl_id: int) -> dict[str, int]:
+    """Checks mit eigener Bezugsgröße: Ladezeit zählt gegen die gemessene Stichprobe, nicht gegen alle Seiten."""
+    n = checks.ladezeit.gemessen(conn, crawl_id)
+    return dict.fromkeys(checks.ladezeit.STICHPROBE, n) if n else {}
+
+
+def neu_auswerten(conn: sqlite3.Connection, crawl_id: int) -> None:
+    """Checks erneut anwenden und Zustand neu speichern, z. B. wenn nach dem Crawl die Ladezeit gemessen wurde."""
+    checks.ausfuehren(conn, crawl_id, _ausgeschlossen(conn, crawl_id))
+    conn.execute("UPDATE crawls SET health=? WHERE id=?", (_health(conn, crawl_id), crawl_id))
+    conn.commit()
+
+
 def _health(conn: sqlite3.Connection, crawl_id: int, kategorie: str | set[str] | None = None) -> float | None:
     """Health des ganzen Crawls oder nur eines Bereichs (bzw. mehrerer Bereiche).
 
@@ -222,9 +250,10 @@ def _health(conn: sqlite3.Connection, crawl_id: int, kategorie: str | set[str] |
     feinschliff = kategorie == {"ki"}
     treffer = _treffer_pro_check(conn, crawl_id)
     aus = _ausgeschlossen(conn, crawl_id)
+    bezug = _bezug(conn, crawl_id)
     eingaben = [
         ("warning" if feinschliff and c.schwere == "notice" else c.schwere,
-         treffer.get(c.id, (0, 0, False))[1], treffer.get(c.id, (0, 0, False))[2], c.id)
+         treffer.get(c.id, (0, 0, False))[1], treffer.get(c.id, (0, 0, False))[2], c.id, bezug.get(c.id))
         for c in checks.REGISTER.values()
         if (kategorie is None or c.kategorie in kategorie) and c.id not in aus
     ]

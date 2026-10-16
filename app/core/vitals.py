@@ -2,7 +2,8 @@
 
 Auswahl wie Semrush (Stichprobe statt alle Seiten): Startseite, dann HTML-Seiten mit der höchsten
 internen Link-Stärke. Ergebnis je Seite und Gerät plus Zusammenfassung (Anteil „gut“, Medianwerte).
-Fließt (noch) nicht in den Health-Score ein, weil die Messung nach dem Crawl läuft.
+Nach jeder Messung wird der Crawl neu ausgewertet: schlechte Werte (mobil) werden zu Problemen im Bereich
+Performance und zählen in den Website-Zustand (app/checks/ladezeit.py).
 """
 
 import sqlite3
@@ -93,6 +94,8 @@ def _ausfuehren(lauf_id: int, urls: list[str], geraete: tuple[str, ...]) -> None
         conn.execute("UPDATE vitals_laeufe SET status = ?, fehler_text = ?, beendet_am = datetime('now') WHERE id = ?",
                      ("fehler" if fehler else "fertig", fehler, lauf_id))
         conn.commit()
+        if not fehler:
+            audit.neu_auswerten(conn, lauf_holen(conn, lauf_id)["crawl_id"])
 
 
 def lauf_holen(conn: sqlite3.Connection, lauf_id: int) -> dict:

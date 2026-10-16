@@ -63,7 +63,7 @@ def projekt_loeschen(projekt_id: int) -> str:
 @server.tool()
 def einstellungen_holen(projekt_id: int) -> dict:
     """Crawl-Einstellungen eines Projekts: start_url, seitenlimit, crawl_delay, user_agent, robots_beachten, quelle,
-    erlauben, sperren, parameter_entfernen, checks_aus (Listen: ein Eintrag pro Zeile)."""
+    erlauben, sperren, parameter_entfernen, checks_aus (Listen: ein Eintrag pro Zeile), ladezeit_auto."""
     with _db() as conn:
         return audit.einstellungen_holen(conn, projekt_id)
 
@@ -73,18 +73,21 @@ def einstellungen_setzen(projekt_id: int, start_url: str | None = None, seitenli
                          crawl_delay: float | None = None, user_agent: str | None = None,
                          robots_beachten: bool | None = None, quelle: str | None = None,
                          erlauben: list[str] | None = None, sperren: list[str] | None = None,
-                         parameter_entfernen: list[str] | None = None, checks_aus: list[str] | None = None) -> dict:
+                         parameter_entfernen: list[str] | None = None, checks_aus: list[str] | None = None,
+                         ladezeit_auto: bool | None = None) -> dict:
     """Crawl-Einstellungen ändern. Nur übergebene Werte werden geändert; eine leere Liste leert das Feld.
     quelle: 'website' (Links ab Start-URL folgen), 'sitemap' (nur URLs aus den Sitemaps) oder 'beides'
     (Links folgen, danach verwaiste Sitemap-URLs mit prüfen).
     erlauben/sperren: Pfad-Masken wie in robots.txt, z. B. "/blog/", "/shop/*/details", "sort=".
     parameter_entfernen: URL-Parameter, die ignoriert werden, z. B. "utm_source" oder "*" für alle.
-    checks_aus: Check-IDs (siehe checks_katalog), die nicht ausgewertet werden und nicht in den Health Score zählen."""
+    checks_aus: Check-IDs (siehe checks_katalog), die nicht ausgewertet werden und nicht in den Health Score zählen.
+    ladezeit_auto: nach jedem vollständigen Crawl automatisch die Ladezeit messen (ca. 1–2 Min., zählt in den Zustand)."""
     with _db() as conn:
         return audit.einstellungen_setzen(
             conn, projekt_id, start_url=start_url, seitenlimit=seitenlimit, crawl_delay=crawl_delay,
             user_agent=user_agent, robots_beachten=robots_beachten, quelle=quelle, erlauben=erlauben,
-            sperren=sperren, parameter_entfernen=parameter_entfernen, checks_aus=checks_aus)
+            sperren=sperren, parameter_entfernen=parameter_entfernen, checks_aus=checks_aus,
+            ladezeit_auto=ladezeit_auto)
 
 
 # ---------- Crawls ----------
