@@ -10,7 +10,7 @@
     {% elif a.verlauf == 'schlimmer' %}<span class="klein error">▲ mehr: {{ a.vorher }} → {{ a.seiten }}</span>{% endif %}
   </div>
   <div class="aktion">
-    <span class="gewinn" title="So viele Punkte gewinnt der Website-Zustand, wenn das behoben ist">+{{ a.gewinn|zahl(1) }} Punkte</span>
+    <span class="wirkung {{ a.wirkung }}">Wirkung {{ a.wirkung }}</span>
     <a class="knopf zweit klein-knopf" style="margin-top:6px" href="/crawls/{{ c.id }}/issues/{{ a.id }}/seite">Ansehen</a>
   </div>
 </li>

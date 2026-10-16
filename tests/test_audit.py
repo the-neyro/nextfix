@@ -269,3 +269,18 @@ def test_score_schwache_website_nicht_schoengerechnet():
     assert score.berechnen([("warning", 100, False, "wenig_text")], 182) < score.berechnen([("warning", 100, False)], 182)
     # Saubere Website mit Kleinigkeiten bleibt im grünen Bereich
     assert score.berechnen(nie + [("warning", 20, False), ("warning", 9, False)], 144) >= 90
+
+
+def test_wirkung_als_stufe_statt_punkte(crawl):
+    from app.core import aufgaben
+    # Stufen nach Abzug: Fehler mindestens „mittel“, Warnung erst auf vielen Seiten
+    assert aufgaben.wirkung(score.strafe("error", 1, False, 200)) == "mittel"
+    assert aufgaben.wirkung(score.strafe("error", 50, False, 200)) == "hoch"
+    assert aufgaben.wirkung(score.strafe("warning", 1, False, 200)) == "gering"
+    assert aufgaben.wirkung(score.strafe("warning", 80, False, 200)) == "mittel"
+    assert aufgaben.wirkung(score.strafe("warning", 0, True, 200)) == "hoch"
+    conn, crawl_id = crawl
+    liste = aufgaben.liste(conn, crawl_id)["aufgaben"]
+    assert all(a["wirkung"] in ("hoch", "mittel", "gering") for a in liste)
+    rang = {"hoch": 0, "mittel": 1, "gering": 2}
+    assert [rang[a["wirkung"]] for a in liste] == sorted(rang[a["wirkung"]] for a in liste)   # passt zur Reihenfolge

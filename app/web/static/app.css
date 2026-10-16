@@ -227,7 +227,10 @@ details.karte[open] > summary { margin-bottom: 16px; }
 .aufgabe .warum { grid-column: 2; color: var(--gedaempft); max-width: 72ch; }
 .aufgabe .info { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
 .aufgabe .aktion { grid-column: 3; grid-row: 1 / span 3; align-self: center; text-align: right; }
-.aufgabe .gewinn { display: block; font-weight: 600; color: var(--gut); white-space: nowrap; }
+.aufgabe .wirkung { display: block; }
+/* Wirkung als Stufe statt Punktzahl (siehe app/core/aufgaben.py) */
+.wirkung { font-weight: 600; white-space: nowrap; }
+.wirkung.hoch { color: var(--gut); } .wirkung.mittel { color: var(--text); } .wirkung.gering { color: var(--gedaempft); font-weight: 500; }
 .aufgabe.erledigt .was { text-decoration: line-through; color: var(--gedaempft); }
 @media (max-width: 640px) { .aufgabe { grid-template-columns: 22px minmax(0, 1fr); } .aufgabe .aktion { grid-column: 2; grid-row: auto; text-align: left; } }
 

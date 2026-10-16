@@ -38,7 +38,8 @@ Typische Abläufe (jede Ergebnisseite verlinkt den nächsten Schritt):
 
 ## 3. „Was jetzt tun“ statt Error/Warning/Notice
 - **Aufgabe = ein fehlgeschlagener Check**, formuliert als Handlung: „Kürze 22 Titles auf ≤ 70 Zeichen“, nicht „Title zu lang (> 70 Zeichen)“.
-- **Priorität = gewinnbare Health-Punkte** (gleiche Formel wie `app/core/score.py`: Gewicht × (0,5 + 0,5 × Anteil)). So passt die Liste immer zur Health-Zahl und der Nutzer sieht „+3 Punkte“.
+- **Priorität = gewinnbare Health-Punkte** (gleiche Formel wie `app/core/score.py`). So passt die Reihenfolge immer zur Health-Zahl.
+  **Angezeigt wird nur die Wirkung hoch / mittel / gering** (Stand 16.10.2026), keine Punktzahl: „+4,2 Punkte“ täuschte eine Genauigkeit vor, die unsere eigene Formel nicht hat, und klang nach Ranking-Gewinn.
   Feinsortierung: × 1,5 wenn Startseite oder Seiten mit hoher Link-Stärke betroffen; bei Gleichstand zuerst geringer Aufwand.
 - **Aufwand** pro Check im Katalog ergänzen: `leicht` (Text ändern), `mittel` (Template/Plugin), `technisch` (Server/Entwickler). Als Etikett zeigen.
 - **Ursache bündeln:** gleiche Abweichung auf vielen Seiten mit gleichem Pfadmuster → „vermutlich 1 Template: /glossar/*“.
@@ -60,7 +61,7 @@ Typische Abläufe (jede Ergebnisseite verlinkt den nächsten Schritt):
 - **Fehler** (IP-Sperre, Timeout): Klartext + was tun („Server blockt gerade, in 30 Min. erneut, Pause erhöhen“).
 
 ## 5. Was Semrush schlecht macht – und wir besser
-1. **Zahlen ohne Reihenfolge** (Errors/Warnings/Notices) → priorisierte Aufgaben mit Gewinn in Punkten.
+1. **Zahlen ohne Reihenfolge** (Errors/Warnings/Notices) → priorisierte Aufgaben mit Wirkung (hoch / mittel / gering).
 2. **Jargon ohne Erklärung** (Canonical, hreflang, Striking Distance, KD %) → Klartext-Titel, Fachbegriff klein dahinter, „?“-Tooltip mit 1 Satz + Beispiel.
 3. **Widersprüchliche Kennzahlen** (Health hoch, trotzdem „Tausende Issues“) → nur gewichtete Probleme zählen; Notices heißen „Hinweise“.
 4. **Issue-Detail = nackte URL-Liste** → pro Seite der konkrete Befund (aktueller Title, Länge) und ein Vorschlag; Gruppierung nach Pfad.
@@ -97,7 +98,7 @@ Typische Abläufe (jede Ergebnisseite verlinkt den nächsten Schritt):
 ```
 Technik-Check > Aufgaben > Titles kürzen
 +----------------------------------------------------------------------------+
-| Titles kürzen (≤ 70 Zeichen)        Warnung · leicht · +0,6 Punkte         |
+| Titles kürzen (≤ 70 Zeichen)        Warnung · leicht · Wirkung gering      |
 | Warum: Google schneidet lange Titles ab, der Klick-Grund geht verloren.    |
 | So geht's: 1. Wichtigstes Wort nach vorn  2. Firmenname kürzen/weglassen    |
 |            3. Im CMS: Feld "SEO-Titel"                                      |
