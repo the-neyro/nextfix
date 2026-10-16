@@ -71,3 +71,37 @@ def test_ungueltige_eingaben(crawl):
         ausblenden.ausblenden(conn, projekt_id, check_id="gibt_es_nicht")
     with pytest.raises(ausblenden.AusblendenFehler):
         ausblenden.einblenden(conn, projekt_id, 999)
+
+
+def test_csv_ohne_ausgeblendetes(crawl, testseite):
+    from app.core import export
+    conn, projekt_id, crawl_id = crawl
+    ausblenden.ausblenden(conn, projekt_id, check_id="status_5xx")
+    ausblenden.ausblenden(conn, projekt_id, url=testseite + "schlecht")
+    issues = export.issues_csv(conn, crawl_id)
+    assert "status_5xx" not in issues and testseite + "schlecht" not in issues
+    zeile = next(z for z in export.seiten_csv(conn, crawl_id).splitlines() if z.split(";")[0] == testseite + "schlecht")
+    assert zeile.endswith(";0")
+
+
+def test_vergleich_ohne_ausgeblendetes(crawl, testseite):
+    from app.core import vergleich
+    conn, projekt_id, crawl_id = crawl
+    neu = audit.crawl_starten(conn, projekt_id, warten=True)["id"]
+    ausblenden.ausblenden(conn, projekt_id, check_id="title_doppelt", url=testseite + "doppelt-1")
+    ausblenden.ausblenden(conn, projekt_id, check_id="status_5xx")
+    assert vergleich._treffer(conn, neu)["title_doppelt"] == 1
+    assert "status_5xx" not in vergleich._treffer(conn, neu)
+    t = vergleich.treffer_vergleich(conn, neu, "title_doppelt", crawl_id)
+    assert t["neu"] == [] and t["behoben"] == []
+
+
+def test_pdf_beispiele_ohne_ausgeblendetes(crawl):
+    from app import berichte
+    conn, projekt_id, crawl_id = crawl
+    vorher = next(a for a in berichte.site_audit_daten(conn, crawl_id)["aufg"]["aufgaben"]
+                  if len(a.get("beispiele", [])) >= 2)
+    weg = vorher["beispiele"][0]
+    ausblenden.ausblenden(conn, projekt_id, check_id=vorher["id"], url=weg)
+    nachher = next(a for a in berichte.site_audit_daten(conn, crawl_id)["aufg"]["aufgaben"] if a["id"] == vorher["id"])
+    assert weg not in nachher["beispiele"] and nachher["beispiele"]

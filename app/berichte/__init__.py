@@ -62,7 +62,7 @@ def site_audit_daten(conn: sqlite3.Connection, crawl_id: int) -> dict:
     a = aufgaben.liste(conn, crawl_id)
     for i in a["aufgaben"][:MASSNAHMEN_MAX]:
         treffer = audit.issue_details(conn, crawl_id, i["id"], limit=BEISPIELE_JE_PROBLEM)["treffer"]
-        i["beispiele"] = [t["url"] for t in treffer if t["url"]]
+        i["beispiele"] = [t["url"] for t in treffer if t["url"] and not t["ausgeblendet"]]
     return {
         "aufg": a, "massnahmen_max": MASSNAHMEN_MAX, "schriften": schriften_css(),
         "abgeschlossen": _ortszeit(ue["crawl"]["beendet_am"] or ue["crawl"]["gestartet_am"]),
