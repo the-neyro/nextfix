@@ -4,7 +4,7 @@
 <div class="kopf">
   <div>
     <h1>{{ projekt.name }}</h1>
-    <div class="unter">{% if projekt.name != projekt.domain %}{{ projekt.domain }} · {% endif %}{% if ue %}Prüfung vom {{ ue.crawl.beendet_am|datum(true) }}, {{ ue.seiten.gesamt }} Seiten{% if ue.crawl.js_rendern %}, mit JavaScript{% endif %}{% endif %}</div>
+    <div class="unter">{% if projekt.name != projekt.domain %}{{ projekt.domain }} · {% endif %}{% if ue %}Prüfung vom {{ ue.crawl.beendet_am|datum(true) }}, {{ ue.seiten.gesamt }} {{ "Seite" if ue.seiten.gesamt == 1 else "Seiten" }}{% if ue.crawl.js_rendern %}, mit JavaScript{% endif %}{% endif %}</div>
   </div>
   <div id="crawl-status">{% include "_crawl_status.html" %}</div>
 </div>

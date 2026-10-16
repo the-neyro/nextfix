@@ -64,6 +64,7 @@ HANDLUNG = {
     "sitemap_nicht_in_robots": "Trag die Sitemap in die robots.txt ein",
     "sitemap_falsche_seiten": "Entferne fehlerhafte Adressen aus der Sitemap",
     "robots_formatfehler": "Korrigiere Tippfehler in der robots.txt",
+    "js_app_ohne_rendern": "Prüf {n} mit „JavaScript ausführen“ – sie bauen sich erst im Browser auf",
     "inhalt_nur_per_js": "Liefere den Inhalt von {n} schon im HTML aus, nicht erst per JavaScript",
     "ki_bots_blockiert": "Lass KI-Suchdienste in der robots.txt zu",
     "llms_tote_links": "Korrigiere tote Links in der llms.txt",

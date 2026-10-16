@@ -111,6 +111,20 @@ def klicktiefe(conn, crawl_id):
     return abfrage(conn, f"SELECT id, tiefe FROM seiten WHERE crawl_id=? AND {HTML} AND tiefe > 3", crawl_id)
 
 
+@check("js_app_ohne_rendern", "Seite baut sich per JavaScript auf – ohne JavaScript geprüft", "warning", "crawlbarkeit",
+       "Die Seite hat einen leeren App-Container (z. B. React oder Vue) und kaum Text im HTML. So sehen sie auch die "
+       "Crawler der KI-Suchdienste. Die Prüfung lief ohne JavaScript, Inhalt und Links fehlen daher womöglich im Ergebnis.",
+       "In den Einstellungen „JavaScript ausführen“ einschalten und erneut prüfen. Dauerhaft besser: Inhalte schon im "
+       "HTML ausliefern (Server-Rendering oder statische Seiten).")
+def js_app_ohne_rendern(conn, crawl_id):
+    return abfrage(conn, """
+        SELECT s.id, 'leerer Container ' || s.js_app || ', ' || s.woerter || CASE s.woerter WHEN 1 THEN ' Wort' ELSE ' Wörter' END
+               || ' im HTML'
+        FROM seiten s JOIN crawls c ON c.id = s.crawl_id
+        WHERE s.crawl_id=? AND c.js_rendern = 0 AND s.status_code = 200 AND s.js_app IS NOT NULL
+          AND s.woerter < 100""", crawl_id)
+
+
 @check("inhalt_nur_per_js", "Inhalt entsteht erst per JavaScript", "warning", "crawlbarkeit",
        "Ohne JavaScript steht auf der Seite weniger als die Hälfte des Textes. Google rendert JavaScript, aber "
        "verzögert; die Crawler der KI-Suchdienste (ChatGPT, Perplexity, Claude) und viele andere führen es gar nicht "
@@ -120,6 +134,7 @@ def klicktiefe(conn, crawl_id):
 def inhalt_nur_per_js(conn, crawl_id):
     # Nur bei Crawls mit „JavaScript ausführen“ ist woerter_roh gefüllt
     return abfrage(conn, f"""
-        SELECT id, 'ohne JavaScript ' || woerter_roh || ' Wörter, mit JavaScript ' || woerter
+        SELECT id, 'ohne JavaScript ' || woerter_roh || CASE woerter_roh WHEN 1 THEN ' Wort' ELSE ' Wörter' END
+               || ', mit JavaScript ' || woerter
         FROM seiten WHERE crawl_id=? AND {HTML} AND woerter_roh IS NOT NULL
           AND woerter >= 50 AND woerter_roh * 2 < woerter""", crawl_id)

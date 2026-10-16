@@ -301,3 +301,8 @@ svg text { fill: var(--gedaempft); font: 12px var(--schmal); }
 @media print { .leiste { display: none; } .app { display: block; } body { background: #fff; } }
 tr.ausgeblendet td { opacity: .5; }
 tr.ausgeblendet td:last-child { opacity: 1; }
+
+/* Hinweis über der Übersicht (z. B. JavaScript-Website ohne JavaScript geprüft) */
+.hinweis-kasten { margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--hinweis);
+  background: var(--hinweis-flaeche); line-height: 1.5; }
+.hinweis-kasten strong { display: block; margin-bottom: 2px; }

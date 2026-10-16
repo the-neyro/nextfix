@@ -311,6 +311,8 @@ def uebersicht(conn: sqlite3.Connection, crawl_id: int) -> dict:
         "zaehler": zaehler,
         "seiten": seiten,
         "top_issues": top,
+        # Website sieht nach JavaScript-App aus, wurde aber ohne JavaScript geprüft → Hinweis auf der Übersicht
+        "js_hinweis": next((i["seiten"] for i in issues if i["id"] == "js_app_ohne_rendern"), 0),
     }
 
 
