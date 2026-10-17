@@ -59,7 +59,8 @@ date, organization markup, based on the GEO study (Princeton, KDD 2024).
 
 Requires Python 3.12 or newer.
 
-**One line** (installs to `~/nextfix`, sets up everything and offers to start Nextfix with the demo website):
+**One line** (installs the latest release to `~/nextfix`, sets up everything, prints the command to connect Claude
+Code and offers to start Nextfix with the demo website):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.sh | bash
@@ -70,6 +71,9 @@ On Windows (PowerShell):
 ```powershell
 irm https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.ps1 | iex
 ```
+
+The installer checks out the newest release tag, not the development branch. For the development version, set
+`NEXTFIX_BRANCH=main` (e.g. `curl … | NEXTFIX_BRANCH=main bash`); running it again updates an existing install.
 
 Or step by step:
 
@@ -96,17 +100,20 @@ data.
 
 ### With Claude (MCP)
 
+Connect Claude Code once (the installer prints this command with your real path; here for `~/nextfix`):
+
 ```bash
-.venv/bin/python -m app.mcp_server             # MCP server (stdio)
+claude mcp add --scope user seo-tool -e PYTHONPATH="$HOME/nextfix" -- "$HOME/nextfix/.venv/bin/python" -m app.mcp_server
 ```
 
-For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 51 tools, e.g.
+Other MCP clients: copy `.mcp.json.example` to `.mcp.json` and set your project path. 51 tools, e.g.
 `crawl_starten`, `was_jetzt_tun` (the task list), `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`,
 `keyword_recherche_starten`, `vitals_messen`, `pdf_bericht`.
 
 Tool names and results are German on purpose, like the user interface: Claude understands them fine and answers in
-your language. The MCP server is called `seo-tool` (its config key in `.mcp.json` and the credentials folder
-`~/.config/seo-tool/`); that name is kept so existing setups keep working.
+your language. The MCP server is called `seo-tool`, not `nextfix`: the name is older than the project name and is
+also used for the credentials folder `~/.config/seo-tool/`. Renaming it would break existing setups and saved keys,
+so it stays.
 
 ### Google Search Console, Bing and Open PageRank
 

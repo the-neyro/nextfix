@@ -2,13 +2,15 @@
 # Nextfix installieren (macOS und Linux), in einer Zeile:
 #   curl -fsSL https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.sh | bash
 #
-# Prüft Python 3.12+, holt Nextfix nach ~/nextfix (oder nutzt den Ordner, aus dem das Skript läuft),
-# richtet .venv mit allen Paketen und Chromium ein und startet auf Wunsch Nextfix mit der Demo-Website.
-# Einstellbar: NEXTFIX_DIR (Zielordner), NEXTFIX_REPO, NEXTFIX_BRANCH, NEXTFIX_START=ja|nein (ohne Rückfrage).
+# Prüft Python 3.12+, holt das neueste Release nach ~/nextfix (oder nutzt den Ordner, aus dem das Skript läuft),
+# richtet .venv mit allen Paketen und Chromium ein, zeigt den Befehl für Claude Code und startet auf Wunsch
+# Nextfix mit der Demo-Website.
+# Einstellbar: NEXTFIX_DIR (Zielordner), NEXTFIX_REPO, NEXTFIX_BRANCH (z. B. main statt neuestem Release),
+# NEXTFIX_START=ja|nein (ohne Rückfrage).
 set -euo pipefail
 
 REPO="${NEXTFIX_REPO:-https://github.com/the-neyro/nextfix.git}"
-BRANCH="${NEXTFIX_BRANCH:-main}"
+BRANCH="${NEXTFIX_BRANCH:-}"
 ZIEL="${NEXTFIX_DIR:-$HOME/nextfix}"
 PORT=8000
 DEMO_PORT=8798
@@ -40,14 +42,24 @@ SKRIPT="${BASH_SOURCE[0]:-}"
 if [ -n "$SKRIPT" ] && [ -f "$SKRIPT" ] && [ -d "$(dirname "$SKRIPT")/../app/web" ]; then
   ZIEL="$(cd "$(dirname "$SKRIPT")/.." && pwd)"
   echo "Nutze vorhandenen Ordner: $ZIEL"
-elif [ -d "$ZIEL/.git" ]; then
-  echo "Aktualisiere $ZIEL"
-  git -C "$ZIEL" pull --ff-only
-elif [ -e "$ZIEL" ]; then
-  abbruch "$ZIEL gibt es schon, ist aber kein Nextfix-Ordner. Anderen Ordner wählen: NEXTFIX_DIR=~/anderer-ordner"
 else
   command -v git >/dev/null 2>&1 || abbruch "git fehlt. macOS: xcode-select --install · Linux: sudo apt install git"
-  git clone --depth 1 --branch "$BRANCH" "$REPO" "$ZIEL"
+  # Standard: neuestes Release (höchstes Tag v…); ohne Release oder mit NEXTFIX_BRANCH: dieser Branch
+  if [ -z "$BRANCH" ]; then
+    BRANCH="$(git ls-remote --tags --refs --sort=-v:refname "$REPO" 'v*' 2>/dev/null | sed -n '1s|.*refs/tags/||p' || true)"
+    [ -n "$BRANCH" ] || BRANCH=main
+  fi
+  if [ -d "$ZIEL/.git" ]; then
+    # Tag oder Branch gezielt holen: der flache Klon kennt sonst nur den Stand, mit dem er angelegt wurde
+    echo "Aktualisiere $ZIEL auf $BRANCH"
+    git -C "$ZIEL" fetch --quiet --depth 1 origin "$BRANCH"
+    git -C "$ZIEL" -c advice.detachedHead=false checkout --quiet --detach FETCH_HEAD
+  elif [ -e "$ZIEL" ]; then
+    abbruch "$ZIEL gibt es schon, ist aber kein Nextfix-Ordner. Anderen Ordner wählen: NEXTFIX_DIR=~/anderer-ordner"
+  else
+    echo "Hole Nextfix $BRANCH nach $ZIEL"
+    git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$BRANCH" "$REPO" "$ZIEL"
+  fi
 fi
 cd "$ZIEL"
 
@@ -70,6 +82,9 @@ if [ "$(uname)" = "Darwin" ] && [ -f "Nextfix starten.command" ]; then
 else
   echo "Künftig starten: cd \"$ZIEL\" && .venv/bin/uvicorn app.web:app   → http://localhost:$PORT"
 fi
+echo
+echo "Mit Claude Code verbinden (einmal, dann kennt Claude die Nextfix-Werkzeuge in jedem Ordner):"
+echo "  claude mcp add --scope user seo-tool -e PYTHONPATH=\"$ZIEL\" -- \"$ZIEL/.venv/bin/python\" -m app.mcp_server"
 
 START="${NEXTFIX_START:-}"
 if [ -z "$START" ]; then

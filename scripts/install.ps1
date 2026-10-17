@@ -1,14 +1,16 @@
 # Nextfix installieren (Windows, PowerShell), in einer Zeile:
 #   irm https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.ps1 | iex
 #
-# Prüft Python 3.12+, holt Nextfix nach %USERPROFILE%\nextfix (oder nutzt den Ordner, aus dem das Skript läuft),
-# richtet .venv mit allen Paketen und Chromium ein und startet auf Wunsch Nextfix mit der Demo-Website.
-# Einstellbar: NEXTFIX_DIR, NEXTFIX_REPO, NEXTFIX_BRANCH, NEXTFIX_START=ja|nein (ohne Rückfrage).
+# Prüft Python 3.12+, holt das neueste Release nach %USERPROFILE%\nextfix (oder nutzt den Ordner, aus dem das
+# Skript läuft), richtet .venv mit allen Paketen und Chromium ein, zeigt den Befehl für Claude Code und startet auf
+# Wunsch Nextfix mit der Demo-Website.
+# Einstellbar: NEXTFIX_DIR, NEXTFIX_REPO, NEXTFIX_BRANCH (z. B. main statt neuestem Release),
+# NEXTFIX_START=ja|nein (ohne Rückfrage).
 $ErrorActionPreference = 'Continue'   # Fehler prüfen wir selbst über $LASTEXITCODE
 
 function Wert($name, $standard) { $w = [Environment]::GetEnvironmentVariable($name); if ($w) { $w } else { $standard } }
 $Repo = Wert 'NEXTFIX_REPO' 'https://github.com/the-neyro/nextfix.git'
-$Branch = Wert 'NEXTFIX_BRANCH' 'main'
+$Branch = Wert 'NEXTFIX_BRANCH' ''
 $Ziel = Wert 'NEXTFIX_DIR' (Join-Path $HOME 'nextfix')
 $Port = 8000
 $DemoPort = 8798
@@ -35,14 +37,24 @@ Schritt '2/4 Nextfix holen'
 if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot '..\app\web'))) {
     $Ziel = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
     Write-Host "Nutze vorhandenen Ordner: $Ziel"
-} elseif (Test-Path (Join-Path $Ziel '.git')) {
-    Write-Host "Aktualisiere $Ziel"
-    git -C $Ziel pull --ff-only; Pruefe 'git pull fehlgeschlagen'
-} elseif (Test-Path $Ziel) {
-    Abbruch "$Ziel gibt es schon, ist aber kein Nextfix-Ordner. Anderen Ordner wählen: `$env:NEXTFIX_DIR = 'C:\anderer-ordner'"
 } else {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Abbruch 'git fehlt: https://git-scm.com/download/win' }
-    git clone --depth 1 --branch $Branch $Repo $Ziel; Pruefe 'git clone fehlgeschlagen'
+    # Standard: neuestes Release (höchstes Tag v…); ohne Release oder mit NEXTFIX_BRANCH: dieser Branch
+    if (-not $Branch) {
+        $tag = git ls-remote --tags --refs --sort=-v:refname $Repo 'v*' 2>$null | Select-Object -First 1
+        $Branch = if ($tag) { ($tag -split 'refs/tags/')[-1] } else { 'main' }
+    }
+    if (Test-Path (Join-Path $Ziel '.git')) {
+        Write-Host "Aktualisiere $Ziel auf $Branch"
+        # Tag oder Branch gezielt holen: der flache Klon kennt sonst nur den Stand, mit dem er angelegt wurde
+        git -C $Ziel fetch --quiet --depth 1 origin $Branch; Pruefe 'git fetch fehlgeschlagen'
+        git -C $Ziel -c advice.detachedHead=false checkout --quiet --detach FETCH_HEAD; Pruefe 'git checkout fehlgeschlagen'
+    } elseif (Test-Path $Ziel) {
+        Abbruch "$Ziel gibt es schon, ist aber kein Nextfix-Ordner. Anderen Ordner wählen: `$env:NEXTFIX_DIR = 'C:\anderer-ordner'"
+    } else {
+        Write-Host "Hole Nextfix $Branch nach $Ziel"
+        git -c advice.detachedHead=false clone --quiet --depth 1 --branch $Branch $Repo $Ziel; Pruefe 'git clone fehlgeschlagen'
+    }
 }
 Set-Location $Ziel
 
@@ -60,7 +72,13 @@ if ($LASTEXITCODE -ne 0) {
 
 # 4. Wie starten, und auf Wunsch gleich starten
 Schritt '4/4 Fertig'
-Write-Host "Künftig starten: cd `"$Ziel`"; .venv\Scripts\uvicorn app.web:app   -> http://localhost:$Port"
+if (Test-Path (Join-Path $Ziel 'Nextfix starten.bat')) {
+    Write-Host "Künftig starten: Doppelklick auf „Nextfix starten.bat“ in $Ziel"
+} else {
+    Write-Host "Künftig starten: cd `"$Ziel`"; .venv\Scripts\uvicorn app.web:app   -> http://localhost:$Port"
+}
+Write-Host "`nMit Claude Code verbinden (einmal, dann kennt Claude die Nextfix-Werkzeuge in jedem Ordner):"
+Write-Host "  claude mcp add --scope user seo-tool -e PYTHONPATH=`"$Ziel`" -- `"$Ziel\.venv\Scripts\python.exe`" -m app.mcp_server"
 
 $Start = Wert 'NEXTFIX_START' ''
 if (-not $Start) {
