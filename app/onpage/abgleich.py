@@ -77,10 +77,10 @@ def pruefen(s: Seite, keyword: str, eingehend: dict | None = None, vitals: dict 
     if im_title:
         vorn = norm(s.title).find(norm(kern(keyword)[0])) <= len(norm(s.title)) // 2
         regel("title_vorn", "Inhalt", "Keyword in der vorderen Title-Hälfte", 1, vorn, "",
-              "Keyword an den Anfang des Titles ziehen; Markenname nach hinten.")
+              "Keyword an den Anfang des Titles ziehen; Markenname nach hinten.", title_vorschlag(keyword, s.title))
     regel("h1_keyword", "Inhalt", "Keyword in der H1", 2, any(woerter_in(keyword, h) for h in s.h1),
           " | ".join(s.h1) or "(keine H1)", f"Die H1 so formulieren, dass „{keyword}“ vorkommt.",
-          f"{_gross(keyword)}: {s.h1[0]}" if s.h1 else _gross(keyword))
+          f"{gross(keyword, s.h1[0])}: {s.h1[0]}" if s.h1 else gross(keyword))
     regel("h1_eine", "Inhalt", "Genau eine H1", 1, len(s.h1) == 1, f"{len(s.h1)} H1",
           "Eine einzige H1 als Hauptüberschrift verwenden.")
     regel("meta_keyword", "Inhalt", "Keyword in der Meta-Description", 1,
@@ -125,7 +125,9 @@ def pruefen(s: Seite, keyword: str, eingehend: dict | None = None, vitals: dict 
     snippet_ok = 10 < len(s.title) <= TITLE_MAX and META_MIN <= len(s.meta_description) <= META_MAX
     regel("snippet_laenge", "Technik", "Title und Meta-Description in passender Länge", 1, snippet_ok,
           f"Title {len(s.title)}, Meta {len(s.meta_description)} Zeichen",
-          f"Title bis {TITLE_MAX}, Meta-Description {META_MIN}–{META_MAX} Zeichen, damit nichts abgeschnitten wird.")
+          f"Title bis {TITLE_MAX}, Meta-Description {META_MIN}–{META_MAX} Zeichen, damit nichts abgeschnitten wird.",
+          # Zu lang ist ein Problem für sich: dann gibt es immer einen gekürzten Vorschlag
+          title_vorschlag(keyword, s.title) if len(s.title) > TITLE_MAX else "")
     regel("schema", "Technik", "Strukturierte Daten vorhanden", 1, bool(s.schema_typen),
           ", ".join(s.schema_typen) or "keine",
           "schema.org-Markup ergänzen (z. B. Article, Product, FAQPage, LocalBusiness) für Rich Results.")
@@ -153,27 +155,102 @@ def pruefen(s: Seite, keyword: str, eingehend: dict | None = None, vitals: dict 
 
 
 AKRONYME = {"ki", "seo", "sea", "ai", "it", "crm", "erp", "api", "dsgvo", "gpt", "llm", "b2b", "b2c", "pdf", "ux",
-            "ui", "gmbh", "usa", "eu", "pc", "tv", "diy", "faq"}
+            "ui", "gmbh", "ag", "ug", "csv", "usa", "eu", "pc", "tv", "diy", "faq"}
+FUELL = {"startseite", "home", "homepage", "willkommen", "index", "unbenannt"}   # Titelteile ohne Aussage
+_STOP_TITLE = _STOP | {"einer", "vom", "ueber", "sind"}
+_TRENNER = " :|,–—-"
 
 
-def _gross(text: str) -> str:
-    """Keyword für Vorschläge schreiben: Akronyme groß (KI, SEO), sonst nur der Anfang groß."""
-    woerter = [w.upper() if w.lower() in AKRONYME else w for w in text.split()]
-    satz = " ".join(woerter)
-    return satz[:1].upper() + satz[1:]
+def gross(keyword: str, title: str = "") -> str:
+    """Suchbegriff für Vorschläge schreiben: Schreibweise aus dem Titel übernehmen, sonst Wörter groß
+    (deutsche Begriffe sind meist Nomen). Akronyme immer groß, Füllwörter ab dem 2. Wort klein."""
+    im_titel = {norm(w): w for w in re.split(r"[\s,:|–—-]+", title or "") if w}
+    woerter = []
+    for i, w in enumerate(keyword.split()):
+        n = norm(w)
+        if n in AKRONYME:
+            woerter.append(w.upper())
+        elif n in im_titel:
+            woerter.append(im_titel[n])
+        elif i > 0 and n in _STOP_TITLE:
+            woerter.append(w.lower())
+        else:
+            woerter.append(w[:1].upper() + w[1:])
+    return " ".join(woerter)
+
+
+def _stutzen(text: str) -> str:
+    return re.sub(r"\s{2,}", " ", text.strip(_TRENNER))
+
+
+def _ohne_stop_ende(woerter: list[str]) -> str:
+    """Übrig gebliebene Verhältniswörter am Ende weg („… in“)."""
+    while woerter and norm(woerter[-1]) in _STOP_TITLE:
+        woerter.pop()
+    return _stutzen(" ".join(woerter))
+
+
+def _ohne_begriff(teil: str, keyword: str) -> str:
+    """Titelteil ohne die Wörter des Suchbegriffs; davorstehendes Verhältniswort fliegt mit („in Hamburg“)."""
+    kw = set(kern(keyword))
+
+    def treffer(w: str) -> bool:
+        n = norm(w)
+        return n in kw or (len(n) >= 4 and any(len(k) >= 4 and n.startswith(k) for k in kw))
+
+    woerter: list[str] = []
+    for w in teil.split():
+        if treffer(w):
+            if woerter and norm(woerter[-1]) in _STOP_TITLE:
+                woerter.pop()
+            continue
+        woerter.append(w)
+    return _ohne_stop_ende(woerter)
+
+
+def _kurz(teil: str) -> str:
+    """Nur der erste Gedanke eines Teils (bis Komma, „und“, „mit“, „seit“)."""
+    return _ohne_stop_ende(re.split(r",|\s(?:und|mit|seit)\s", teil)[0].split())
 
 
 def title_vorschlag(keyword: str, title: str) -> str:
-    """Keyword nach vorn, Marke dahinter, höchstens TITLE_MAX Zeichen. Marke = kürzester Teil (nach | – -)."""
-    teile = [t.strip() for t in re.split(r"\s[|–—-]\s", title or "") if t.strip()]
-    marke = min(teile, key=len) if len(teile) > 1 else ""
-    rest = next((t for t in teile if t != marke), "")
-    kw = _gross(keyword)
-    for kandidat in (f"{kw}: {rest} | {marke}", f"{kw}: {rest}", f"{kw} | {marke}", kw):
-        kandidat = kandidat.strip(" :|")
-        if len(kandidat) <= TITLE_MAX:
+    """Suchbegriff nach vorn, Firmenname dahinter, höchstens TITLE_MAX Zeichen (wie der Titel-Check der Website).
+    Füllteile („Home“, „Startseite“) fliegen raus, der kürzeste übrige Teil gilt als Firmenname."""
+    teile = [t.strip() for t in re.split(r"\s[|–—-]\s", title or "") if t.strip() and norm(t) not in FUELL]
+    kuerzester = min(teile, key=len) if teile else ""
+
+    def mit_begriff(t: str) -> bool:
+        return bool(keyword.strip()) and woerter_in(keyword, t)
+
+    # Enthält der kürzeste Teil den Suchbegriff („Friseur in Kiel“), ist eher ein anderer kurzer Teil der Name
+    anderer = next((t for t in teile if t != kuerzester and not mit_begriff(t) and len(t.split()) <= 4), "")
+    if len(teile) >= 2 and mit_begriff(kuerzester) and anderer:
+        kuerzester = anderer
+    nur_name = len(teile) == 1 and len(kuerzester.split()) <= 3   # „Bäckerei Sommer“ allein ist ein Name
+    marke = kuerzester if len(teile) > 1 or nur_name else ""
+    marke = _stutzen(re.sub(r"^(willkommen (bei|im|in der|in)|herzlich willkommen( bei)?)\s+", "", marke,
+                            flags=re.IGNORECASE))
+    rest = "" if nur_name else next((t for t in teile if t != kuerzester), teile[0] if teile else "")
+    kw = gross(keyword, title) if keyword.strip() else ""
+    r = _ohne_begriff(rest, keyword) if kw else rest
+    rk = _kurz(r)
+
+    def bau(vorn: str, mitte: str, name: str) -> str:
+        """Leere Teile weglassen, damit nie „Begriff: | Name“ entsteht."""
+        # Rest beginnt mit einem Verhältniswort („für kleine Firmen“): ohne Doppelpunkt anhängen
+        trenner = " " if mitte and norm(mitte.split()[0]) in _STOP_TITLE else ": "
+        kopf = f"{vorn}{trenner}{mitte}" if vorn and mitte else vorn or mitte
+        return " | ".join(x for x in (kopf, name) if x)
+
+    if kw:
+        kandidaten = [bau(kw, r, marke), bau(kw, rk, marke), bau(kw, "", marke), bau(kw, r, ""), bau(kw, rk, ""), kw]
+    else:
+        kandidaten = [bau("", r, marke), bau("", rk, marke), rk, marke]
+    for k in kandidaten:
+        kandidat = _stutzen(k)
+        if kandidat and len(kandidat) <= TITLE_MAX:
             return kandidat
-    return kw
+    return _stutzen(kw or rk)[:TITLE_MAX]
 
 
 def score(pruefungen: list[Pruefung]) -> int:
