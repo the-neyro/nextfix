@@ -1,8 +1,8 @@
 """Checks auf Site-Ebene: HTTPS-Weiterleitung, www, Zertifikat, robots.txt-Format, KI-Suche."""
 
-from urllib.robotparser import RobotFileParser
 
 from app.checks.katalog import check, fakten
+from app.crawler.robots import RobotsTxt
 
 ROBOTS_FELDER = {"user-agent", "allow", "disallow", "sitemap", "crawl-delay", "host", "clean-param",
                  "request-rate", "visit-time", "noindex", "content-signal"}
@@ -110,7 +110,7 @@ def _gesperrte_bots(conn, crawl_id, bots) -> list[str]:
     z = conn.execute("SELECT robots_status, robots_text, start_url FROM crawls WHERE id=?", (crawl_id,)).fetchone()
     if z[0] != 200 or not z[1]:
         return []
-    robots = RobotFileParser()
+    robots = RobotsTxt()
     robots.parse(z[1].splitlines())
     return [bot for bot in bots if not robots.can_fetch(bot, z[2])]
 
