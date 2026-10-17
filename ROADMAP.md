@@ -5,15 +5,24 @@ change when real users report problems. Ideas and bugs: [issues](https://github.
 
 ## Planned
 
-- **Windows, officially.** The installer already runs on Windows; the tests do not pass there reliably yet (one
-  background-import test times out, and the whole run is much slower). Once they are green every time, Windows
-  becomes a supported platform.
-- **Plain-language fix guides.** Every task explains in a few steps, without jargon, how to fix it yourself,
-  including where the field is in WordPress (Yoast, Rank Math).
-- **Easier Claude setup.** The installer prints the ready-made `claude mcp add` command with your real path.
-- **Install from releases.** The one-line installer fetches the latest release instead of the development branch.
+- **Windows, officially.** Installer and the double-click start file already work on Windows and are checked
+  automatically; the tests do not pass there reliably yet (one background-import test times out, and the whole run
+  is much slower). Once they are green every time, Windows becomes a supported platform.
+- **Plain-language guides for the remaining tasks.** The ten most common tasks already have them (see below); the
+  other checks still explain the fix in shorter, more technical words.
 - **Referring domains from open data.** A rough count of linking domains from the Common Crawl web graph, if it
   works without paid APIs and without huge downloads for every user.
+
+## Done
+
+- **Plain-language fix guides with WordPress hints** for the ten most common tasks: what to do without jargon, and
+  where the field is in WordPress (Yoast, Rank Math, block editor). Shown on the issue page, in the task list and in
+  the PDF (0.2.0, #19).
+- **Easier Claude setup.** The installer prints the ready-made `claude mcp add` command with your real path
+  (0.2.0, #17).
+- **Install from releases.** The one-line installer checks out the newest release; `NEXTFIX_BRANCH=main` for the
+  development version (0.2.0, #17).
+- **Double-click start on Windows**, `Nextfix starten.bat`, like `Nextfix starten.command` on the Mac (0.2.0, #18).
 
 ## Deliberately not planned
 
