@@ -1,0 +1,13 @@
+name: Idea
+description: Suggest a feature or an improvement
+labels: [idea]
+body:
+  - type: textarea
+    attributes:
+      label: What would help you?
+      description: Describe the problem or question you have, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: How could Nextfix do it?
