@@ -1,5 +1,6 @@
 # Nextfix
 
+[![Tests](https://github.com/the-neyro/nextfix/actions/workflows/tests.yml/badge.svg)](https://github.com/the-neyro/nextfix/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-HTMX-009688.svg)
@@ -89,6 +90,10 @@ For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project pa
 `crawl_starten`, `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`, `keyword_recherche_starten`,
 `vitals_messen`, `pdf_bericht`.
 
+Tool names and results are German on purpose, like the user interface: Claude understands them fine and answers in
+your language. The MCP server is called `seo-tool` (its config key in `.mcp.json` and the credentials folder
+`~/.config/seo-tool/`); that name is kept so existing setups keep working.
+
 ### Google Search Console, Bing and Open PageRank
 
 Setup guides (German): [`docs/anleitung-gsc.md`](docs/anleitung-gsc.md),
@@ -120,6 +125,8 @@ and never end up in Git.
 Convention: a new feature starts in `app/core/`, then gets wired into the API, the UI **and** MCP, plus a test.
 Data is stored in `data/seo.db` (SQLite, not in Git); set a different path with `SEO_DB`. Code and UI are written
 in German.
+
+How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md). What changed: [CHANGELOG.md](CHANGELOG.md).
 
 ## Limitations
 
