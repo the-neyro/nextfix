@@ -58,6 +58,20 @@ date, organization markup, based on the GEO study (Princeton, KDD 2024).
 
 Requires Python 3.12 or newer.
 
+**One line** (installs to `~/nextfix`, sets up everything and offers to start Nextfix with the demo website):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.sh | bash
+```
+
+On Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.ps1 | iex
+```
+
+Or step by step:
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
