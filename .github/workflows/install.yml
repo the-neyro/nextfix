@@ -3,9 +3,9 @@ name: Install
 on:
   push:
     branches: [main]
-    paths: [scripts/install.sh, scripts/install.ps1, requirements.txt, .github/workflows/install.yml]
+    paths: [scripts/install.sh, scripts/install.ps1, "Nextfix starten.bat", requirements.txt, .github/workflows/install.yml]
   pull_request:
-    paths: [scripts/install.sh, scripts/install.ps1, requirements.txt, .github/workflows/install.yml]
+    paths: [scripts/install.sh, scripts/install.ps1, "Nextfix starten.bat", requirements.txt, .github/workflows/install.yml]
 
 jobs:
   install:
@@ -31,3 +31,20 @@ jobs:
           ./scripts/install.ps1
           if ($LASTEXITCODE -ne 0) { exit 1 }
           .venv\Scripts\python.exe -c "import app.web; print('ok')"
+      - name: Nextfix starten.bat
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process cmd.exe -ArgumentList '/c', '"Nextfix starten.bat"' -PassThru -NoNewWindow `
+            -RedirectStandardOutput bat-out.txt -RedirectStandardError bat-err.txt
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://127.0.0.1:8000 | Out-Null; $ok = $true; break }
+            catch { Start-Sleep 1 }
+          }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Get-Process uvicorn -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep 1
+          Write-Host '--- Ausgabe der .bat:'; Get-Content bat-out.txt, bat-err.txt -ErrorAction SilentlyContinue
+          if (-not $ok) { Write-Host 'Server antwortet nicht'; exit 1 }
+          Write-Host 'ok: Nextfix starten.bat startet den Server'
