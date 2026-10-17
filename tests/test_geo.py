@@ -120,6 +120,15 @@ def test_wenig_text_zaehlt_nur_hauptinhalt(db):
     assert treffer(conn, c, "wenig_text") == {"glossar": "150 Wörter", "alt": "120 Wörter"}
 
 
+def test_wenig_text_ohne_noindex_seiten(db):
+    """noindex ist eine der vorgeschlagenen Lösungen, danach darf die Seite nicht mehr als dünn zählen."""
+    conn, c = db
+    seite(conn, c, "impressum", woerter=40, meta_robots="noindex, follow")
+    seite(conn, c, "tags/rot", woerter=30, x_robots_tag="NOINDEX")
+    seite(conn, c, "kontakt", woerter=50, meta_robots="index, follow")
+    assert treffer(conn, c, "wenig_text") == {"kontakt": "50 Wörter"}
+
+
 def test_render_blockierende_skripte(db):
     html = """<html><head><script src="/a.js"></script><script src="/b.js" defer></script>
     <script src="/c.js" async></script><script type="module" src="/d.js"></script><script>inline()</script></head>
