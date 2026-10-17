@@ -2,7 +2,7 @@
 
 from itertools import combinations
 
-from app.checks.inhalt import KANONISCH
+from app.checks.inhalt import INDEXIERBAR, KANONISCH
 from app.checks.katalog import check, json_spalte
 from app.crawler.texte import aehnlichkeit
 
@@ -25,7 +25,7 @@ def _kandidaten(signaturen: dict[int, list[int]]) -> set[tuple[int, int]]:
        "Fast gleicher Haupttext auf mehreren URLs: Suchmaschinen wählen selbst eine Version, die anderen ranken kaum.",
        "Inhalte zusammenführen, deutlich unterscheiden oder per Canonical auf die Hauptversion verweisen.")
 def duplicate_content(conn, crawl_id):
-    zeilen = json_spalte(conn, crawl_id, "signatur", KANONISCH)
+    zeilen = json_spalte(conn, crawl_id, "signatur", f"{KANONISCH} AND {INDEXIERBAR}")   # noindex: Google sieht sie nicht
     signaturen = {seite_id: sig for seite_id, _, sig in zeilen}
     urls = {seite_id: url for seite_id, url, _ in zeilen}
     partner: dict[int, list[tuple[float, int]]] = {}
