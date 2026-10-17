@@ -11,6 +11,8 @@ TEXT_ANTEIL_MIN = 0.10
 
 # Seiten mit Canonical auf eine andere URL sind gewollte Varianten, keine Duplikate
 KANONISCH = "(canonical IS NULL OR canonical = url)"
+# noindex-Seiten (meta robots oder X-Robots-Tag) erscheinen nicht bei Google, dünner Text schadet dort nicht
+INDEXIERBAR = "(COALESCE(meta_robots, '') NOT LIKE '%noindex%' AND COALESCE(x_robots_tag, '') NOT LIKE '%noindex%')"
 
 
 @check("title_fehlt", "Title-Tag fehlt oder ist leer", "error", "inhalt",
@@ -105,9 +107,11 @@ def mehrere_h1(conn, crawl_id):
        "Hauptinhalt – Menü, Fußzeile und Cookie-Hinweis machen eine Seite nicht gehaltvoller.",
        "Inhalt ausbauen, mit einer ähnlichen Seite zusammenlegen oder (z. B. dünne Glossar-Seiten) auf noindex setzen.")
 def wenig_text(conn, crawl_id):
-    # Wörter im Hauptbereich (geo.woerter); ältere Crawls ohne GEO-Signale: ganze Seite
+    # Wörter im Hauptbereich (geo.woerter); ältere Crawls ohne GEO-Signale: ganze Seite. noindex zählt nicht,
+    # weil die Aufgabe genau das als Lösung anbietet („… oder nimm sie aus dem Index“)
     return abfrage(conn, f"""SELECT id, n || ' Wörter' FROM (
-        SELECT id, COALESCE(json_extract(geo, '$.woerter'), woerter) AS n FROM seiten WHERE crawl_id=? AND {HTML})
+        SELECT id, COALESCE(json_extract(geo, '$.woerter'), woerter) AS n FROM seiten
+        WHERE crawl_id=? AND {HTML} AND {INDEXIERBAR})
         WHERE n < {WOERTER_MIN}""", crawl_id)
 
 
