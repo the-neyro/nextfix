@@ -140,7 +140,8 @@ Convention: a new feature starts in `app/core/`, then gets wired into the API, t
 Data is stored in `data/seo.db` (SQLite, not in Git); set a different path with `SEO_DB`. Code and UI are written
 in German.
 
-How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md). What changed: [CHANGELOG.md](CHANGELOG.md).
+How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md). What changed: [CHANGELOG.md](CHANGELOG.md). What comes next
+(and what deliberately does not): [ROADMAP.md](ROADMAP.md).
 
 ## Limitations
 
