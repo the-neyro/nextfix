@@ -85,6 +85,11 @@ and opens http://localhost:8000 in your browser; the first start sets everything
 Close the window to stop Nextfix. If macOS blocks the file (e.g. after downloading the ZIP), right-click it, choose
 “Open” and confirm once.
 
+**On Windows without the terminal:** double-click `Nextfix starten.bat` in the project folder, same behaviour (first
+start runs `scripts/install.ps1`). If Windows shows “Windows protected your PC”, click “More info” → “Run anyway”.
+Windows is not officially supported yet: installation and start are checked automatically, but one test still fails
+there now and then.
+
 Then add a domain and click “Website prüfen” (audit website). No website of your own? Start the demo site:
 
 ```bash
