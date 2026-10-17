@@ -2,6 +2,18 @@
 
 All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
+## 0.2.2 – 2026-10-18
+
+### Fixed
+- Umlaut domains: links written as punycode (`xn--…`) now count as internal, so the crawl no longer stops at the
+  home page of a domain like `bäckerei-müller.de`. Default ports (`:443`, `:80`) no longer make a link external (#23).
+- Character sets: pages without a charset in the HTTP header are decoded with their `<meta charset>`, else UTF-8,
+  else windows-1252. Older ISO-8859-1 sites no longer show broken umlauts in titles and word counts (#23).
+- robots.txt is read like Google does: `*` and `$` wildcards, the longest rule wins and Allow wins ties (e.g.
+  WordPress `Allow: /wp-admin/admin-ajax.php`). Also used for the “AI crawlers blocked” check (#23).
+- Big files: PDFs, videos and error pages linked from a site are no longer downloaded; HTML is read up to 5 MB
+  while the real size still counts for “HTML too large” (#23).
+
 ## 0.2.1 – 2026-10-18
 
 ### Fixed
