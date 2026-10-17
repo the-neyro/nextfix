@@ -10,7 +10,7 @@ from contextlib import closing
 from mcp.server import MCPServer
 
 from app import berichte, config
-from app.core import audit, ausblenden, autoritaet, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
+from app.core import aufgaben, audit, ausblenden, autoritaet, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import verbinden
 
 server = MCPServer(
@@ -18,7 +18,8 @@ server = MCPServer(
     instructions=(
         "Lokales SEO-Tool (Site Audit). Tools arbeiten auf derselben Datenbank wie die Web-UI "
         "(http://localhost:8000). Ablauf: projekt_anlegen → einstellungen_setzen (optional) → "
-        "crawl_starten → uebersicht / issues_liste / issue_details / seiten_liste. "
+        "crawl_starten → was_jetzt_tun (Aufgabenliste wie in der Oberfläche) / uebersicht / issues_liste / "
+        "issue_details / seiten_liste. "
         "Nach mehreren Crawls: verlauf, crawl_vergleich, treffer_vergleich. "
         "Absichtlich so (z. B. Login-Seite ohne Text)? ausblenden → zählt nicht mehr im Zustand; einblenden nimmt es zurück. "
         "Position Tracking: gsc_status / gsc_test (Zugang prüfen) → positionen_import (quelle gsc oder mock) → "
@@ -144,6 +145,17 @@ def uebersicht(crawl_id: int | None = None, projekt_id: int | None = None) -> di
     Seiten-Aufteilung, Top-Issues. Ohne crawl_id: letzter fertiger Crawl des Projekts."""
     with _db() as conn:
         return audit.uebersicht(conn, _crawl_id(conn, crawl_id, projekt_id))
+
+
+@server.tool()
+def was_jetzt_tun(projekt_id: int | None = None, crawl_id: int | None = None) -> dict:
+    """Die Liste „Was jetzt tun“ wie in der Oberfläche: aufgaben (nach Wirkung sortiert, je Aufgabe was, warum,
+    beheben, wirkung hoch|mittel|gering, aufwand_text, wer, seiten_text, verlauf), feinschliff (Kleinigkeiten),
+    erledigt (seit dem vorigen Crawl behoben). Ohne crawl_id: letzter fertiger Crawl des Projekts."""
+    with _db() as conn:
+        cid = _crawl_id(conn, crawl_id, projekt_id)
+        audit.crawl_holen(conn, cid)   # unbekannte crawl_id → Fehler statt leerer Liste
+        return aufgaben.liste(conn, cid)
 
 
 @server.tool()

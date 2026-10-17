@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
 from app import berichte, gsc
-from app.core import audit, autoritaet, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
+from app.core import audit, aufgaben, autoritaet, export, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import sitzung
 
 router = APIRouter(prefix="/api")
@@ -109,6 +109,16 @@ def crawl_holen(crawl_id: int, conn: Conn = Depends(sitzung)) -> dict:
 def crawl_abbrechen(crawl_id: int, conn: Conn = Depends(sitzung)) -> dict:
     try:
         return audit.crawl_abbrechen(conn, crawl_id)
+    except audit.AuditFehler as e:
+        raise _fehler(e)
+
+
+@router.get("/crawls/{crawl_id}/aufgaben")
+def was_jetzt_tun(crawl_id: int, conn: Conn = Depends(sitzung)) -> dict:
+    """„Was jetzt tun“: aufgaben, feinschliff, erledigt."""
+    try:
+        audit.crawl_holen(conn, crawl_id)
+        return aufgaben.liste(conn, crawl_id)
     except audit.AuditFehler as e:
         raise _fehler(e)
 
