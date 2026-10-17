@@ -1,0 +1,33 @@
+name: Install
+
+on:
+  push:
+    branches: [main]
+    paths: [scripts/install.sh, scripts/install.ps1, requirements.txt, .github/workflows/install.yml]
+  pull_request:
+    paths: [scripts/install.sh, scripts/install.ps1, requirements.txt, .github/workflows/install.yml]
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      NEXTFIX_START: nein
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install.sh
+        if: runner.os != 'Windows'
+        run: bash scripts/install.sh && .venv/bin/python -c "import app.web; print('ok')"
+      - name: install.ps1
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/install.ps1
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          .venv\Scripts\python.exe -c "import app.web; print('ok')"
