@@ -36,22 +36,23 @@ class Check:
     warum: str
     beheben: str
     funktion: CheckFunktion
+    wordpress: str = ""   # optional: wo man es in WordPress (Yoast, Rank Math) behebt
 
     def als_dict(self) -> dict:
-        return {k: getattr(self, k) for k in ("id", "name", "schwere", "kategorie", "warum", "beheben")}
+        return {k: getattr(self, k) for k in ("id", "name", "schwere", "kategorie", "warum", "beheben", "wordpress")}
 
 
 REGISTER: dict[str, Check] = {}
 
 
-def check(id: str, name: str, schwere: str, kategorie: str, warum: str, beheben: str):
+def check(id: str, name: str, schwere: str, kategorie: str, warum: str, beheben: str, wordpress: str = ""):
     assert schwere in SCHWEREGRADE, schwere
     assert kategorie in KATEGORIEN, kategorie
 
     def deko(funktion: CheckFunktion) -> CheckFunktion:
         if id in REGISTER:
             raise ValueError(f"Check-ID doppelt: {id}")
-        REGISTER[id] = Check(id, name, schwere, kategorie, warum, beheben, funktion)
+        REGISTER[id] = Check(id, name, schwere, kategorie, warum, beheben, funktion, wordpress)
         return funktion
 
     return deko

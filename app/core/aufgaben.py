@@ -151,7 +151,7 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
             alt = vorher[c.id][1]
             verlauf = "besser" if seiten < alt else "schlimmer" if seiten > alt else "gleich"
         a = {"id": c.id, "name": c.name, "was": handlung(c, seiten, ganze_site), "warum": c.warum,
-             "beheben": c.beheben, "schwere": c.schwere, "stufe": STUFEN[c.schwere], "kategorie": c.kategorie,
+             "beheben": c.beheben, "wordpress": c.wordpress, "schwere": c.schwere, "stufe": STUFEN[c.schwere], "kategorie": c.kategorie,
              "seiten": seiten, "ganze_site": ganze_site, "seiten_text": _seiten_text(seiten, ganze_site),
              "gewinn": round(gewinn, 1), "wirkung": wirkung(abzug[c.id]), "aufwand": _aufwand(c), "aufwand_text": AUFWAND_TEXT[_aufwand(c)],
              "wer": _wer(c), "verlauf": verlauf, "vorher": vorher.get(c.id, (0, 0, False))[1]}
