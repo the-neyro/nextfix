@@ -9,12 +9,12 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from urllib.parse import urlsplit
-from urllib.robotparser import RobotFileParser
 
 import httpx
 
 from app.crawler import filter, rendern, ressourcen, site, sitemap
-from app.crawler.parser import zerlegen
+from app.crawler.parser import dekodieren, zerlegen
+from app.crawler.robots import RobotsTxt
 from app.crawler.urls import host, ist_intern, normalisieren
 
 TIMEOUT = 15.0          # Sekunden; > 5 s Antwortzeit wird als Problem gewertet
@@ -22,6 +22,7 @@ MAX_RESSOURCEN = 2000   # Obergrenze für Bild/JS/CSS-Prüfungen pro Crawl
 MAX_EXTERN = 500       # externe Links/Ressourcen pro Crawl
 EXTERN_PAUSE = 0.1     # Sekunden; verschiedene Hosts, daher kürzer als die Crawl-Pause
 MAX_SITEMAP_PRUEFUNG = 1000  # Sitemap-URLs, die nicht gecrawlt wurden, per HEAD prüfen
+MAX_HTML_BYTES = 5 * 1024 * 1024   # mehr HTML wird nicht gelesen (Check „HTML zu groß“ greift ab 2 MB)
 QUELLEN = ("website", "sitemap", "beides")
 
 # austauschbar für Tests (ohne Chromium)
@@ -53,8 +54,7 @@ class Crawler:
             timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": e.user_agent}
         )
         self.start_host = host(e.start_url)
-        self.robots = RobotFileParser()
-        self.robots.allow_all = True
+        self.robots = RobotsTxt()   # ohne robots.txt: alles erlaubt
         self.sitemap_urls: list[str] = []
         self.filter = filter.UrlFilter(filter.liste(e.erlauben), filter.liste(e.sperren),
                                        filter.liste(e.parameter_entfernen))
@@ -105,7 +105,7 @@ class Crawler:
             status = r.status_code
             if r.status_code == 200:
                 text = r.text
-                self.robots = RobotFileParser()
+                self.robots = RobotsTxt()
                 self.robots.parse(text.splitlines())
                 sitemaps = self.robots.site_maps() or []
         except httpx.HTTPError:
@@ -184,7 +184,7 @@ class Crawler:
         """Ruft eine Seite ab, speichert sie und gibt neu gefundene Ziele zurück."""
         t0 = time.perf_counter()
         try:
-            r = self.client.get(url)
+            r, inhalt, groesse = _abrufen(self.client, url)
         except httpx.HTTPError as fehler:
             self._seite_speichern(url, tiefe, abruf_fehler=f"{type(fehler).__name__}: {fehler}"[:300],
                                   ladezeit_ms=int((time.perf_counter() - t0) * 1000))
@@ -200,7 +200,7 @@ class Crawler:
             last_modified=h.get("last-modified"),
             hat_hsts=int("strict-transport-security" in h),
             ladezeit_ms=ladezeit,
-            html_bytes=len(r.content),
+            html_bytes=groesse,
         )
 
         if r.is_redirect and "location" in h:
@@ -212,11 +212,11 @@ class Crawler:
             self._seite_speichern(url, tiefe, **daten)
             return []
 
-        html, woerter_roh = r.text, None
+        html, woerter_roh = dekodieren(inhalt, daten["content_type"]), None
         if self.renderer:
             gerendert = self.renderer.rendern(url)
             if gerendert:  # Wörter ohne JavaScript merken: zeigt, was Crawler ohne Rendering sehen
-                woerter_roh, html = zerlegen(r.text, url).woerter, gerendert
+                woerter_roh, html = zerlegen(html, url).woerter, gerendert
         inhalt = zerlegen(html, url)
         for l in inhalt.links:  # ignorierte Parameter: Link zählt für die Seite ohne diese Parameter
             if l.art == "a" and ist_intern(l.url, self.start_host):
@@ -340,6 +340,24 @@ class Crawler:
                               (status, self.crawl_id, url))
             self._fortschritt()
             self._warten()
+
+
+def _abrufen(client: httpx.Client, url: str) -> tuple[httpx.Response, bytes, int | None]:
+    """GET als Stream: nur HTML-Seiten mit Status 200 werden gelesen, und das höchstens bis MAX_HTML_BYTES.
+    PDFs, Videos und Fehlerseiten kosten so keine Zeit und keinen Speicher. Liefert (Antwort, Inhalt, Größe)."""
+    with client.stream("GET", url) as r:
+        laenge = r.headers.get("content-length")
+        groesse = int(laenge) if laenge and laenge.isdigit() else None
+        if r.status_code != 200 or "html" not in (r.headers.get("content-type") or "").lower():
+            return r, b"", groesse
+        teile, gelesen = [], 0
+        for stueck in r.iter_bytes():
+            teile.append(stueck)
+            gelesen += len(stueck)
+            if gelesen > MAX_HTML_BYTES:
+                break
+        inhalt = b"".join(teile)[:MAX_HTML_BYTES]
+        return r, inhalt, max(gelesen, groesse or 0)
 
 
 def _status(client: httpx.Client, url: str, folgen: bool = False) -> int:

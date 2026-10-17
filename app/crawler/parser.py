@@ -56,6 +56,31 @@ def _text(node) -> str:
     return " ".join(node.text(separator=" ").split()) if node else ""
 
 
+_META_CHARSET = re.compile(rb"""<meta[^>]+charset\s*=\s*["']?\s*([\w-]+)""", re.IGNORECASE)
+# Wie Browser: „iso-8859-1“ und „ascii“ sind in HTML in Wahrheit windows-1252
+_ZEICHENSATZ_ALIAS = {"iso-8859-1": "cp1252", "latin1": "cp1252", "latin-1": "cp1252", "us-ascii": "cp1252",
+                      "ascii": "cp1252"}
+
+
+def dekodieren(inhalt: bytes, content_type: str | None) -> str:
+    """HTML-Bytes in Text: Zeichensatz aus dem HTTP-Header, sonst aus <meta charset>, sonst UTF-8,
+    und wenn das nicht passt windows-1252 (ältere deutsche Websites)."""
+    if inhalt.startswith(b"\xef\xbb\xbf"):
+        return inhalt[3:].decode("utf-8", errors="replace")
+    kandidaten = re.findall(r"charset\s*=\s*[\"']?([\w-]+)", content_type or "", re.IGNORECASE)
+    if not kandidaten and (m := _META_CHARSET.search(inhalt[:4096])):
+        kandidaten = [m.group(1).decode("ascii", errors="ignore")]
+    for zeichensatz in kandidaten:
+        try:
+            return inhalt.decode(_ZEICHENSATZ_ALIAS.get(zeichensatz.lower(), zeichensatz), errors="replace")
+        except LookupError:
+            pass   # unbekannter Name, weiter mit UTF-8
+    try:
+        return inhalt.decode("utf-8")
+    except UnicodeDecodeError:
+        return inhalt.decode("cp1252", errors="replace")
+
+
 def zerlegen(html: str, basis_url: str) -> SeitenInhalt:
     baum = HTMLParser(html)
     inhalt = SeitenInhalt()
