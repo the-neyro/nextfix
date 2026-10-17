@@ -65,6 +65,11 @@ python3 -m venv .venv
 .venv/bin/uvicorn app.web:app --reload         # http://localhost:8000
 ```
 
+**On a Mac without the terminal:** double-click `Nextfix starten.command` in the project folder. It starts Nextfix
+and opens http://localhost:8000 in your browser; the first start sets everything up (a few minutes, only once).
+Close the window to stop Nextfix. If macOS blocks the file (e.g. after downloading the ZIP), right-click it, choose
+“Open” and confirm once.
+
 Then add a domain and click “Website prüfen” (audit website). No website of your own? Start the demo site:
 
 ```bash
