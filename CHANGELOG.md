@@ -2,6 +2,13 @@
 
 All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
+## 0.2.1 – 2026-10-18
+
+### Fixed
+- Pages with noindex no longer count for missing or duplicate titles and descriptions, headings, text ratio and
+  duplicate content. Google does not show these pages, so they only produced false alarms (e.g. a clickable demo
+  on noindex counted as 21 duplicate titles and 54 missing descriptions). Image alt texts still count (#21).
+
 ## 0.2.0 – 2026-10-17
 
 Easier to install and to act on: the installer fetches the latest release and prints the Claude Code command,
