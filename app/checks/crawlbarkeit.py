@@ -6,8 +6,13 @@ MAX_REDIRECTS = 3
 
 
 @check("status_4xx", "Seiten mit 4xx-Statuscode", "error", "crawlbarkeit",
-       "Seite existiert nicht oder ist gesperrt; Nutzer und Suchmaschinen landen im Leeren.",
-       "Seite wiederherstellen, per 301 umleiten oder Links darauf entfernen.")
+       "Die Adresse führt ins Leere („Seite nicht gefunden“). Besucher brechen ab, und Google nimmt die Seite aus den "
+       "Suchergebnissen.",
+       "Gibt es den Inhalt unter einer neuen Adresse, leite die alte Adresse dorthin weiter (eine dauerhafte "
+       "Weiterleitung, auch „301“ genannt). Ist er ganz weg, entferne die Links, die noch auf die alte Adresse zeigen; "
+       "welche das sind, zeigt die Aufgabe „Defekte interne Links“.",
+       wordpress="Weiterleitung anlegen: kostenloses Plugin „Redirection“ oder Rank Math → Weiterleitungen (bei Yoast "
+       "nur in der Premium-Version). Alte Adresse als Quelle, neue als Ziel, Typ „301“.")
 def status_4xx(conn, crawl_id):
     return abfrage(conn, "SELECT id, status_code FROM seiten WHERE crawl_id=? AND status_code BETWEEN 400 AND 499", crawl_id)
 

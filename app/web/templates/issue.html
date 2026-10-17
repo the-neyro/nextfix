@@ -44,6 +44,7 @@
   <section class="karte">
     <h2>So behebst du es</h2>
     <p>{{ d.beheben }}</p>
+    {% if d.wordpress %}<p class="klein"><strong>In WordPress:</strong> {{ d.wordpress }}</p>{% endif %}
     {% if gruppen and gruppen[0][1] >= 5 and gruppen[0][0] != '/' %}
     <p class="klein">{{ gruppen[0][1] }} Fundstellen liegen unter <strong>{{ gruppen[0][0] }}</strong>. Vermutlich steckt eine gemeinsame Vorlage dahinter – dann reicht eine Änderung für alle.</p>
     {% endif %}

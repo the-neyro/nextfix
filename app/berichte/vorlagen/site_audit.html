@@ -220,6 +220,7 @@
       <dl>
         <dt>Warum</dt><dd>{{ i.warum }}</dd>
         <dt>So beheben</dt><dd>{{ i.beheben }}</dd>
+        {% if i.wordpress %}<dt>In WordPress</dt><dd>{{ i.wordpress }}</dd>{% endif %}
         {% if i.beispiele %}<dt>Zum Beispiel</dt><dd>{% for u in i.beispiele %}<div class="url">{{ u }}</div>{% endfor %}</dd>{% endif %}
       </dl>
     </div>

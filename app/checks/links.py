@@ -18,8 +18,12 @@ _DEFEKT = """
 
 
 @check("interne_links_defekt", "Defekte interne Links", "error", "links",
-       "Links ins Leere frustrieren Nutzer und verschwenden Crawl-Budget.",
-       "Link korrigieren oder entfernen, Zielseite ggf. umleiten.")
+       "Ein Link auf deiner Website führt auf eine Seite, die es nicht gibt. Besucher landen auf „Seite nicht "
+       "gefunden“, und Google folgt dem Link umsonst.",
+       "Öffne die Seite, auf der der Link steht (siehe Liste), und trag die richtige Adresse ein oder lösch den Link. "
+       "Gibt es das Ziel unter neuer Adresse, hilft zusätzlich eine Weiterleitung von der alten Adresse.",
+       wordpress="Seite bearbeiten → verlinkten Text anklicken → Stift-Symbol → neue Adresse eintragen oder Link "
+       "entfernen. Steht der Link im Menü: Design → Menüs (bei Block-Themes: Design → Editor → Navigation).")
 def interne_links_defekt(conn, crawl_id):
     return abfrage(conn, _DEFEKT, crawl_id)
 

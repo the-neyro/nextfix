@@ -46,8 +46,14 @@ def sitemap_zu_gross(conn, crawl_id):
 
 
 @check("sitemap_falsche_seiten", "Falsche Seiten in sitemap.xml", "error", "crawlbarkeit",
-       "Die Sitemap soll nur indexierbare Seiten mit Status 200 enthalten – keine Weiterleitungen, Fehler, Duplikate oder noindex.",
-       "Weiterleitungen durch Ziel-URLs ersetzen, Fehlerseiten, Duplikate und noindex-Seiten entfernen.")
+       "Die Sitemap ist die Liste, mit der du Google deine Seiten meldest. Stehen dort Adressen, die weiterleiten, "
+       "fehlen, doppelt sind oder für Google ausgeblendet sind, verschwendet Google Zeit und vertraut der Liste weniger.",
+       "Nimm diese Adressen aus der Sitemap: Weiterleitungen ersetzt du durch die Adresse, auf die sie zeigen, fehlende "
+       "und ausgeblendete Seiten kommen ganz raus. Meist baut ein Plugin die Sitemap selbst, dann reicht es, die "
+       "Ursache zu beheben (alte Seite löschen oder richtig weiterleiten).",
+       wordpress="Yoast und Rank Math bauen die Sitemap selbst und lassen ausgeblendete Seiten weg. Steht trotzdem eine "
+       "alte Adresse drin, ist die alte Seite meist noch veröffentlicht, obwohl eine Weiterleitung auf sie zeigt: in "
+       "den Papierkorb legen.")
 def sitemap_falsche_seiten(conn, crawl_id):
     treffer = []
     for d in _eintraege(conn, crawl_id):
