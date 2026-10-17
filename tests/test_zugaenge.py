@@ -104,3 +104,22 @@ def test_ui_crawl_starten_im_hintergrund(testseite):
         time.sleep(0.1)
     assert r.headers.get("HX-Refresh") == "true"
     assert "Website-Zustand" in client.get(f"/projekte/{pid}").text
+
+
+def test_was_jetzt_tun_ueber_mcp_und_api(testseite):
+    """„Was jetzt tun“ ist per MCP und API dieselbe Liste wie in der Oberfläche."""
+    pid = client.post("/api/projekte", json={"domain": "127.0.0.1"}).json()["id"]
+    asyncio.run(server.call_tool("einstellungen_setzen", {"projekt_id": pid, "start_url": testseite, "crawl_delay": 0}))
+    asyncio.run(server.call_tool("crawl_starten", {"projekt_id": pid}))
+    cid = client.get(f"/api/projekte/{pid}/crawls").json()[0]["id"]
+
+    api = client.get(f"/api/crawls/{cid}/aufgaben").json()
+    assert set(api) >= {"aufgaben", "feinschliff", "erledigt"}
+    erste = api["aufgaben"][0]
+    assert {"was", "warum", "beheben", "wirkung", "aufwand_text", "wer", "seiten_text"} <= set(erste)
+    assert erste["wirkung"] in ("hoch", "mittel", "gering")
+    assert any(a["id"] == "status_4xx" for a in api["aufgaben"])   # Testseite hat /kaputt
+
+    mcp = asyncio.run(server.call_tool("was_jetzt_tun", {"projekt_id": pid}))
+    assert erste["was"] in str(mcp)
+    assert client.get("/api/crawls/9999/aufgaben").status_code == 404

@@ -1,9 +1,10 @@
 # Nextfix
 
+[![Tests](https://github.com/the-neyro/nextfix/actions/workflows/tests.yml/badge.svg)](https://github.com/the-neyro/nextfix/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-HTMX-009688.svg)
-![MCP](https://img.shields.io/badge/MCP-50%20tools-6E56CF.svg)
+![MCP](https://img.shields.io/badge/MCP-51%20tools-6E56CF.svg)
 
 **An SEO tool that tells you what to fix next.** Runs locally, costs nothing, and can be fully operated by Claude
 via MCP.
@@ -58,12 +59,31 @@ date, organization markup, based on the GEO study (Princeton, KDD 2024).
 
 Requires Python 3.12 or newer.
 
+**One line** (installs to `~/nextfix`, sets up everything and offers to start Nextfix with the demo website):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.sh | bash
+```
+
+On Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.ps1 | iex
+```
+
+Or step by step:
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium          # for page speed and PDF reports
 .venv/bin/uvicorn app.web:app --reload         # http://localhost:8000
 ```
+
+**On a Mac without the terminal:** double-click `Nextfix starten.command` in the project folder. It starts Nextfix
+and opens http://localhost:8000 in your browser; the first start sets everything up (a few minutes, only once).
+Close the window to stop Nextfix. If macOS blocks the file (e.g. after downloading the ZIP), right-click it, choose
+“Open” and confirm once.
 
 Then add a domain and click “Website prüfen” (audit website). No website of your own? Start the demo site:
 
@@ -80,9 +100,13 @@ data.
 .venv/bin/python -m app.mcp_server             # MCP server (stdio)
 ```
 
-For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 50 tools, e.g.
-`crawl_starten`, `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`, `keyword_recherche_starten`,
-`vitals_messen`, `pdf_bericht`.
+For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 51 tools, e.g.
+`crawl_starten`, `was_jetzt_tun` (the task list), `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`,
+`keyword_recherche_starten`, `vitals_messen`, `pdf_bericht`.
+
+Tool names and results are German on purpose, like the user interface: Claude understands them fine and answers in
+your language. The MCP server is called `seo-tool` (its config key in `.mcp.json` and the credentials folder
+`~/.config/seo-tool/`); that name is kept so existing setups keep working.
 
 ### Google Search Console, Bing and Open PageRank
 
@@ -115,6 +139,8 @@ and never end up in Git.
 Convention: a new feature starts in `app/core/`, then gets wired into the API, the UI **and** MCP, plus a test.
 Data is stored in `data/seo.db` (SQLite, not in Git); set a different path with `SEO_DB`. Code and UI are written
 in German.
+
+How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md). What changed: [CHANGELOG.md](CHANGELOG.md).
 
 ## Limitations
 

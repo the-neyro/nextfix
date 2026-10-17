@@ -163,9 +163,9 @@ def test_ki_score():
 
 
 def test_vorschlag_fuer_title_und_h1():
-    assert abgleich.title_vorschlag("ki agentur", "Radhaus – Digitale Lösungen") == "KI agentur: Digitale Lösungen | Radhaus"
-    assert abgleich.title_vorschlag("seo check", "Startseite") == "SEO check: Startseite"
+    assert abgleich.title_vorschlag("ki agentur", "Radhaus – Digitale Lösungen") == "KI Agentur: Digitale Lösungen | Radhaus"
+    assert abgleich.title_vorschlag("seo check", "Startseite") == "SEO Check"
     lang = abgleich.title_vorschlag("on premise ki", "On-Premise KI vs. Cloud: Was ist besser für Unternehmen im Mittelstand? – Radhaus")
-    assert lang == "On premise KI | Radhaus" and len(lang) <= abgleich.TITLE_MAX
+    assert lang == "On Premise KI | Radhaus" and len(lang) <= abgleich.TITLE_MAX
     p = {x.id: x for x in abgleich.pruefen(lesen(SCHLECHT, "https://ex.de/"), "seo check")}
-    assert p["title_keyword"].vorschlag == "SEO check: Startseite" and p["h1_keyword"].vorschlag == "SEO check: Willkommen"
+    assert p["title_keyword"].vorschlag == "SEO Check" and p["h1_keyword"].vorschlag == "SEO Check: Willkommen"

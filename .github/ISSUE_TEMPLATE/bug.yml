@@ -1,0 +1,28 @@
+name: Bug
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a project for …
+        2. Click “Website prüfen”
+        3. …
+  - type: input
+    attributes:
+      label: Audited URL (if public)
+  - type: input
+    attributes:
+      label: System
+      placeholder: macOS 15, Python 3.12, Chrome
+  - type: textarea
+    attributes:
+      label: Error message or log
+      render: text
