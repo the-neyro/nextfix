@@ -1,5 +1,6 @@
 # Nextfix
 
+[![Tests](https://github.com/the-neyro/nextfix/actions/workflows/tests.yml/badge.svg)](https://github.com/the-neyro/nextfix/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-HTMX-009688.svg)
@@ -115,6 +116,8 @@ and never end up in Git.
 Convention: a new feature starts in `app/core/`, then gets wired into the API, the UI **and** MCP, plus a test.
 Data is stored in `data/seo.db` (SQLite, not in Git); set a different path with `SEO_DB`. Code and UI are written
 in German.
+
+How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md). What changed: [CHANGELOG.md](CHANGELOG.md).
 
 ## Limitations
 

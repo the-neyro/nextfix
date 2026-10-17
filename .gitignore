@@ -20,3 +20,6 @@ docs/skills-kandidaten.md
 
 # Exporte (PDF/CSV) enthalten Kundendaten
 data/export/
+
+# macOS
+.DS_Store
