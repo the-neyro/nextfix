@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-HTMX-009688.svg)
-![MCP](https://img.shields.io/badge/MCP-50%20tools-6E56CF.svg)
+![MCP](https://img.shields.io/badge/MCP-51%20tools-6E56CF.svg)
 
 **An SEO tool that tells you what to fix next.** Runs locally, costs nothing, and can be fully operated by Claude
 via MCP.
@@ -80,9 +80,9 @@ data.
 .venv/bin/python -m app.mcp_server             # MCP server (stdio)
 ```
 
-For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 50 tools, e.g.
-`crawl_starten`, `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`, `keyword_recherche_starten`,
-`vitals_messen`, `pdf_bericht`.
+For Claude Code, copy `.mcp.json.example` to `.mcp.json` and set your project path. 51 tools, e.g.
+`crawl_starten`, `was_jetzt_tun` (the task list), `issues_liste`, `onpage_pruefen`, `positionen_uebersicht`,
+`keyword_recherche_starten`, `vitals_messen`, `pdf_bericht`.
 
 ### Google Search Console, Bing and Open PageRank
 
