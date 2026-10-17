@@ -11,8 +11,18 @@ TEXT_ANTEIL_MIN = 0.10
 
 # Seiten mit Canonical auf eine andere URL sind gewollte Varianten, keine Duplikate
 KANONISCH = "(canonical IS NULL OR canonical = url)"
-# noindex-Seiten (meta robots oder X-Robots-Tag) erscheinen nicht bei Google, dünner Text schadet dort nicht
-INDEXIERBAR = "(COALESCE(meta_robots, '') NOT LIKE '%noindex%' AND COALESCE(x_robots_tag, '') NOT LIKE '%noindex%')"
+
+
+def _indexierbar(tabelle: str = "") -> str:
+    """noindex-Seiten (meta robots oder X-Robots-Tag) erscheinen nicht bei Google: Titel, Beschreibung,
+    Überschriften und Textmenge sind dort egal. tabelle: Alias mit Punkt, z. B. "s."."""
+    return (f"(COALESCE({tabelle}meta_robots, '') NOT LIKE '%noindex%' "
+            f"AND COALESCE({tabelle}x_robots_tag, '') NOT LIKE '%noindex%')")
+
+
+INDEXIERBAR = _indexierbar()
+# Seiten, deren Suchergebnis-Darstellung zählt: erfolgreich geparst und nicht auf noindex
+SUCHBAR = f"{HTML} AND {INDEXIERBAR}"
 
 
 @check("title_fehlt", "Title-Tag fehlt oder ist leer", "error", "inhalt",
@@ -22,7 +32,7 @@ INDEXIERBAR = "(COALESCE(meta_robots, '') NOT LIKE '%noindex%' AND COALESCE(x_ro
        wordpress="Seite bearbeiten → im Yoast-Kasten unter dem Text „SEO-Titel“, bei Rank Math „Snippet bearbeiten“ → "
        "„Titel“. Fehlt der Titel danach immer noch, liegt es meist am Theme: Frag deinen Webbetreuer.")
 def title_fehlt(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {HTML} AND COALESCE(title, '') = ''", crawl_id)
+    return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND COALESCE(title, '') = ''", crawl_id)
 
 
 @check("title_doppelt", "Doppelte Title-Tags", "error", "inhalt",
@@ -31,9 +41,9 @@ def title_fehlt(conn, crawl_id):
 def title_doppelt(conn, crawl_id):
     return abfrage(conn, f"""
         SELECT s.id, s.title FROM seiten s JOIN (
-            SELECT title FROM seiten WHERE crawl_id=? AND {HTML} AND {KANONISCH} AND COALESCE(title, '') != ''
+            SELECT title FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND {KANONISCH} AND COALESCE(title, '') != ''
             GROUP BY title HAVING COUNT(*) > 1) d ON d.title = s.title
-        WHERE s.crawl_id=? AND s.status_code=200 AND (s.canonical IS NULL OR s.canonical = s.url)""", crawl_id, crawl_id)
+        WHERE s.crawl_id=? AND s.status_code=200 AND {_indexierbar('s.')} AND (s.canonical IS NULL OR s.canonical = s.url)""", crawl_id, crawl_id)
 
 
 @check("meta_desc_doppelt", "Doppelte Meta-Descriptions", "error", "inhalt",
@@ -47,9 +57,9 @@ def title_doppelt(conn, crawl_id):
 def meta_desc_doppelt(conn, crawl_id):
     return abfrage(conn, f"""
         SELECT s.id, s.meta_description FROM seiten s JOIN (
-            SELECT meta_description FROM seiten WHERE crawl_id=? AND {HTML} AND {KANONISCH} AND COALESCE(meta_description, '') != ''
+            SELECT meta_description FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND {KANONISCH} AND COALESCE(meta_description, '') != ''
             GROUP BY meta_description HAVING COUNT(*) > 1) d ON d.meta_description = s.meta_description
-        WHERE s.crawl_id=? AND s.status_code=200 AND (s.canonical IS NULL OR s.canonical = s.url)""", crawl_id, crawl_id)
+        WHERE s.crawl_id=? AND s.status_code=200 AND {_indexierbar('s.')} AND (s.canonical IS NULL OR s.canonical = s.url)""", crawl_id, crawl_id)
 
 
 @check("title_zu_lang", f"Title zu lang (> {TITLE_MAX} Zeichen)", "warning", "inhalt",
@@ -59,21 +69,21 @@ def meta_desc_doppelt(conn, crawl_id):
        wordpress="Yoast: Seite bearbeiten → „SEO-Titel“ (der Balken wird grün, wenn die Länge passt). Rank Math: "
        "„Snippet bearbeiten“ → „Titel“, mit Zeichenzähler.")
 def title_zu_lang(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, length(title) || ' Zeichen' FROM seiten WHERE crawl_id=? AND {HTML} AND length(title) > {TITLE_MAX}", crawl_id)
+    return abfrage(conn, f"SELECT id, length(title) || ' Zeichen' FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND length(title) > {TITLE_MAX}", crawl_id)
 
 
 @check("title_zu_kurz", f"Title zu kurz (≤ {TITLE_MIN} Zeichen)", "warning", "inhalt",
        "Sehr kurze Titles sagen zu wenig über die Seite aus.",
        "Title mit Haupt-Keyword und Nutzen ergänzen.")
 def title_zu_kurz(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, title FROM seiten WHERE crawl_id=? AND {HTML} AND length(title) BETWEEN 1 AND {TITLE_MIN}", crawl_id)
+    return abfrage(conn, f"SELECT id, title FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND length(title) BETWEEN 1 AND {TITLE_MIN}", crawl_id)
 
 
 @check("meta_desc_zu_lang", f"Meta-Description zu lang (> {META_DESC_MAX} Zeichen)", "notice", "inhalt",
        "Zu lange Beschreibungen schneidet Google im Suchergebnis ab; die Botschaft am Ende geht verloren.",
        f"Auf höchstens {META_DESC_MAX} Zeichen kürzen, das Wichtigste zuerst.")
 def meta_desc_zu_lang(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, length(meta_description) || ' Zeichen' FROM seiten WHERE crawl_id=? AND {HTML}"
+    return abfrage(conn, f"SELECT id, length(meta_description) || ' Zeichen' FROM seiten WHERE crawl_id=? AND {SUCHBAR}"
                          f" AND length(meta_description) > {META_DESC_MAX}", crawl_id)
 
 
@@ -84,7 +94,7 @@ def meta_desc_zu_lang(conn, crawl_id):
        wordpress="Seite bearbeiten → im Yoast-Kasten unter dem Text „Meta-Beschreibung“, bei Rank Math „Snippet bearbeiten“ "
        "→ „Beschreibung“.")
 def meta_desc_zu_kurz(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, length(meta_description) || ' Zeichen' FROM seiten WHERE crawl_id=? AND {HTML}"
+    return abfrage(conn, f"SELECT id, length(meta_description) || ' Zeichen' FROM seiten WHERE crawl_id=? AND {SUCHBAR}"
                          f" AND length(meta_description) BETWEEN 1 AND {META_DESC_MIN - 1}", crawl_id)
 
 
@@ -95,28 +105,28 @@ def meta_desc_zu_kurz(conn, crawl_id):
        wordpress="Seite bearbeiten → im Yoast-Kasten unter dem Text „Meta-Beschreibung“, bei Rank Math „Snippet bearbeiten“ "
        "→ „Beschreibung“.")
 def meta_desc_fehlt(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {HTML} AND COALESCE(meta_description, '') = ''", crawl_id)
+    return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND COALESCE(meta_description, '') = ''", crawl_id)
 
 
 @check("h1_fehlt", "H1-Überschrift fehlt", "warning", "inhalt",
        "Die H1 zeigt Nutzern und Suchmaschinen das Thema der Seite.",
        "Eine aussagekräftige H1 pro Seite setzen.")
 def h1_fehlt(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {HTML} AND h1_anzahl = 0", crawl_id)
+    return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND h1_anzahl = 0", crawl_id)
 
 
 @check("h1_gleich_title", "Überschrift (H1) und Seitentitel identisch", "warning", "inhalt",
        "Kein Fehler, aber verschenkt: Unterschiedliche Formulierungen decken mehr Suchvarianten ab.",
        "Formuliere die Überschrift auf der Seite etwas anders als den Seitentitel.")
 def h1_gleich_title(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, title FROM seiten WHERE crawl_id=? AND {HTML} AND h1_anzahl = 1 AND lower(trim(h1_text)) = lower(trim(title))", crawl_id)
+    return abfrage(conn, f"SELECT id, title FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND h1_anzahl = 1 AND lower(trim(h1_text)) = lower(trim(title))", crawl_id)
 
 
 @check("mehrere_h1", "Mehr als eine H1", "notice", "inhalt",
        "Mehrere H1 verwässern die Struktur der Seite.",
        "Eine H1 behalten, weitere zu H2 machen.")
 def mehrere_h1(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, h1_anzahl || ' × H1' FROM seiten WHERE crawl_id=? AND {HTML} AND h1_anzahl > 1", crawl_id)
+    return abfrage(conn, f"SELECT id, h1_anzahl || ' × H1' FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND h1_anzahl > 1", crawl_id)
 
 
 @check("wenig_text", f"Wenig Text (< {WOERTER_MIN} Wörter im Hauptinhalt)", "warning", "inhalt",
@@ -134,7 +144,7 @@ def wenig_text(conn, crawl_id):
     # weil die Aufgabe genau das als Lösung anbietet („… oder nimm sie aus dem Index“)
     return abfrage(conn, f"""SELECT id, n || ' Wörter' FROM (
         SELECT id, COALESCE(json_extract(geo, '$.woerter'), woerter) AS n FROM seiten
-        WHERE crawl_id=? AND {HTML} AND {INDEXIERBAR})
+        WHERE crawl_id=? AND {SUCHBAR})
         WHERE n < {WOERTER_MIN}""", crawl_id)
 
 
@@ -143,7 +153,7 @@ def wenig_text(conn, crawl_id):
        "lädt unnötig viel.",
        "Ergänze Text. Bleibt der Wert niedrig, lass prüfen, welche eingebetteten Skripte und Styles überflüssig sind.")
 def text_html_niedrig(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, round(text_anteil * 100, 1) || ' %' FROM seiten WHERE crawl_id=? AND {HTML} AND text_anteil <= {TEXT_ANTEIL_MIN}", crawl_id)
+    return abfrage(conn, f"SELECT id, round(text_anteil * 100, 1) || ' %' FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND text_anteil <= {TEXT_ANTEIL_MIN}", crawl_id)
 
 
 @check("bilder_ohne_alt", "Bilder ohne alt-Attribut", "warning", "inhalt",
