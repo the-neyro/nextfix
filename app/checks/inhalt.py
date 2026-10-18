@@ -1,6 +1,7 @@
 """Checks: Title, Meta-Description, Überschriften, Text."""
 
 from app.checks.katalog import HTML, abfrage, check
+from app.checks.ki import ist_rechtsseite
 
 TITLE_MAX = 70
 TITLE_MIN = 10
@@ -46,7 +47,7 @@ def title_doppelt(conn, crawl_id):
         WHERE s.crawl_id=? AND s.status_code=200 AND {_indexierbar('s.')} AND (s.canonical IS NULL OR s.canonical = s.url)""", crawl_id, crawl_id)
 
 
-@check("meta_desc_doppelt", "Doppelte Meta-Descriptions", "error", "inhalt",
+@check("meta_desc_doppelt", "Doppelte Meta-Descriptions", "warning", "inhalt",
        "Die Beschreibung zeigt Google oft unter dem Titel im Suchergebnis. Steht überall derselbe Text, erfährt "
        "niemand, warum sich gerade diese Seite lohnt.",
        "Schreib für jede Seite eine eigene Beschreibung in ein, zwei Sätzen: was auf der Seite steht und was der "
@@ -115,8 +116,9 @@ def h1_fehlt(conn, crawl_id):
     return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND h1_anzahl = 0", crawl_id)
 
 
-@check("h1_gleich_title", "Überschrift (H1) und Seitentitel identisch", "warning", "inhalt",
-       "Kein Fehler, aber verschenkt: Unterschiedliche Formulierungen decken mehr Suchvarianten ab.",
+@check("h1_gleich_title", "Überschrift (H1) und Seitentitel identisch", "notice", "inhalt",
+       "Kein Fehler, Google stört sich nicht daran. Unterschiedliche Formulierungen können aber mehr Suchvarianten "
+       "abdecken.",
        "Formuliere die Überschrift auf der Seite etwas anders als den Seitentitel.")
 def h1_gleich_title(conn, crawl_id):
     # In Python vergleichen: SQLites lower() kennt nur A–Z, „Über“ und „über“ wären sonst verschieden
@@ -126,15 +128,17 @@ def h1_gleich_title(conn, crawl_id):
 
 
 @check("mehrere_h1", "Mehr als eine H1", "notice", "inhalt",
-       "Mehrere H1 verwässern die Struktur der Seite.",
+       "Für Google kein Problem, mehrere H1 sind erlaubt. Eine klare Hauptüberschrift hilft aber Lesern und "
+       "Screenreadern, sich zurechtzufinden.",
        "Eine H1 behalten, weitere zu H2 machen.")
 def mehrere_h1(conn, crawl_id):
     return abfrage(conn, f"SELECT id, h1_anzahl || ' × H1' FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND h1_anzahl > 1", crawl_id)
 
 
 @check("wenig_text", f"Wenig Text (< {WOERTER_MIN} Wörter im Hauptinhalt)", "warning", "inhalt",
-       "Dünne Seiten ranken schlecht, weil sie wenig Antwort auf Suchanfragen geben. Gezählt wird nur der "
-       "Hauptinhalt – Menü, Fußzeile und Cookie-Hinweis machen eine Seite nicht gehaltvoller.",
+       "Faustregel, kein Google-Grenzwert: Google wertet die Länge allein nicht, es zählt, ob die Seite eine Frage "
+       "wirklich beantwortet. Mit sehr wenig Text gelingt das aber selten. Gezählt wird nur der Hauptinhalt – Menü, "
+       "Fußzeile und Cookie-Hinweis machen eine Seite nicht gehaltvoller. Rechtsseiten wie Impressum zählen nicht.",
        "Schreib mehr zu dem, was Besucher hier wissen wollen: Fragen von Kunden, Preise, Ablauf, Beispiele. Ist die "
        "Seite nur für den Betrieb da (Impressum, Login, Danke-Seite), sag Google, dass es sie nicht anzeigen soll "
        "(das heißt „noindex“), dann zählt sie hier nicht mehr. Zwei fast gleiche dünne Seiten kannst du auch zu "
@@ -145,15 +149,16 @@ def mehrere_h1(conn, crawl_id):
 def wenig_text(conn, crawl_id):
     # Wörter im Hauptbereich (geo.woerter); ältere Crawls ohne GEO-Signale: ganze Seite. noindex zählt nicht,
     # weil die Aufgabe genau das als Lösung anbietet („… oder nimm sie aus dem Index“)
-    return abfrage(conn, f"""SELECT id, n || ' Wörter' FROM (
-        SELECT id, COALESCE(json_extract(geo, '$.woerter'), woerter) AS n FROM seiten
+    # Rechtsseiten (Impressum, Datenschutz …) sind von Natur aus kurz und sollen gar nicht ranken
+    return [(sid, f"{n} Wörter") for sid, n, url in conn.execute(f"""SELECT id, n, url FROM (
+        SELECT id, url, COALESCE(json_extract(geo, '$.woerter'), woerter) AS n FROM seiten
         WHERE crawl_id=? AND {SUCHBAR})
-        WHERE n < {WOERTER_MIN}""", crawl_id)
+        WHERE n < {WOERTER_MIN}""", (crawl_id,)) if not ist_rechtsseite(url)]
 
 
-@check("text_html_niedrig", "Viel Code, wenig Text (≤ 10 % Text)", "warning", "inhalt",
-       "Weniger als 10 % der Seite ist lesbarer Text, der Rest ist Code. Oft ist der Inhalt dünn oder die Seite "
-       "lädt unnötig viel.",
+@check("text_html_niedrig", "Viel Code, wenig Text (≤ 10 % Text)", "notice", "inhalt",
+       "Faustregel anderer SEO-Tools, für Google kein Kriterium: Weniger als 10 % der Seite ist lesbarer Text. Das "
+       "kann auf dünnen Inhalt oder viel überflüssigen Code hinweisen.",
        "Ergänze Text. Bleibt der Wert niedrig, lass prüfen, welche eingebetteten Skripte und Styles überflüssig sind.")
 def text_html_niedrig(conn, crawl_id):
     return abfrage(conn, f"SELECT id, round(text_anteil * 100, 1) || ' %' FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND text_anteil <= {TEXT_ANTEIL_MIN}", crawl_id)

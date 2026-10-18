@@ -10,20 +10,21 @@ import json
 # Article/NewsArticle/BlogPosting haben laut Google keine Pflichtfelder (headline ist nur empfohlen)
 PFLICHTFELDER = {
     "Product": ("name",),
-    "Organization": ("name",), "LocalBusiness": ("name", "address"),
+    "LocalBusiness": ("name", "address"),
     "BreadcrumbList": ("itemListElement",),
     "FAQPage": ("mainEntity",), "Question": ("name", "acceptedAnswer"),
     "Event": ("name", "startDate", "location"),
     "Recipe": ("name", "image"),
     "JobPosting": ("title", "datePosted", "description", "hiringOrganization"),
     "VideoObject": ("name", "thumbnailUrl", "uploadDate"),
-    "Review": ("itemReviewed", "author"),
-    "Person": ("name",),
+    "Review": ("itemReviewed", "author", "reviewRating"),
 }
 
 
 # Mindestens eines dieser Felder (Google, Produkt-Snippets: review, aggregateRating oder offers)
-EINES_VON = {"Product": ("offers", "review", "aggregateRating")}
+# Organization und Person haben bei Google keine Pflichtfelder (und Person kein Rich Result), daher fehlen sie oben.
+EINES_VON = {"Product": ("offers", "review", "aggregateRating"),
+             "JobPosting": ("jobLocation", "jobLocationType")}   # Ort oder „Fernarbeit“
 
 
 def jsonld_auswerten(bloecke: list[str]) -> dict:

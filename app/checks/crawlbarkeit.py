@@ -35,7 +35,8 @@ def nicht_erreichbar(conn, crawl_id):
 
 
 @check("redirect_kette", "Redirect-Ketten und -Schleifen", "error", "crawlbarkeit",
-       f"Mehr als {MAX_REDIRECTS} Weiterleitungen hintereinander oder eine Schleife: Crawler brechen ab, Ladezeit steigt.",
+       f"Mehr als {MAX_REDIRECTS} Weiterleitungen hintereinander oder eine Schleife: Jede Station kostet Ladezeit, "
+       "Schleifen enden nie. Googlebot folgt bis zu 10 Weiterleitungen, andere Crawler oft weniger.",
        "Jede Weiterleitung direkt auf das endgültige Ziel zeigen lassen.")
 def redirect_kette(conn, crawl_id):
     ziele = dict(conn.execute(
@@ -55,7 +56,8 @@ def redirect_kette(conn, crawl_id):
 
 
 @check("temp_redirect", "Temporäre Weiterleitungen", "warning", "crawlbarkeit",
-       "302/307 signalisieren nur vorübergehenden Umzug; Ranking-Signale gehen evtl. nicht über.",
+       "302/307 signalisieren nur einen vorübergehenden Umzug. Google wertet das als schwächeres Signal für die neue "
+       "Adresse; bei einem dauerhaften Umzug ist 301 eindeutiger.",
        "Bei dauerhaftem Umzug 301 verwenden.")
 def temp_redirect(conn, crawl_id):
     return abfrage(conn, "SELECT id, status_code || ' → ' || redirect_ziel FROM seiten WHERE crawl_id=? AND status_code IN (302, 307)", crawl_id)
@@ -82,8 +84,9 @@ def robots_fehlt(conn, crawl_id):
     return [] if z[0] == 200 else [(None, f"Status {z[0]}")]
 
 
-@check("sitemap_fehlt", "sitemap.xml nicht gefunden", "warning", "crawlbarkeit",
-       "Die Sitemap hilft Suchmaschinen, alle wichtigen Seiten zu finden.",
+@check("sitemap_fehlt", "sitemap.xml nicht gefunden", "notice", "crawlbarkeit",
+       "Die Sitemap hilft Suchmaschinen, alle wichtigen Seiten zu finden. Laut Google brauchen kleine, gut verlinkte "
+       "Websites (bis etwa 500 Seiten) nicht unbedingt eine; schaden tut sie nie.",
        "sitemap.xml erzeugen und in robots.txt eintragen.")
 def sitemap_fehlt(conn, crawl_id):
     z = conn.execute("SELECT sitemap_status FROM crawls WHERE id=?", (crawl_id,)).fetchone()

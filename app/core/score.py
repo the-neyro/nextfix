@@ -7,14 +7,16 @@ Pro Check c mit Treffern und Gewicht w:
 Warum so (Fassung 1 war 100 * (1 - Σ strafe / Σ w) über alle Checks): Die meisten der ~100 Checks schlagen nie an
 (hreflang, TLS …). Sie blähten Σ w auf, echte Probleme „verdünnten“ sich – schwache Websites bekamen 92–99.
 Jetzt zählt nur, was gefunden wurde; der Anteil betroffener Seiten wiegt stark (SOCKEL klein), und e^(-x) hält
-den Wert zwischen 0 und 100. Dünner Inhalt wiegt wie ein Fehler, weil er auf vielen Seiten das Ranking der ganzen
-Website drückt (Abgleich mit einem externen Audit-Bericht).
+den Wert zwischen 0 und 100.
+
+Fassung 3 vom 18.10.2026: „Wenig Text“ wiegt nicht mehr wie ein Fehler, sondern wie eine Warnung. Google wertet die
+Länge eines Textes allein nicht (SEO Starter Guide); das Sondergewicht 3 hatte technisch saubere Websites auf ~60 gedrückt.
 """
 
 import math
 
 GEWICHTE = {"error": 3.0, "warning": 1.0, "notice": 0.0}
-GEWICHT_CHECK = {"wenig_text": 3.0}   # Abweichungen vom Schweregrad
+GEWICHT_CHECK: dict[str, float] = {}   # Abweichungen vom Schweregrad (zurzeit keine)
 SOCKEL = 0.15
 K = 8.0   # je größer, desto milder: Σ strafe = K → Health 37
 

@@ -29,7 +29,8 @@ def _schlecht(conn, crawl_id, metrik: str, text) -> list:
 
 @check("ladezeit_lcp", "Hauptinhalt lädt langsam (LCP mobil über 4 s)", "warning", "performance",
        "Der größte sichtbare Inhalt erscheint auf dem Handy erst nach über 4 Sekunden. LCP gehört zu den Core Web "
-       "Vitals, die Google fürs Ranking nutzt, und viele Besucher springen vorher ab.",
+       "Vitals. Google wertet dafür Messungen bei echten Besuchern (Search Console), Nextfix misst im Labor; die "
+       "Richtung stimmt meist, die Zahl kann abweichen. Viele Besucher springen vorher ab.",
        "Hauptbild verkleinern (WebP/AVIF, passende Größe) und nicht lazy laden, sondern vorladen; Server-Antwort "
        "beschleunigen und render-blockierende Skripte und Styles reduzieren.")
 def ladezeit_lcp(conn, crawl_id):

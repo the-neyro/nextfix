@@ -54,11 +54,12 @@ def html_zu_gross(conn, crawl_id):
     return abfrage(conn, f"SELECT id, (html_bytes / 1024) || ' KB' FROM seiten WHERE crawl_id=? AND {HTML} AND html_bytes > {HTML_MAX_BYTES}", crawl_id)
 
 
-@check("langsame_seite", "Langsame Seite (HTML > 1 s)", "error", "performance",
-       "Nur die HTML-Antwortzeit gemessen; über 1 Sekunde ist für Nutzer spürbar.",
+@check("langsame_seite", "Langsame Server-Antwort (HTML > 1,8 s)", "warning", "performance",
+       "Gemessen wird nur, wie lange das HTML braucht. Laut web.dev ist eine Server-Antwort über 1,8 Sekunden "
+       "schlecht; alles danach (Bilder, Skripte) kommt noch obendrauf.",
        "Server-Antwortzeit verbessern: Caching, schnellere Datenbank-Abfragen, CDN.")
 def langsame_seite(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, ladezeit_ms || ' ms' FROM seiten WHERE crawl_id=? AND {HTML} AND ladezeit_ms > 1000 AND ladezeit_ms <= 5000", crawl_id)
+    return abfrage(conn, f"SELECT id, ladezeit_ms || ' ms' FROM seiten WHERE crawl_id=? AND {HTML} AND ladezeit_ms > 1800 AND ladezeit_ms <= 5000", crawl_id)
 
 
 @check("unkomprimiert", "Unkomprimierte Seiten", "warning", "performance",
@@ -106,8 +107,9 @@ def viewport_unvollstaendig(conn, crawl_id):
     return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {HTML} AND hat_viewport = 1 AND viewport_ok = 0", crawl_id)
 
 
-@check("meta_refresh", "Seite mit Meta-Refresh", "error", "technik",
-       "Meta-Refresh ist eine schlechte Weiterleitung: langsam und für Suchmaschinen unklar.",
+@check("meta_refresh", "Seite mit Meta-Refresh", "warning", "technik",
+       "Google behandelt einen sofortigen Meta-Refresh wie eine Weiterleitung. Für Besucher ist er trotzdem "
+       "langsam und irritierend, und andere Suchmaschinen verstehen ihn schlechter.",
        "Durch serverseitige 301-Weiterleitung ersetzen.")
 def meta_refresh(conn, crawl_id):
     return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {HTML} AND hat_meta_refresh = 1", crawl_id)
@@ -133,7 +135,8 @@ def canonical_defekt(conn, crawl_id):
 
 
 @check("ohne_lang", "Kein lang-Attribut", "warning", "technik",
-       "Ohne Sprachangabe raten Suchmaschinen und Screenreader die Sprache.",
+       "Ohne Sprachangabe lesen Screenreader den Text womöglich in der falschen Aussprache vor, und Browser bieten "
+       "unnötig eine Übersetzung an. Google selbst erkennt die Sprache am Text und nutzt lang nicht.",
        '<html lang="de"> setzen.')
 def ohne_lang(conn, crawl_id):
     return abfrage(conn, f"SELECT id, NULL FROM seiten WHERE crawl_id=? AND {HTML} AND lang IS NULL", crawl_id)
