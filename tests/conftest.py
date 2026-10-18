@@ -20,3 +20,22 @@ def testseite():
     server, url = ts.starten()
     yield url
     server.shutdown()
+
+
+# ---------- langsame Tests (z. B. der Prüfstand) nur mit --langsam ----------
+
+def pytest_addoption(parser):
+    parser.addoption("--langsam", action="store_true", help="auch langsame Tests ausführen (z. B. Prüfstand, ~1-2 Min.)")
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "langsam: langsamer Test, läuft nur mit --langsam")
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--langsam"):
+        return
+    ueberspringen = pytest.mark.skip(reason="langsam: mit --langsam ausführen")
+    for item in items:
+        if "langsam" in item.keywords:
+            item.add_marker(ueberspringen)
