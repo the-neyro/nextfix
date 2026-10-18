@@ -24,6 +24,12 @@ EXTERN_PAUSE = 0.1     # Sekunden; verschiedene Hosts, daher kürzer als die Cra
 MAX_SITEMAP_PRUEFUNG = 1000  # Sitemap-URLs, die nicht gecrawlt wurden, per HEAD prüfen
 MAX_HTML_BYTES = 5 * 1024 * 1024   # mehr HTML wird nicht gelesen (Check „HTML zu groß“ greift ab 2 MB)
 QUELLEN = ("website", "sitemap", "beides")
+WIEDERHOLUNGEN = 2      # weitere Versuche nach Connect-/Read-Timeout, bevor etwas als nicht erreichbar zählt
+WIEDERHOLEN_PAUSE = 2.0  # Sekunden zwischen den Versuchen
+# Manche Server (z. B. Google-Hilfeseiten) antworten Bots mit 404/403; externe Links prüfen wir dann wie ein Browser nach
+EXTERN_NACHPRUEFEN = (403, 404, 405, 429, 501)
+BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
 
 # austauschbar für Tests (ohne Chromium)
 RENDERER_FABRIK = rendern.Renderer
@@ -183,8 +189,14 @@ class Crawler:
     def _seite_abrufen(self, url: str, tiefe: int) -> list[tuple[str, int]]:
         """Ruft eine Seite ab, speichert sie und gibt neu gefundene Ziele zurück."""
         t0 = time.perf_counter()
+
+        def abruf():
+            nonlocal t0
+            t0 = time.perf_counter()   # Ladezeit nur des letzten Versuchs, Timeouts davor zählen nicht mit
+            return _abrufen(self.client, url)
+
         try:
-            r, inhalt, groesse = _abrufen(self.client, url)
+            r, inhalt, groesse = _mit_wiederholung(abruf)
         except httpx.HTTPError as fehler:
             self._seite_speichern(url, tiefe, abruf_fehler=f"{type(fehler).__name__}: {fehler}"[:300],
                                   ladezeit_ms=int((time.perf_counter() - t0) * 1000))
@@ -305,7 +317,7 @@ class Crawler:
                 return
             status = None
             try:
-                status = _status(self.client, url, folgen=True)
+                status = _mit_wiederholung(lambda: _extern_status(self.client, url))
             except httpx.HTTPError:
                 pass
             self._ressource_speichern(url, art, extern=1, status_code=status)
@@ -342,6 +354,17 @@ class Crawler:
             self._warten()
 
 
+def _mit_wiederholung(aufruf):
+    """Führt aufruf() aus; bei Connect- oder Read-Timeout bis zu WIEDERHOLUNGEN weitere Versuche mit Pause."""
+    for versuch in range(WIEDERHOLUNGEN + 1):
+        try:
+            return aufruf()
+        except (httpx.ConnectTimeout, httpx.ReadTimeout):
+            if versuch == WIEDERHOLUNGEN:
+                raise
+            time.sleep(WIEDERHOLEN_PAUSE)
+
+
 def _abrufen(client: httpx.Client, url: str) -> tuple[httpx.Response, bytes, int | None]:
     """GET als Stream: nur HTML-Seiten mit Status 200 werden gelesen, und das höchstens bis MAX_HTML_BYTES.
     PDFs, Videos und Fehlerseiten kosten so keine Zeit und keinen Speicher. Liefert (Antwort, Inhalt, Größe)."""
@@ -365,6 +388,16 @@ def _status(client: httpx.Client, url: str, folgen: bool = False) -> int:
     r = client.head(url, follow_redirects=folgen)
     if r.status_code in (403, 405, 501):
         with client.stream("GET", url, follow_redirects=folgen) as r:
+            pass
+    return r.status_code
+
+
+def _extern_status(client: httpx.Client, url: str) -> int:
+    """HEAD mit Bot-Kennung; bei Ablehnung einmal per GET mit Browser-Kennung nachprüfen.
+    Gemeldet wird nur, was auch für einen normalen Browser fehlschlägt."""
+    r = client.head(url, follow_redirects=True)
+    if r.status_code in EXTERN_NACHPRUEFEN:
+        with client.stream("GET", url, follow_redirects=True, headers={"User-Agent": BROWSER_UA}) as r:
             pass
     return r.status_code
 
