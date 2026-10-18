@@ -4,6 +4,10 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
 ## Unreleased
 
+### Fixed
+- CSV exports: text starting with = + - @ (e.g. a page title from a crawled site) gets a leading apostrophe,
+  so Excel/Numbers never run it as a formula (CSV injection). Numbers stay numbers.
+
 ### Changed
 - Honest scoring, checked against Google Search Central and web.dev: “Little text” now weighs like a warning, not
   like an error (Google does not rank by length), and legal pages (imprint, privacy) no longer count. H1 equal to

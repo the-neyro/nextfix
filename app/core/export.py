@@ -16,12 +16,21 @@ SEITEN_SPALTEN = ("url", "status_code", "tiefe", "title", "meta_description", "h
                   "ladezeit_ms", "html_bytes", "canonical", "meta_robots", "lang", "blockiert", "link_rank")
 
 
+# Text von fremden Websites (Titel, URLs …) darf in Excel/Numbers nicht als Formel laufen (CSV-Injection, OWASP)
+FORMEL_ANFANG = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _entschaerfen(wert):
+    """Texte, die mit einem Formelzeichen beginnen, bekommen ein Apostroph davor; Zahlen bleiben Zahlen."""
+    return "'" + wert if isinstance(wert, str) and wert.startswith(FORMEL_ANFANG) else wert
+
+
 def _csv(kopf: list[str], zeilen) -> str:
     puffer = io.StringIO()
     puffer.write("﻿")
     schreiber = csv.writer(puffer, delimiter=";", lineterminator="\r\n")
     schreiber.writerow(kopf)
-    schreiber.writerows(zeilen)
+    schreiber.writerows([_entschaerfen(w) for w in z] for z in zeilen)
     return puffer.getvalue()
 
 
