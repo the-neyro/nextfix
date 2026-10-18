@@ -2,6 +2,27 @@
 
 All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
+## Unreleased
+
+### Added
+- Test bench (“Prüfstand”): `python -m scripts.pruefstand` serves seven local test websites with a known truth for
+  every check (must fire / must not fire, edge cases like 70/71 characters or 199/200 words), crawls them with the
+  real Nextfix code into its own database and prints a table: correct, false alarms, misses, not testable locally.
+  Runs in CI (`pytest --langsam`). `--export <folder>` writes the cases as static files for a second opinion.
+
+### Fixed
+- Mobile CLS was too good: Chrome flags layout shifts in the first ~500 ms as “recent input” under touch emulation,
+  so they were dropped.
+- robots.txt starting with a byte order mark (BOM): the first `User-agent` group was ignored, so its rules did not
+  apply; same file was reported as broken. llms.txt with a BOM no longer counts as badly formatted.
+- `<meta name="robots" content="none">` and `<meta name="googlebot" content="noindex">` now count as noindex.
+- “H1 equals title” also matches when only the case of umlauts differs.
+- Structured data follows Google: Article types have no required fields; Product needs `offers`, `review` or
+  `aggregateRating` besides `name`.
+- No “missing doctype” when an HTML comment comes first; no “obsolete plugin” for a file name containing “java”.
+- “Internal links to redirects” only lists redirects that an internal link points to, not every step of a chain.
+- hreflang: a target page without any hreflang now counts as missing return link.
+
 ## 0.2.2 – 2026-10-18
 
 ### Fixed

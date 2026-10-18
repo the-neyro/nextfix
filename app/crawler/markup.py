@@ -7,8 +7,8 @@ für die wichtigsten Typen mit Google-Rich-Results.
 import json
 
 # Pflichtfelder nach Google-Dokumentation (Auswahl der häufigsten Rich-Result-Typen)
+# Article/NewsArticle/BlogPosting haben laut Google keine Pflichtfelder (headline ist nur empfohlen)
 PFLICHTFELDER = {
-    "Article": ("headline",), "NewsArticle": ("headline",), "BlogPosting": ("headline",),
     "Product": ("name",),
     "Organization": ("name",), "LocalBusiness": ("name", "address"),
     "BreadcrumbList": ("itemListElement",),
@@ -20,6 +20,10 @@ PFLICHTFELDER = {
     "Review": ("itemReviewed", "author"),
     "Person": ("name",),
 }
+
+
+# Mindestens eines dieser Felder (Google, Produkt-Snippets: review, aggregateRating oder offers)
+EINES_VON = {"Product": ("offers", "review", "aggregateRating")}
 
 
 def jsonld_auswerten(bloecke: list[str]) -> dict:
@@ -57,6 +61,8 @@ def _knoten_pruefen(k, nr: int, typen: list, fehler: list) -> None:
         fehlend = [f for f in PFLICHTFELDER.get(t, ()) if k.get(f) in (None, "", [])]
         if fehlend:
             fehler.append(f"{t}: Pflichtfeld(er) fehlen: {', '.join(fehlend)}")
+        if t in EINES_VON and all(k.get(f) in (None, "", []) for f in EINES_VON[t]):
+            fehler.append(f"{t}: eines dieser Felder fehlt: {', '.join(EINES_VON[t])}")
 
 
 def microdata_typen(itemtypes: list[str]) -> list[str]:

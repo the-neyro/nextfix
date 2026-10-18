@@ -2,7 +2,7 @@
 
 import re
 
-from app.checks.katalog import check, json_spalte
+from app.checks.katalog import HTML, check, json_spalte
 from app.crawler.urls import normalisieren
 
 # Sprache (ISO 639-1/-2), optional Schrift (ISO 15924), optional Region (ISO 3166 oder UN M.49)
@@ -93,6 +93,9 @@ def hreflang_ziel_defekt(conn, crawl_id):
 def hreflang_ohne_rueckverweis(conn, crawl_id):
     alle = _eintraege(conn, crawl_id)
     ziele_je_url = {url: {ziel for _, ziel, _ in eintraege} for _, url, eintraege in alle}
+    # Erreichbare HTML-Seiten ganz ohne hreflang verweisen auch nicht zurück
+    for (url,) in conn.execute(f"SELECT url FROM seiten WHERE crawl_id=? AND {HTML}", (crawl_id,)):
+        ziele_je_url.setdefault(url, set())
     treffer = []
     for seite_id, url, eintraege in alle:
         fehlend = [ziel for _, ziel, _ in eintraege

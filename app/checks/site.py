@@ -20,7 +20,7 @@ LLMS_MIN_LINKS = 3
 def robots_pruefen(text: str) -> list[str]:
     """Formatfehler in robots.txt: unbekannte Felder, fehlender Doppelpunkt, Regeln vor User-agent."""
     fehler, hat_agent = [], False
-    for nr, zeile in enumerate(text.splitlines(), 1):
+    for nr, zeile in enumerate(text.removeprefix("\ufeff").splitlines(), 1):
         inhalt = zeile.split("#", 1)[0].strip()
         if not inhalt:
             continue
