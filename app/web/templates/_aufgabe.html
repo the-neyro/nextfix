@@ -8,6 +8,7 @@
     {% if a.verlauf == 'neu' %}<span class="klein">neu seit der letzten Prüfung</span>
     {% elif a.verlauf == 'besser' %}<span class="klein gut">▼ besser: {{ a.vorher }} → {{ a.seiten }}</span>
     {% elif a.verlauf == 'schlimmer' %}<span class="klein error">▲ mehr: {{ a.vorher }} → {{ a.seiten }}</span>{% endif %}
+    {% if a.traffic_text %}<span class="klein">{{ a.traffic_text }}</span>{% endif %}
   </div>
   <div class="aktion">
     <span class="wirkung {{ a.wirkung }}">Wirkung {{ a.wirkung }}</span>

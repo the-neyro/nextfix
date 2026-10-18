@@ -4,6 +4,11 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
 ## Unreleased
 
+### Added
+- Task priority uses Google Search Console data when imported: within the same impact level, tasks whose pages had
+  more clicks (then impressions) in the last 28 days come first, and each task shows those numbers. Severity stays
+  first, like Semrush and Ahrefs. Without GSC data the order is unchanged. Free, local, no extra API calls.
+
 ### Fixed
 - CSV exports: text starting with = + - @ (e.g. a page title from a crawled site) gets a leading apostrophe,
   so Excel/Numbers never run it as a formula (CSV injection). Numbers stay numbers.

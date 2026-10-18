@@ -55,7 +55,7 @@
     <section class="karte" aria-labelledby="was-jetzt">
       <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap">
         <h2 id="was-jetzt">Was jetzt tun</h2>
-        <span class="klein">Sortiert nach Wirkung auf den Website-Zustand</span>
+        <span class="klein">Sortiert nach Wirkung auf den Website-Zustand{% if aufg.suchdaten %}, bei gleicher Wirkung nach Klicks bei Google ({{ aufg.suchdaten.von|datum }} bis {{ aufg.suchdaten.bis|datum }}{% if aufg.suchdaten.quellen == ['mock'] %}, Beispieldaten{% endif %}){% endif %}</span>
       </div>
       {% if aufg.aufgaben %}
       <ol class="aufgaben">
