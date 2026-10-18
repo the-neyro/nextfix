@@ -20,7 +20,9 @@ def statuscodes(w: Website) -> None:
         '<p><a href="/gesperrt/seite">Interner Bereich</a></p>'), nein=["interne_links_defekt"])
 
     w.seite("/langsam-0-5", verzoegerung=0.5, nein=["langsame_seite"])
-    w.seite("/langsam-1-5", verzoegerung=1.5, ja=["langsame_seite"], nein=["nicht_erreichbar"])
+    w.seite("/langsam-1-5", verzoegerung=1.5, nein=["langsame_seite", "nicht_erreichbar"],
+            warum={"langsame_seite": "Grenze 1,8 s (web.dev: Server-Antwort ab 1,8 s schlecht)"})
+    w.seite("/langsam-2-2", verzoegerung=2.2, ja=["langsame_seite"], nein=["nicht_erreichbar"])
     w.seite("/sehr-langsam", verzoegerung=5.5, ja=["nicht_erreichbar"], nein=["langsame_seite"],
             warum={"langsame_seite": "über 5 s zählt als „lädt nicht“, nicht doppelt als langsam"})
 

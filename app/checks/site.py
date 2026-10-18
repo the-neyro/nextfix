@@ -91,7 +91,8 @@ def tls_veraltet(conn, crawl_id):
 
 
 @check("llms_fehlt", "llms.txt nicht gefunden", "notice", "ki",
-       "llms.txt gibt KI-Assistenten eine kompakte Übersicht der wichtigsten Inhalte.",
+       "llms.txt gibt KI-Assistenten eine kompakte Übersicht der wichtigsten Inhalte. Ein junger, freiwilliger "
+       "Vorschlag: Google nutzt die Datei nicht, ob andere KI-Dienste sie lesen, ist kaum belegt.",
        "llms.txt im Root anlegen: '# Name', Kurzbeschreibung, Links zu wichtigen Seiten.")
 def llms_fehlt(conn, crawl_id):
     l = fakten(conn, crawl_id).get("llms") or {}

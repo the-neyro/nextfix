@@ -57,7 +57,8 @@ def _geo_seiten(conn, crawl_id, mit_url=False):
 @check("ki_fragen_ohne_faq", "Fragen ohne FAQ-Markup", "notice", "ki",
        "Die Seite beantwortet mehrere Fragen (Zwischenüberschriften mit „?“), markiert sie aber nicht als FAQ. "
        "Frage-Antwort-Paare mit Markup sind für KI-Systeme leicht als Antwort zu übernehmen. "
-       "Hinweis: Google zeigt FAQ-Rich-Results nur noch für Behörden- und Gesundheitsseiten.",
+       "Hinweis: Google zeigt seit Mai 2026 gar keine FAQ-Rich-Results mehr; ob andere KI-Dienste das Markup "
+       "nutzen, ist nicht belegt. Deshalb nur Feinschliff.",
        "Fragen und Antworten als FAQPage (JSON-LD) auszeichnen, jede Antwort direkt unter der Frage in 1–3 Sätzen.")
 def ki_fragen_ohne_faq(conn, crawl_id):
     return [(seite_id, f"{geo['fragen']} Fragen")
@@ -87,8 +88,8 @@ def ki_textwand(conn, crawl_id):
 
 
 @check("ki_artikel_ohne_autor_datum", "Artikel ohne Autor oder Datum", "notice", "ki",
-       "Bei Artikeln achten Suchmaschinen und KI-Systeme auf Aktualität und Urheber (E-E-A-T). "
-       "Ohne Datum und Autor wirkt der Inhalt weniger vertrauenswürdig.",
+       "Ohne Datum und Autor wirkt ein Artikel weniger vertrauenswürdig, für Leser wie für KI-Systeme. Ein "
+       "direkter Rankingfaktor bei Google ist das nicht, Google empfiehlt beides aber für Artikel.",
        "datePublished/dateModified und author im Article-Markup angeben, Datum auch sichtbar mit <time datetime>.")
 def ki_artikel_ohne_autor_datum(conn, crawl_id):
     treffer = []

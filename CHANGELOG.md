@@ -4,6 +4,17 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
 ## Unreleased
 
+### Changed
+- Honest scoring, checked against Google Search Central and web.dev: “Little text” now weighs like a warning, not
+  like an error (Google does not rank by length), and legal pages (imprint, privacy) no longer count. H1 equal to
+  title and low text/HTML ratio are notices. Duplicate content, duplicate meta descriptions and meta refresh are
+  warnings. Slow server response starts at 1.8 s (web.dev TTFB), not 1 s, and is a warning.
+- Structured data: Organization and Person no longer have required fields (Google has none); Review needs
+  reviewRating, JobPosting needs jobLocation or jobLocationType.
+- Texts corrected: FAQ rich results are gone since May 2026, llms.txt is not used by Google, lang matters for
+  screen readers rather than Google, sitemaps are optional for small sites, lab vs. field data for Core Web Vitals.
+- Demo website: before 64.0 (was 48.7), after 90.6, tasks 8 → 3.
+
 ### Added
 - Test bench (“Prüfstand”): `python -m scripts.pruefstand` serves seven local test websites with a known truth for
   every check (must fire / must not fire, edge cases like 70/71 characters or 199/200 words), crawls them with the

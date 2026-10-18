@@ -264,9 +264,9 @@ def test_score_schwache_website_nicht_schoengerechnet():
     nie = [("error", 0, False)] * 60 + [("warning", 0, False)] * 30
     duenn = nie + [("warning", 116, False, "wenig_text"), ("warning", 22, False), ("error", 8, False),
                    ("error", 2, False), ("warning", 2, False), ("error", 1, False)]
-    assert 55 <= score.berechnen(duenn, 182) <= 70
-    # Wenig Text auf vielen Seiten wiegt wie ein Fehler
-    assert score.berechnen([("warning", 100, False, "wenig_text")], 182) < score.berechnen([("warning", 100, False)], 182)
+    # Fassung 3: „Wenig Text“ wiegt wie eine Warnung (Google wertet Länge allein nicht) → ~72 statt ~61, aber nicht 95
+    assert 65 <= score.berechnen(duenn, 182) <= 80
+    assert score.berechnen([("warning", 100, False, "wenig_text")], 182) == score.berechnen([("warning", 100, False)], 182)
     # Saubere Website mit Kleinigkeiten bleibt im grünen Bereich
     assert score.berechnen(nie + [("warning", 20, False), ("warning", 9, False)], 144) >= 90
 

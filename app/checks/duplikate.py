@@ -21,8 +21,9 @@ def _kandidaten(signaturen: dict[int, list[int]]) -> set[tuple[int, int]]:
     return paare
 
 
-@check("duplicate_content", f"Doppelter Inhalt (≥ {AEHNLICH_AB:.0%} ähnlich)", "error", "inhalt",
-       "Fast gleicher Haupttext auf mehreren URLs: Suchmaschinen wählen selbst eine Version, die anderen ranken kaum.",
+@check("duplicate_content", f"Doppelter Inhalt (≥ {AEHNLICH_AB:.0%} ähnlich)", "warning", "inhalt",
+       "Fast gleicher Haupttext auf mehreren URLs: Google wählt selbst eine Version, die anderen erscheinen meist "
+       "nicht. Eine Strafe gibt es dafür nicht, aber du verschenkst Seiten.",
        "Inhalte zusammenführen, deutlich unterscheiden oder per Canonical auf die Hauptversion verweisen.")
 def duplicate_content(conn, crawl_id):
     zeilen = json_spalte(conn, crawl_id, "signatur", f"{KANONISCH} AND {INDEXIERBAR}")   # noindex: Google sieht sie nicht
