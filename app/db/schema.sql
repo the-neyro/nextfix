@@ -159,6 +159,14 @@ CREATE TABLE IF NOT EXISTS sitemap_eintraege (
 );
 CREATE INDEX IF NOT EXISTS idx_sitemap_eintraege ON sitemap_eintraege(crawl_id, url);
 
+-- Ziele von Canonical, hreflang und llms.txt, die der Crawl nicht über Links erreicht hat (per HEAD geprüft)
+CREATE TABLE IF NOT EXISTS ziel_status (
+    crawl_id    INTEGER NOT NULL REFERENCES crawls(id) ON DELETE CASCADE,
+    url         TEXT NOT NULL,
+    status_code INTEGER,            -- NULL = nicht erreichbar
+    PRIMARY KEY (crawl_id, url)
+);
+
 -- Search-Console-Daten (Position Tracking), eigenes Archiv pro Projekt.
 -- Eine Zeile = ein Tag × Suchbegriff × Seite × Land × Gerät, wie die GSC-API sie liefert.
 CREATE TABLE IF NOT EXISTS gsc_zeilen (

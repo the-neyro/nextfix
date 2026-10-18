@@ -22,6 +22,7 @@ MAX_RESSOURCEN = 2000   # Obergrenze für Bild/JS/CSS-Prüfungen pro Crawl
 MAX_EXTERN = 500       # externe Links/Ressourcen pro Crawl
 EXTERN_PAUSE = 0.1     # Sekunden; verschiedene Hosts, daher kürzer als die Crawl-Pause
 MAX_SITEMAP_PRUEFUNG = 1000  # Sitemap-URLs, die nicht gecrawlt wurden, per HEAD prüfen
+MAX_ZIEL_PRUEFUNG = 200      # nicht verlinkte Ziele von Canonical, hreflang und llms.txt
 MAX_HTML_BYTES = 5 * 1024 * 1024   # mehr HTML wird nicht gelesen (Check „HTML zu groß“ greift ab 2 MB)
 QUELLEN = ("website", "sitemap", "beides")
 WIEDERHOLUNGEN = 2      # weitere Versuche nach Connect-/Read-Timeout, bevor etwas als nicht erreichbar zählt
@@ -84,6 +85,7 @@ class Crawler:
         self._ressourcen_pruefen()
         self._extern_pruefen()
         self._sitemap_urls_pruefen()
+        self._ziele_pruefen()
 
     def _abbruch_gewuenscht(self) -> bool:
         zeile = self.conn.execute("SELECT abbrechen FROM crawls WHERE id = ?", (self.crawl_id,)).fetchone()
@@ -355,6 +357,43 @@ class Crawler:
                 pass
             self.conn.execute("UPDATE sitemap_eintraege SET status_code=? WHERE crawl_id=? AND url=?",
                               (status, self.crawl_id, url))
+            self._fortschritt()
+            self._warten()
+
+
+    def _ziel_urls(self) -> list[str]:
+        """Ziele von Canonical, hreflang und llms.txt, in der Reihenfolge ihres ersten Auftretens."""
+        ziele = []
+        for url, canonical, hreflang in self.conn.execute(
+                "SELECT url, canonical, hreflang FROM seiten WHERE crawl_id=?", (self.crawl_id,)):
+            if canonical and canonical != url:
+                ziele.append(canonical)
+            for e in json.loads(hreflang or "[]"):
+                ziele.append(normalisieren(e["url"], url) or e["url"])
+        z = self.conn.execute("SELECT fakten FROM crawls WHERE id=?", (self.crawl_id,)).fetchone()
+        ziele += ((json.loads(z[0]) if z and z[0] else {}).get("llms") or {}).get("links") or []
+        return list(dict.fromkeys(u for u in ziele if u and u.startswith(("http://", "https://"))))
+
+    def _ziele_pruefen(self) -> None:
+        """Status von Canonical-, hreflang- und llms.txt-Zielen holen, die nirgends verlinkt sind und deshalb
+        nicht gecrawlt wurden (sonst blieben z. B. Canonicals auf eine 404 unentdeckt)."""
+        gecrawlt = {z[0] for z in self.conn.execute("SELECT url FROM seiten WHERE crawl_id=?", (self.crawl_id,))}
+        for url in [u for u in self._ziel_urls() if u not in gecrawlt][:MAX_ZIEL_PRUEFUNG]:
+            if self._abbruch_gewuenscht():
+                return
+            if self.e.robots_beachten and not self._erlaubt(url):
+                continue
+            status = None
+            try:
+                r = _mit_wiederholung(lambda: self.client.head(url))
+                if r.status_code in (405, 501):
+                    r = _mit_wiederholung(lambda: self.client.get(url))
+                status = r.status_code
+            except httpx.HTTPError:
+                pass
+            self.conn.execute("INSERT OR REPLACE INTO ziel_status (crawl_id, url, status_code) VALUES (?,?,?)",
+                              (self.crawl_id, url, status))
+            self.conn.commit()
             self._fortschritt()
             self._warten()
 

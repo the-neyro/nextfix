@@ -1,6 +1,6 @@
 """Checks: HTTPS, Performance, technisches Markup."""
 
-from app.checks.katalog import HTML, abfrage, check, json_spalte
+from app.checks.katalog import HTML, abfrage, check, json_spalte, url_status
 
 HTML_MAX_BYTES = 2 * 1024 * 1024
 
@@ -127,11 +127,11 @@ def mehrere_canonicals(conn, crawl_id):
        "Hinweis dann.",
        "Trag als Canonical die richtige, funktionierende Adresse ein – meist die Seite selbst.")
 def canonical_defekt(conn, crawl_id):
-    return abfrage(conn, """
-        SELECT s.id, s.canonical || ' (' || COALESCE(z.status_code, 'nicht erreichbar') || ')'
-        FROM seiten s JOIN seiten z ON z.crawl_id = s.crawl_id AND z.url = s.canonical
-        WHERE s.crawl_id=? AND s.canonical IS NOT NULL AND s.canonical != s.url
-          AND COALESCE(z.status_code, 0) != 200 AND z.blockiert = 0""", crawl_id)
+    status = url_status(conn, crawl_id)   # auch nicht verlinkte Ziele (per HEAD nachgeprüft)
+    return [(sid, f"{canonical} ({status[canonical] or 'nicht erreichbar'})")
+            for sid, url, canonical in conn.execute(
+                "SELECT id, url, canonical FROM seiten WHERE crawl_id=? AND canonical IS NOT NULL", (crawl_id,))
+            if canonical != url and canonical in status and status[canonical] != 200]
 
 
 @check("ohne_lang", "Kein lang-Attribut", "warning", "technik",
