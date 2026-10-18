@@ -10,7 +10,11 @@ from app.crawler import geo, markup, texte
 from app.crawler.urls import normalisieren
 
 SEMANTIK_TAGS = ("main", "article", "section", "nav", "header", "footer", "aside")
-PLUGIN_MUSTER = re.compile(r"flash|shockwave|\.swf\b|java|\.jar\b|\.class\b|silverlight|\.xap\b", re.I)
+# Plugin-Typen, Dateiendungen und die ActiveX-ID von Flash; „java“ allein reicht nicht (z. B. java-kurs.pdf)
+PLUGIN_MUSTER = re.compile(r"shockwave|x-java|java-applet|java-vm|silverlight|d27cdb6e|\.swf\b|\.jar\b|\.class\b|"
+                           r"\.xap\b", re.I)
+# Kommentare vor dem Doctype sind erlaubt, Browser bleiben im Standardmodus
+DOCTYPE = re.compile(r"\s*(?:<!--.*?-->\s*)*<!doctype", re.I | re.S)
 
 
 @dataclass
@@ -84,7 +88,7 @@ def dekodieren(inhalt: bytes, content_type: str | None) -> str:
 def zerlegen(html: str, basis_url: str) -> SeitenInhalt:
     baum = HTMLParser(html)
     inhalt = SeitenInhalt()
-    inhalt.hat_doctype = html.lstrip()[:15].lower().startswith("<!doctype")
+    inhalt.hat_doctype = bool(DOCTYPE.match(html[:4096]))
 
     # <base href> verändert die Basis für relative Links
     base = baum.css_first("base[href]")
@@ -120,8 +124,11 @@ def _kopf(baum, inhalt: SeitenInhalt, basis_url: str) -> None:
         name = a.get("name", "").lower()
         if name == "description":
             inhalt.meta_description = a.get("content", "").strip()
-        elif name == "robots":
-            inhalt.meta_robots = a.get("content", "").strip().lower()
+        elif name in ("robots", "googlebot"):   # Google beachtet beide; „none“ = noindex, nofollow
+            wert = a.get("content", "").strip().lower()
+            if "none" in re.split(r"[\s,]+", wert):
+                wert += ", noindex, nofollow"
+            inhalt.meta_robots = ", ".join(filter(None, (inhalt.meta_robots, wert)))
         elif name == "viewport":
             inhalt.hat_viewport = True
             c = a.get("content", "").lower()
@@ -189,7 +196,7 @@ def _technik(baum, inhalt: SeitenInhalt) -> None:
     inhalt.hat_frames = bool(baum.css_first("frameset, frame"))
     inhalt.hat_passwort = bool(baum.css_first('input[type="password" i]'))
     for node in baum.css("object, embed, applet"):
-        merkmale = " ".join(str(v) for v in node.attributes.values()) + (" java" if node.tag == "applet" else "")
+        merkmale = " ".join(str(v) for v in node.attributes.values()) + (" java-applet" if node.tag == "applet" else "")
         if PLUGIN_MUSTER.search(merkmale):
             inhalt.plugins.append(node.tag)
     inhalt.semantik = [t for t in SEMANTIK_TAGS if baum.css_first(t)]

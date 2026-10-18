@@ -104,7 +104,7 @@ class Crawler:
             r = self.client.get(wurzel + "/robots.txt", follow_redirects=True)
             status = r.status_code
             if r.status_code == 200:
-                text = r.text
+                text = r.text.removeprefix("\ufeff")   # BOM (Windows-Editoren): Google ignoriert ihn
                 self.robots = RobotsTxt()
                 self.robots.parse(text.splitlines())
                 sitemaps = self.robots.site_maps() or []

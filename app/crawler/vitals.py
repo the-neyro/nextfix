@@ -54,7 +54,8 @@ try {
   let sitzung = 0, eintraege = [];
   new PerformanceObserver(l => {
     for (const e of l.getEntries()) {
-      if (e.hadRecentInput) continue;
+      // hadRecentInput nicht beachten: Im Labor gibt es keine Eingaben, aber Chrome setzt es bei Handy-Emulation
+      // für alle Sprünge der ersten ~500 ms (Phantom-Eingabe der Touch-Emulation) – mobiles CLS wäre sonst zu gut
       const erster = eintraege[0], letzter = eintraege[eintraege.length - 1];
       if (sitzung && e.startTime - letzter.startTime < 1000 && e.startTime - erster.startTime < 5000) {
         sitzung += e.value; eintraege.push(e);

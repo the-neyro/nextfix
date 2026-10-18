@@ -23,7 +23,7 @@ class RobotsTxt:
         agenten: list[str] = []
         regeln: list[tuple[bool, str]] = []
         for zeile in zeilen:
-            zeile = zeile.split("#", 1)[0].strip()
+            zeile = zeile.removeprefix("\ufeff").split("#", 1)[0].strip()   # BOM am Dateianfang ignorieren
             if ":" not in zeile:
                 continue
             feld, wert = (t.strip() for t in zeile.split(":", 1))

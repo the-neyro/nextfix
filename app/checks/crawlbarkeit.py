@@ -66,7 +66,12 @@ def temp_redirect(conn, crawl_id):
        "zum Ziel – das kostet bei jedem Aufruf etwas Ladezeit.",
        "Ändere die internen Links so, dass sie direkt auf die neue Adresse zeigen.")
 def perm_redirect(conn, crawl_id):
-    return abfrage(conn, "SELECT id, status_code || ' → ' || redirect_ziel FROM seiten WHERE crawl_id=? AND status_code IN (301, 308)", crawl_id)
+    # Nur Adressen, auf die ein interner Link zeigt: Zwischenschritte einer Kette meldet „Redirect-Ketten“
+    return abfrage(conn, """
+        SELECT s.id, s.status_code || ' → ' || s.redirect_ziel FROM seiten s
+        WHERE s.crawl_id=? AND s.status_code IN (301, 308) AND EXISTS (
+            SELECT 1 FROM links l WHERE l.crawl_id = s.crawl_id AND l.ziel_url = s.url AND l.art = 'a' AND l.intern = 1)""",
+        crawl_id)
 
 
 @check("robots_fehlt", "robots.txt nicht gefunden", "notice", "crawlbarkeit",

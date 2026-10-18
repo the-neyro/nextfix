@@ -89,6 +89,7 @@ def _llms(client: httpx.Client, wurzel: str) -> dict:
 
 def llms_auswerten(text: str, basis: str) -> dict:
     """Aufbau nach llmstxt.org: H1, Zitat mit Kurzbeschreibung, H2-Abschnitte mit Linklisten."""
+    text = text.removeprefix("\ufeff")   # BOM am Dateianfang (Windows-Editoren)
     zeilen = [z.strip() for z in text.splitlines() if z.strip()]
     # Markdown-Links [Titel](URL) und – oft in der Praxis – nackte URLs
     markdown = [urljoin(basis, l) for l in re.findall(r"\]\(([^)\s]+)", text)]

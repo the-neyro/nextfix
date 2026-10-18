@@ -119,7 +119,10 @@ def h1_fehlt(conn, crawl_id):
        "Kein Fehler, aber verschenkt: Unterschiedliche Formulierungen decken mehr Suchvarianten ab.",
        "Formuliere die Überschrift auf der Seite etwas anders als den Seitentitel.")
 def h1_gleich_title(conn, crawl_id):
-    return abfrage(conn, f"SELECT id, title FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND h1_anzahl = 1 AND lower(trim(h1_text)) = lower(trim(title))", crawl_id)
+    # In Python vergleichen: SQLites lower() kennt nur A–Z, „Über“ und „über“ wären sonst verschieden
+    zeilen = conn.execute(f"SELECT id, title, h1_text FROM seiten WHERE crawl_id=? AND {SUCHBAR} AND h1_anzahl = 1"
+                          " AND title IS NOT NULL AND h1_text IS NOT NULL", (crawl_id,))
+    return [(seite_id, title) for seite_id, title, h1 in zeilen if h1.strip().casefold() == title.strip().casefold()]
 
 
 @check("mehrere_h1", "Mehr als eine H1", "notice", "inhalt",
