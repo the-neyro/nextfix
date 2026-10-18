@@ -34,3 +34,10 @@ def test_etag_reicht_statt_last_modified(tmp_path):
     assert ohne_last_modified(conn, 1) == []
     _seite(conn, "https://x.de/c/")
     assert ohne_last_modified(conn, 1) != []
+
+
+def test_csv_ohne_formeln():
+    """Fremder Text wie ein Titel „=1+1“ darf in Excel nicht als Formel laufen; Zahlen bleiben Zahlen."""
+    from app.core.export import _csv
+    text = _csv(["a", "b", "c"], [("=1+1", -3, "@SUMME(A1)"), ("normal", 5, "-minus")])
+    assert "'=1+1;-3;'@SUMME(A1)" in text and "normal;5;'-minus" in text
