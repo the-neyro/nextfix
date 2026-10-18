@@ -56,8 +56,7 @@ class BingVolumen:
         return ergebnis
 
     def _wochen(self, keyword: str) -> list[int]:
-        warten = self.pause - (time.monotonic() - self._letzte)
-        if warten > 0:
+        while (warten := self.pause - (time.monotonic() - self._letzte)) > 0:  # sleep kann zu früh enden (Windows)
             time.sleep(warten)
         self._letzte = time.monotonic()
         q = self.quelle or bing.BingApiQuelle()

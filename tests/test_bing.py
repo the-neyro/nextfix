@@ -166,6 +166,8 @@ def test_alte_gsc_property_wird_uebernommen(test_db):
     conn.execute("INSERT INTO gsc_auto (projekt_id, quelle) VALUES (1, 'mock')")
     conn.commit()
     conn.close()
+    from app import db
+    db._EINGERICHTET.clear()  # wie ein Neustart: das Schema läuft je Prozess einmal
     conn = verbinden()  # Schema läuft erneut und übernimmt die alten Einträge
     assert gsc_konto.property_holen(conn, 1) == "sc-domain:ex.de"
     assert importe.auto_holen(conn, 1) == {"google": "mock", "bing": None}
