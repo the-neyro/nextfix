@@ -13,6 +13,7 @@ steps to reproduce and the URL you audited (if it is public) help most.
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m pytest -q        # tests, no network needed
+.venv/bin/python -m pytest -q --langsam tests/test_pruefstand.py   # test bench, ~1 min, needs Chromium
 ```
 
 - One topic per pull request, with a short description of what changed and how you checked it.

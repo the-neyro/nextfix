@@ -285,11 +285,14 @@ def main() -> int:
     parser.add_argument("--bericht", type=Path, help="Tabelle als Markdown in diese Datei schreiben")
     parser.add_argument("--ohne-browser", action="store_true", help="JS-Rendering und Ladezeit auslassen")
     parser.add_argument("--export", type=Path, help="Websites als statische HTML-Dateien in diesen Ordner schreiben")
+    parser.add_argument("--export-basis", help="öffentliche Adresse des Export-Ordners (für absolute Links)")
+    parser.add_argument("--noindex", action="store_true", help="Export: alle Seiten auf noindex (verändert viele Fälle)")
     args = parser.parse_args()
     if args.export:
         from scripts.pruefstand_web import export
-        export.schreiben(websites_bauen(), args.export)
-        print(f"Export: {args.export}")
+        zahlen = export.schreiben(websites_bauen(), args.export, args.export_basis, args.noindex)
+        print(f"Export nach {args.export}: {zahlen['dateien']} Dateien, {zahlen['soll']} Soll-Einträge, "
+              f"davon {zahlen['nur_lokal']} nur lokal prüfbar (soll.json)")
         return 0
 
     db = config.PROJEKT_ROOT / "data" / "pruefstand.db"
