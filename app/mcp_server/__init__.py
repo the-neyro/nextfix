@@ -150,8 +150,10 @@ def uebersicht(crawl_id: int | None = None, projekt_id: int | None = None) -> di
 @server.tool()
 def was_jetzt_tun(projekt_id: int | None = None, crawl_id: int | None = None) -> dict:
     """Die Liste „Was jetzt tun“ wie in der Oberfläche: aufgaben (nach Wirkung sortiert, je Aufgabe was, warum,
-    beheben, wirkung hoch|mittel|gering, aufwand_text, wer, seiten_text, verlauf), feinschliff (Kleinigkeiten),
-    erledigt (seit dem vorigen Crawl behoben). Ohne crawl_id: letzter fertiger Crawl des Projekts."""
+    beheben, wirkung hoch|mittel|gering, aufwand_text, wer, seiten_text, verlauf; mit Search-Console-Daten auch
+    klicks, impressionen, traffic_text der betroffenen Seiten in 28 Tagen – sie ordnen innerhalb derselben Wirkung),
+    feinschliff (Kleinigkeiten), erledigt (seit dem vorigen Crawl behoben), suchdaten (Zeitraum oder None).
+    Ohne crawl_id: letzter fertiger Crawl des Projekts."""
     with _db() as conn:
         cid = _crawl_id(conn, crawl_id, projekt_id)
         audit.crawl_holen(conn, cid)   # unbekannte crawl_id → Fehler statt leerer Liste

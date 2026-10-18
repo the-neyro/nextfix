@@ -41,6 +41,7 @@ Typische Abläufe (jede Ergebnisseite verlinkt den nächsten Schritt):
 - **Priorität = gewinnbare Health-Punkte** (gleiche Formel wie `app/core/score.py`). So passt die Reihenfolge immer zur Health-Zahl.
   **Angezeigt wird nur die Wirkung hoch / mittel / gering** (Stand 16.10.2026), keine Punktzahl: „+4,2 Punkte“ täuschte eine Genauigkeit vor, die unsere eigene Formel nicht hat, und klang nach Ranking-Gewinn.
   Feinsortierung: × 1,5 wenn Startseite oder Seiten mit hoher Link-Stärke betroffen; bei Gleichstand zuerst geringer Aufwand.
+  **Mit Search-Console-Daten** (Stand 18.10.2026, `app/core/traffic.py`): innerhalb derselben Wirkungsstufe zuerst die Aufgabe, deren Seiten in den letzten 28 Tagen mehr Klicks (dann Impressionen) hatten; die Zahlen stehen an der Aufgabe. Wie Semrush/Ahrefs: Schweregrad vorn, Traffic als zweites Signal. Ohne Daten bleibt die Reihenfolge unverändert.
 - **Aufwand** pro Check im Katalog ergänzen: `leicht` (Text ändern), `mittel` (Template/Plugin), `technisch` (Server/Entwickler). Als Etikett zeigen.
 - **Ursache bündeln:** gleiche Abweichung auf vielen Seiten mit gleichem Pfadmuster → „vermutlich 1 Template: /glossar/*“.
 - **Anzahl:** 5 sichtbar, „weitere 9 anzeigen“. Notices (Gewicht 0) nie in der Liste, sondern unten eingeklappt „Feinschliff (11)“; nicht als „Issues“ in Kategorien zählen.

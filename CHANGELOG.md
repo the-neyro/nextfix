@@ -4,6 +4,11 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
 ## Unreleased
 
+### Added
+- Task priority uses Google Search Console data when imported: within the same impact level, tasks whose pages had
+  more clicks (then impressions) in the last 28 days come first, and each task shows those numbers. Severity stays
+  first, like Semrush and Ahrefs. Without GSC data the order is unchanged. Free, local, no extra API calls.
+
 ### Fixed
 - JavaScript rendering: if Chromium cannot load a page (timeout, dropped connection), Nextfix no longer falls back
   to the raw HTML silently. New warning `js_rendern_fehlgeschlagen` lists each URL with the reason; title, text,

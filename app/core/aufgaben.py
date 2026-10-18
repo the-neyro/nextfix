@@ -4,6 +4,10 @@ Reihenfolge = Punkte, die der Website-Zustand (Health) gewinnt, wenn nur dieses 
 aus app/core/score.py, damit Liste und Zustandszahl zusammenpassen. Bei gleichem Gewinn zuerst der geringere Aufwand.
 Feinschliff (Notices, Gewicht 0) kommt nicht in die Liste, sondern getrennt darunter.
 
+Mit Search-Console-Daten (app/core/traffic.py) ordnen Klicks, dann Impressionen der betroffenen Seiten innerhalb
+derselben Wirkungsstufe – wie bei Semrush und Ahrefs bleibt der Schweregrad vorn, Traffic ist das zweite Signal.
+Ohne Daten ist die Reihenfolge dieselbe wie zuvor (die Stufe folgt aus demselben Abzug wie der Gewinn).
+
 Angezeigt wird nur die Wirkung als Stufe (hoch / mittel / gering), keine Punktzahl: Die Punkte stammen aus unserer
 eigenen Formel und sagen nichts darüber, was eine Behebung bei Rankings oder Besuchern bringt. Eine Zahl wie „+4,2“
 täuscht eine Genauigkeit vor, die es nicht gibt. „gewinn“ bleibt für Sortierung und MCP im Ergebnis.
@@ -12,7 +16,7 @@ täuscht eine Genauigkeit vor, die es nicht gibt. „gewinn“ bleibt für Sorti
 import sqlite3
 
 from app import checks
-from app.core import score
+from app.core import ausblenden, score, traffic
 
 STUFEN = {"error": "dringend", "warning": "wichtig", "notice": "feinschliff"}
 
@@ -87,6 +91,7 @@ HANDLUNG = {
 # auf vielen Seiten (ab etwa 30 %) „mittel“ und site-weit „hoch“.
 WIRKUNG_HOCH = 1.0
 WIRKUNG_MITTEL = 0.4
+WIRKUNG_RANG = {"hoch": 0, "mittel": 1, "gering": 2}
 
 
 def wirkung(abzug: float) -> str:
@@ -124,7 +129,9 @@ def _vorheriger_crawl(conn: sqlite3.Connection, crawl_id: int) -> int | None:
 
 
 def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
-    """{"aufgaben": [...], "feinschliff": [...], "erledigt": [...], "vorher_id": int | None}."""
+    """{"aufgaben": [...], "feinschliff": [...], "erledigt": [...], "vorher_id": int | None,
+    "suchdaten": {"von", "bis", "tage", "quellen"} | None}. Mit Search-Console-Daten je Aufgabe klicks, impressionen,
+    traffic_text, sonst None."""
     from app.core import audit   # zirkulären Import vermeiden
 
     treffer = audit._treffer_pro_check(conn, crawl_id)
@@ -138,6 +145,9 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
 
     vorher_id = _vorheriger_crawl(conn, crawl_id)
     vorher = audit._treffer_pro_check(conn, vorher_id) if vorher_id else {}
+    projekt_id = conn.execute("SELECT projekt_id FROM crawls WHERE id=?", (crawl_id,)).fetchone()[0]
+    suchdaten = traffic.pro_seite(conn, projekt_id)
+    urls = _betroffene_urls(conn, crawl_id) if suchdaten else {}
 
     aufgaben, feinschliff = [], []
     for c in aktiv:
@@ -156,13 +166,30 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
              "beheben": c.beheben, "wordpress": c.wordpress, "schwere": c.schwere, "stufe": STUFEN[c.schwere], "kategorie": c.kategorie,
              "seiten": seiten, "ganze_site": ganze_site, "seiten_text": _seiten_text(seiten, ganze_site),
              "gewinn": round(gewinn, 1), "wirkung": wirkung(abzug[c.id]), "aufwand": _aufwand(c), "aufwand_text": AUFWAND_TEXT[_aufwand(c)],
-             "wer": _wer(c), "verlauf": verlauf, "vorher": vorher.get(c.id, (0, 0, False))[1]}
+             "wer": _wer(c), "verlauf": verlauf, "vorher": vorher.get(c.id, (0, 0, False))[1],
+             "klicks": None, "impressionen": None, "traffic_text": None}
+        if suchdaten:
+            k, i = suchdaten["summe"] if ganze_site else traffic.fuer_urls(suchdaten, urls.get(c.id, ()))
+            a.update(klicks=k, impressionen=i, traffic_text=traffic.text(k, i, suchdaten["tage"]))
         (feinschliff if c.schwere == "notice" else aufgaben).append(a)
 
-    aufgaben.sort(key=lambda a: (-a["gewinn"], a["aufwand"], -a["seiten"]))
-    feinschliff.sort(key=lambda a: -a["seiten"])
+    aufgaben.sort(key=lambda a: (WIRKUNG_RANG[a["wirkung"]], -(a["klicks"] or 0), -(a["impressionen"] or 0),
+                                 -a["gewinn"], a["aufwand"], -a["seiten"]))
+    feinschliff.sort(key=lambda a: (-(a["klicks"] or 0), -(a["impressionen"] or 0), -a["seiten"]))
     erledigt = [{"id": cid, "name": checks.REGISTER[cid].name, "seiten": v[1]}
                 for cid, v in vorher.items()
                 if cid in checks.REGISTER and cid not in treffer and cid not in aus
                 and checks.REGISTER[cid].schwere != "notice"]
-    return {"aufgaben": aufgaben, "feinschliff": feinschliff, "erledigt": erledigt, "vorher_id": vorher_id}
+    suche = {k: suchdaten[k] for k in ("von", "bis", "tage", "quellen")} if suchdaten else None
+    return {"aufgaben": aufgaben, "feinschliff": feinschliff, "erledigt": erledigt, "vorher_id": vorher_id,
+            "suchdaten": suche}
+
+
+def _betroffene_urls(conn: sqlite3.Connection, crawl_id: int) -> dict[str, set[str]]:
+    """check_id → URLs mit Treffer (ohne Ausgeblendetes, wie im Zustand)."""
+    urls: dict[str, set[str]] = {}
+    for check_id, url in conn.execute(f"""
+            SELECT i.check_id, s.url FROM issues i JOIN seiten s ON s.id = i.seite_id
+            WHERE i.crawl_id=? AND {ausblenden.NICHT_AUSGEBLENDET}""", (crawl_id,)):
+        urls.setdefault(check_id, set()).add(url)
+    return urls
