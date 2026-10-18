@@ -5,6 +5,9 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 ## Unreleased
 
 ### Fixed
+- JavaScript rendering: if Chromium cannot load a page (timeout, dropped connection), Nextfix no longer falls back
+  to the raw HTML silently. New warning `js_rendern_fehlgeschlagen` lists each URL with the reason; title, text,
+  heading, duplicate and AI-search content checks skip those pages instead of raising false alarms. Now 111 checks.
 - CSV exports: text starting with = + - @ (e.g. a page title from a crawled site) gets a leading apostrophe,
   so Excel/Numbers never run it as a formula (CSV injection). Numbers stay numbers.
 

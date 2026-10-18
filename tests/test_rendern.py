@@ -31,9 +31,9 @@ class FakeRenderer:
         return html
 
 
-def _crawl(testseite, **einst):
+def _crawl(testseite, projekt="127.0.0.1", **einst):
     conn = verbinden()
-    p = projekte.anlegen(conn, "127.0.0.1").id
+    p = projekte.anlegen(conn, projekt).id
     audit.einstellungen_setzen(conn, p, start_url=testseite, crawl_delay=0, **einst)
     return conn, audit.crawl_starten(conn, p, warten=True)["id"]
 
@@ -122,3 +122,52 @@ def test_kein_hinweis_mit_js_rendern(testseite, monkeypatch):
     conn, c = _crawl(testseite + "js", seitenlimit=1, js_rendern=True)
     assert not audit.issue_details(conn, c, "js_app_ohne_rendern")["treffer"]
     assert audit.uebersicht(conn, c)["js_hinweis"] == 0
+
+
+# ---------- Rendern gescheitert: je Seite melden, Inhalts-Prüfungen setzen aus ----------
+
+class Scheitert(FakeRenderer):
+    """/gut lässt sich nicht rendern, alle anderen Seiten schon."""
+    def __init__(self, user_agent):
+        self.fehler = None
+
+    def rendern(self, url):
+        if url.endswith("/gut"):
+            self.fehler = "net::ERR_EMPTY_RESPONSE"
+            return None
+        self.fehler = None
+        return super().rendern(url)
+
+
+def test_rendern_gescheitert_wird_je_seite_gemeldet(testseite, monkeypatch):
+    monkeypatch.setattr(crawler, "RENDERER_FABRIK", Scheitert)
+    conn, c = _crawl(testseite, js_rendern=True)
+    treffer = audit.issue_details(conn, c, "js_rendern_fehlgeschlagen")["treffer"]
+    assert [(t["url"], t["detail"]) for t in treffer] == [(testseite + "gut", "net::ERR_EMPTY_RESPONSE")]
+    assert _seite(conn, c, testseite + "gut")["woerter_roh"] is None   # kein stilles Roh-HTML als „gerendert“
+
+
+def test_inhalts_pruefungen_setzen_bei_gescheitertem_rendern_aus(testseite, monkeypatch):
+    class AlleScheitern(Scheitert):
+        def rendern(self, url):
+            self.fehler = "nach 20 s nicht fertig geladen"
+            return None
+    inhalts_checks = ("title_fehlt", "wenig_text", "meta_desc_fehlt", "duplicate_content", "ki_schwer_lesbar")
+    conn, ohne_js = _crawl(testseite, projekt="gegenprobe.de")   # Gegenprobe: die Testseite hat diese Fehler eingebaut
+    assert [k for k in inhalts_checks if not audit.issue_details(conn, ohne_js, k)["treffer"]] == []
+    monkeypatch.setattr(crawler, "RENDERER_FABRIK", AlleScheitern)
+    conn, c = _crawl(testseite, js_rendern=True)
+    gemeldet = {t["url"] for t in audit.issue_details(conn, c, "js_rendern_fehlgeschlagen")["treffer"]}
+    assert testseite in gemeldet
+    for check_id in inhalts_checks:
+        assert not audit.issue_details(conn, c, check_id)["treffer"], check_id
+
+
+def test_grund_ist_kurz_und_lesbar():
+    from app.crawler.rendern import grund
+
+    class TimeoutError(Exception):
+        pass
+    assert grund(TimeoutError("Timeout 20000ms exceeded."), 20) == "nach 20 s nicht fertig geladen"
+    fehler = Exception("Page.goto: net::ERR_EMPTY_RESPONSE at http://127.0.0.1:1/x\nCall log:\n  - navigating")
+    assert grund(fehler, 20) == "net::ERR_EMPTY_RESPONSE"

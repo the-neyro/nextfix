@@ -1,6 +1,6 @@
 """Checks: Title, Meta-Description, Überschriften, Text."""
 
-from app.checks.katalog import HTML, abfrage, check
+from app.checks.katalog import GERENDERT, HTML, abfrage, check
 from app.checks.ki import ist_rechtsseite
 
 TITLE_MAX = 70
@@ -22,8 +22,8 @@ def _indexierbar(tabelle: str = "") -> str:
 
 
 INDEXIERBAR = _indexierbar()
-# Seiten, deren Suchergebnis-Darstellung zählt: erfolgreich geparst und nicht auf noindex
-SUCHBAR = f"{HTML} AND {INDEXIERBAR}"
+# Seiten, deren Suchergebnis-Darstellung zählt: erfolgreich geparst, nicht auf noindex, Rendern nicht gescheitert
+SUCHBAR = f"{HTML} AND {INDEXIERBAR} AND {GERENDERT}"
 
 
 @check("title_fehlt", "Title-Tag fehlt oder ist leer", "error", "inhalt",

@@ -36,7 +36,7 @@ TEILWEISE = {
     "ohne_last_modified": "nur ganze Website; Grenzfall „alle Seiten mit Header“ auf Website sauber",
 }
 BROWSER_WEBSITES = {"js", "tempo"}
-BROWSER_CHECKS = {"inhalt_nur_per_js", "ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"}
+BROWSER_CHECKS = {"inhalt_nur_per_js", "js_rendern_fehlgeschlagen", "ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"}
 
 # Bekannte Abweichungen (bewusst noch nicht behoben), Schlüssel aus Ergebnis.abweichungen(): Grund
 BEKANNT: dict[tuple[str, str, str], str] = {
@@ -50,7 +50,9 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _antworten(self, mit_body: bool) -> None:
         a = self.website.finden(self.path) or Antwort(status=404, body="<h1>Seite nicht gefunden</h1>")
-        if a.abbrechen:
+        if mit_body and a.nur_erster_get:
+            a.gets += 1
+        if a.abbrechen or a.gets > 1:
             self.close_connection = True
             return
         if mit_body and a.verzoegerung:
