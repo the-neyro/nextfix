@@ -12,11 +12,11 @@ def intern(w: Website) -> None:
                ja=["interne_links_nofollow"])
     _mit_links(w, "/noopener-intern", '<a href="/uebersicht" rel="noopener noreferrer">Alle Testfälle</a>',
                nein=["interne_links_nofollow"])
-    _mit_links(w, "/link-ohne-text", '<a href="/uebersicht"></a> <a href="/"><img src="/bilder/ok.png" alt=""></a>',
+    _mit_links(w, "/link-ohne-text", '<a href="/uebersicht"></a> <a href="/"><img width="40" height="40" src="/bilder/ok.png" alt=""></a>',
                ja=["links_ohne_anker"])
     _mit_links(w, "/link-mit-aria-label", '<a href="/uebersicht" aria-label="Alle Testfälle"><svg width="9" '
                'height="9"></svg></a>', nein=["links_ohne_anker"])
-    _mit_links(w, "/bild-link-mit-alt", '<a href="/uebersicht"><img src="/bilder/ok.png" alt="Alle Testfälle"></a>',
+    _mit_links(w, "/bild-link-mit-alt", '<a href="/uebersicht"><img width="40" height="40" src="/bilder/ok.png" alt="Alle Testfälle"></a>',
                nein=["links_ohne_anker"])
     _mit_links(w, "/anker-hier", '<a href="/uebersicht">hier</a> <a href="/">Mehr erfahren</a>',
                ja=["nichtssagender_anker"])
@@ -60,9 +60,9 @@ def extern(w: Website) -> None:
                warum={"externe_links_defekt": "Weiterleitung auf 200, Server ohne HEAD und ein Link auf den eigenen "
                                               "Rechner (localhost) sind nicht defekt"})
     _mit_links(w, "/extern-nofollow", f'<a href="{f}/ok/partner" rel="nofollow">Partner</a>', ja=["externe_nofollow"])
-    _mit_links(w, "/extern-bild-defekt", f'<img src="{f}/fehlt/bild.png" alt="Fremdes Bild">',
+    _mit_links(w, "/extern-bild-defekt", f'<img width="40" height="40" src="{f}/fehlt/bild.png" alt="Fremdes Bild">',
                ja=["externe_bilder_defekt"])
-    _mit_links(w, "/extern-bild-ok", f'<img src="{f}/ok/bild.png" alt="Fremdes Bild">', nein=["externe_bilder_defekt"])
+    _mit_links(w, "/extern-bild-ok", f'<img width="40" height="40" src="{f}/ok/bild.png" alt="Fremdes Bild">', nein=["externe_bilder_defekt"])
     w.seite("/extern-js-defekt", nach_main=f'<script src="{f}/fehlt/skript.js"></script>',
             ja=["externe_js_css_defekt"])
     w.seite("/extern-js-ok", nach_main=f'<script src="{f}/ok/skript.js"></script>', nein=["externe_js_css_defekt"])

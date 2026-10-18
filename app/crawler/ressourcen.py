@@ -1,6 +1,8 @@
 """Bewertung einzelner Ressourcen (JS/CSS): Caching und Minifizierung aus Header und Inhalt."""
 
 import re
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 MIN_BYTES_MINIFY = 2048        # kleine Dateien: Minifizierung lohnt kaum, nicht bewerten
 MINIFIZIERT_ZEILE_AB = 200     # Ø Zeichen pro Zeile: ab hier sicher minifiziert
@@ -22,6 +24,22 @@ def wird_gecacht(cache_control: str | None, expires: str | None) -> bool:
     if alter:
         return max(alter) > 0
     return "immutable" in cc or bool((expires or "").strip())
+
+
+def cache_sekunden(cache_control: str | None, expires: str | None) -> int | None:
+    """Wie lange der Browser die Datei behalten darf, in Sekunden. None = unbekannt oder „immutable“ ohne Angabe."""
+    cc = (cache_control or "").lower()
+    if "no-store" in cc or "no-cache" in cc:
+        return 0
+    alter = [int(x) for x in MAX_AGE.findall(cc)]
+    if alter:
+        return max(alter)
+    if expires and expires.strip():
+        try:
+            return max(0, int((parsedate_to_datetime(expires) - datetime.now(timezone.utc)).total_seconds()))
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 def ist_minifiziert(text: str) -> bool | None:

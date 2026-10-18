@@ -47,7 +47,7 @@ def beschreibung(w: Website) -> None:
 
 def ueberschriften(w: Website) -> None:
     w.seite("/ohne-h1", h1=False, inhalt=absaetze("ohne-h1", 220), ja=["h1_fehlt"])
-    w.seite("/h1-nur-bild", h1=False, inhalt='<h1><img src="/bilder/ok.png" alt="Radhaus Logo"></h1>'
+    w.seite("/h1-nur-bild", h1=False, inhalt='<h1><img width="40" height="40" src="/bilder/ok.png" alt="Radhaus Logo"></h1>'
             + absaetze("h1-nur-bild", 220), nein=["h1_fehlt"])
     t = "Gleich lautender Titel und Überschrift im Test"
     w.seite("/h1-gleich-title", titel=t, h1=t.lower(), ja=["h1_gleich_title"])
@@ -73,9 +73,9 @@ def textmenge(w: Website) -> None:
         w._nr -= 1
         polster = max(0, int(sichtbarer_text(inhalt) / ziel) - probe - 20)
         w.seite(pfad, inhalt=inhalt, kopf=f"<style>/*{'x' * polster}*/</style>", **{soll: ["text_html_niedrig"]})
-    w.seite("/bild-ohne-alt", inhalt=absaetze("bild-ohne-alt", 218) + '<img src="/bilder/ok.png">',
+    w.seite("/bild-ohne-alt", inhalt=absaetze("bild-ohne-alt", 218) + '<img width="40" height="40" src="/bilder/ok.png">',
             ja=["bilder_ohne_alt"])
-    w.seite("/bild-alt-leer", inhalt=absaetze("bild-alt-leer", 218) + '<img src="/bilder/ok.png" alt="">',
+    w.seite("/bild-alt-leer", inhalt=absaetze("bild-alt-leer", 218) + '<img width="40" height="40" src="/bilder/ok.png" alt="">',
             nein=["bilder_ohne_alt"], warum={"bilder_ohne_alt": "alt=\"\" ist richtig für Schmuckbilder"})
 
 

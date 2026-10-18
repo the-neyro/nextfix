@@ -264,6 +264,8 @@ class Crawler:
             kaputte_links=json.dumps(inhalt.kaputte_links),
             geo=json.dumps(inhalt.geo),
             blockierend=json.dumps(inhalt.blockierend),
+            css_blockierend=json.dumps(inhalt.css_blockierend),
+            bilder_ohne_masse=inhalt.bilder_ohne_masse,
         )
         self.conn.executemany(
             "INSERT INTO links (crawl_id, seite_id, ziel_url, art, intern, anker_text, nofollow, alt)"
@@ -414,6 +416,7 @@ def _datei_laden(client: httpx.Client, url: str) -> dict:
             bytes=len(r.content),
             content_encoding=r.headers.get("content-encoding"),
             gecacht=int(ressourcen.wird_gecacht(r.headers.get("cache-control"), r.headers.get("expires"))),
+            cache_sekunden=ressourcen.cache_sekunden(r.headers.get("cache-control"), r.headers.get("expires")),
             minifiziert=None if (m := ressourcen.ist_minifiziert(text)) is None else int(m),
         )
     return werte

@@ -25,7 +25,7 @@ is in German.</sub>
 
 | Module | Question it answers |
 |---|---|
-| **Site audit** | What is broken, and what comes first? Crawler (links, sitemap or both, robots.txt, optional JavaScript rendering), 107 checks in 8 areas, site health 0–100, tasks ranked by impact (high / medium / low), “intentional” flag to hide deliberate cases, history between audits, CSV and PDF report. |
+| **Site audit** | What is broken, and what comes first? Crawler (links, sitemap or both, robots.txt, optional JavaScript rendering), 110 checks in 8 areas, site health 0–100, tasks ranked by impact (high / medium / low), “intentional” flag to hide deliberate cases, history between audits, CSV and PDF report. |
 | **Page speed** | Is the site fast enough? Core Web Vitals (LCP, CLS, TBT) measured in the lab with real Chromium, mobile and desktop, scored with the Lighthouse formula and checked against PageSpeed Insights. Poor values count towards site health; optionally measured automatically after every crawl. |
 | **Rankings** | Where am I found, where am I losing ground? Data from Google Search Console and Bing Webmaster Tools: visibility, winners and losers, “almost on page 1”, keyword cannibalization, daily import. |
 | **Authority** | How strong is my domain compared to competitors? Open PageRank value (0–10) for every project and any competitor domain, cached for 30 days, free API key. |

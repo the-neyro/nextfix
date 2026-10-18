@@ -33,7 +33,21 @@ def alles(w: Website) -> None:
     # + /stil.css auf jeder Seite = 101 bzw. 100 Dateien
     for pfad, anzahl, soll in (("/css-101", 100, "ja"), ("/css-100", 99, "nein")):
         links = "".join(f'<link rel="stylesheet" href="/css/datei-{i:03d}.css">' for i in range(1, anzahl + 1))
-        w.seite(pfad, kopf=links, **{soll: ["zu_viele_js_css"]})
+        erwartet = {"ja": ["css_blockierend"], "nein": []}   # 100 Stylesheets blockieren natürlich auch
+        erwartet[soll].append("zu_viele_js_css")
+        w.seite(pfad, kopf=links, **erwartet)
+    # /stil.css hat jede Seite: plus zwei = drei blockierende Stylesheets (Grenze), plus eins = zwei (normal)
+    w.seite("/css-drei", kopf='<link rel="stylesheet" href="/css/datei-001.css"><link rel="stylesheet" href="/css/datei-002.css">',
+            ja=["css_blockierend"])
+    w.seite("/css-zwei-print", kopf='<link rel="stylesheet" href="/css/datei-001.css">'
+            '<link rel="stylesheet" href="/css/datei-002.css" media="print">', nein=["css_blockierend"],
+            warum={"css_blockierend": "das Druck-Stylesheet blockiert nicht, also nur zwei"})
+    w.datei("/css/kurz.css", ".kurz{margin:0}", "text/css", header={"Cache-Control": "max-age=600"})
+    w.seite("/cache-kurz", kopf='<link rel="stylesheet" href="/css/kurz.css">', ja=["js_css_cache_kurz"],
+            nein=["js_css_ohne_cache"], warum={"js_css_ohne_cache": "gecacht ist es, nur kurz (10 Minuten)"})
+    w.datei("/css/sieben-tage.css", ".sieben{margin:0}", "text/css", header={"Cache-Control": "max-age=604800"})
+    w.seite("/cache-sieben-tage", kopf='<link rel="stylesheet" href="/css/sieben-tage.css">', nein=["js_css_cache_kurz"],
+            warum={"js_css_cache_kurz": "genau 7 Tage gelten nicht mehr als kurz"})
 
     w.datei("/js/ungezippt-1025.js", _einzeilig(1025), JS, gzip=False)
     w.datei("/js/ungezippt-1024.js", _einzeilig(1024), JS, gzip=False)

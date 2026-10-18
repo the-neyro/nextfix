@@ -187,3 +187,14 @@ def ohne_last_modified(conn, crawl_id):
     fehlend, gesamt = conn.execute(
         f"SELECT SUM(COALESCE(last_modified, '') = '' AND COALESCE(etag, '') = ''), COUNT(*) FROM seiten WHERE crawl_id=? AND {HTML}", (crawl_id,)).fetchone()
     return [(None, f"{fehlend} von {gesamt} HTML-Seiten")] if fehlend else []
+
+
+@check("bilder_ohne_masse", "Bilder ohne Breite und Höhe", "notice", "performance",
+       "Ohne width und height kennt der Browser den Platz eines Bildes erst nach dem Laden, und der Text darunter "
+       "springt. Das verschlechtert den Wert für Layout-Sprünge (CLS).",
+       "Jedem Bild width und height mitgeben (die echten Pixelmaße reichen, per CSS darf es trotzdem skalieren). "
+       "WordPress macht das bei Bildern aus der Mediathek automatisch.")
+def bilder_ohne_masse(conn, crawl_id):
+    return abfrage(conn, f"SELECT id, bilder_ohne_masse || ' Bild(er)' FROM seiten WHERE crawl_id=? AND {HTML} "
+                         "AND bilder_ohne_masse > 0", crawl_id)
+
