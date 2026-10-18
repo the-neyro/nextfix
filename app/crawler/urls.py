@@ -53,3 +53,12 @@ def ist_intern(url: str, start_host: str) -> bool:
     def ohne_www(h: str) -> str:
         return h[4:] if h.startswith("www.") else h
     return ohne_www(host(url)) == ohne_www(_netloc(start_host, ""))
+
+
+def ist_lokal(url: str) -> bool:
+    """Zeigt auf den eigenen Rechner (localhost, 127.0.0.1, ::1, *.localhost) – von außen nie erreichbar."""
+    try:
+        name = (urlsplit(url).hostname or "").rstrip(".")
+    except ValueError:
+        return False
+    return name in ("localhost", "127.0.0.1", "::1") or name.endswith(".localhost")
