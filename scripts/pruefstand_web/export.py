@@ -7,7 +7,7 @@ steht in soll.json mit „nur_lokal“ und Grund. Nichts davon wird hier veröff
 """
 
 import json
-import os
+import posixpath  # URL-Pfade: immer „/“, auch unter Windows
 import re
 from pathlib import Path
 
@@ -51,12 +51,12 @@ def _datei(pfad: str) -> str:
 
 def _relativ(text: str, w: Website, pfad: str, basis_neu: str | None) -> str:
     """Links auf die eigene Website relativ zur Datei machen (oder auf basis_neu umstellen)."""
-    ordner = os.path.dirname(_datei(pfad)) or "."
+    ordner = posixpath.dirname(_datei(pfad)) or "."
 
     def ziel(url_pfad: str) -> str:
         if basis_neu:
             return basis_neu.rstrip("/") + url_pfad
-        rel = os.path.relpath(_datei(url_pfad.split("?")[0]), ordner)
+        rel = posixpath.relpath(_datei(url_pfad.split("?")[0]), ordner)
         return rel[:-len("index.html")] or "./" if rel.endswith("index.html") else rel
     text = text.replace(w.basis, "/")
     return re.sub(r'(href|src|data)="(/[^"/][^"]*|/)"', lambda m: f'{m.group(1)}="{ziel(m.group(2))}"', text)
