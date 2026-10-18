@@ -15,7 +15,7 @@ import httpx
 from app.crawler import filter, rendern, ressourcen, site, sitemap
 from app.crawler.parser import dekodieren, zerlegen
 from app.crawler.robots import RobotsTxt
-from app.crawler.urls import host, ist_intern, normalisieren
+from app.crawler.urls import host, ist_intern, ist_lokal, normalisieren
 
 TIMEOUT = 15.0          # Sekunden; > 5 s Antwortzeit wird als Problem gewertet
 MAX_RESSOURCEN = 2000   # Obergrenze für Bild/JS/CSS-Prüfungen pro Crawl
@@ -315,6 +315,8 @@ class Crawler:
         for url, art in zeilen:
             if self._abbruch_gewuenscht():
                 return
+            if ist_lokal(url):   # z. B. Knopf „Programm öffnen“ auf localhost: Absicht, nicht prüfbar
+                continue
             status = None
             try:
                 status = _mit_wiederholung(lambda: _extern_status(self.client, url))

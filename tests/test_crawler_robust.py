@@ -7,7 +7,7 @@ from app.crawler import crawler as crawler_modul
 from app.crawler.crawler import CrawlEinstellungen, Crawler
 from app.crawler.parser import dekodieren
 from app.crawler.robots import RobotsTxt
-from app.crawler.urls import host, ist_intern, normalisieren
+from app.crawler.urls import host, ist_intern, ist_lokal, normalisieren
 from app.db import verbinden
 
 PUNY = "xn--bckerei-mller-bfb28a.de"   # bäckerei-müller.de
@@ -189,3 +189,30 @@ def test_externer_link_mit_404_nur_fuer_bots_zaehlt_nicht():
     assert ("GET", "/antwort", True) in anfragen
     treffer = externe_links_defekt(conn, crawl_id)
     assert len(treffer) == 1 and "/weg" in str(treffer[0])
+
+
+def test_links_auf_den_eigenen_rechner_werden_nicht_geprueft():
+    from app.checks.extern import externe_links_defekt
+    for url in ("http://localhost:8000/", "http://127.0.0.1/", "http://[::1]:8000/", "http://app.localhost/"):
+        assert ist_lokal(url)
+    assert not ist_lokal("https://localhost.example/") and not ist_lokal("https://t.de/")
+    anfragen = []
+
+    def antwort(r):
+        if r.url.host == "t.de":
+            return _html('<a href="http://localhost:8000/">Nextfix öffnen</a>') if r.url.path == "/" \
+                else httpx.Response(404)
+        if ist_lokal(str(r.url)):
+            anfragen.append(str(r.url))
+            raise httpx.ConnectError("Connection refused", request=r)
+        return httpx.Response(404)
+
+    conn = verbinden()
+    p = projekte.anlegen(conn, "t.de")
+    crawl_id = conn.execute("INSERT INTO crawls (projekt_id, start_url) VALUES (?, ?)",
+                            (p.id, "https://t.de/")).lastrowid
+    conn.commit()
+    client = httpx.Client(transport=httpx.MockTransport(antwort))
+    Crawler(conn, crawl_id, CrawlEinstellungen(start_url="https://t.de/", crawl_delay=0), client).ausfuehren()
+    assert anfragen == []
+    assert externe_links_defekt(conn, crawl_id) == []
