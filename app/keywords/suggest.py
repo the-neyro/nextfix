@@ -73,8 +73,9 @@ class Suggest:
         return ergebnis
 
     def _holen(self, anfrage: str) -> list[str]:
-        warten = self.pause - (time.monotonic() - self._letzte)
-        if warten > 0:
+        # In einer Schleife: sleep kann (z. B. unter Windows mit grober Uhr) etwas zu früh zurückkehren,
+        # die Pause zwischen echten Anfragen soll aber garantiert sein
+        while (warten := self.pause - (time.monotonic() - self._letzte)) > 0:
             time.sleep(warten)
         self._letzte = time.monotonic()
         self.anfragen_echt += 1
