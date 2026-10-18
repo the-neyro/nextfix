@@ -1,6 +1,7 @@
 """SQLite-Zugriff: Verbindung öffnen und Schema anlegen."""
 
 import sqlite3
+import threading
 from pathlib import Path
 
 from collections.abc import Iterator
@@ -53,17 +54,41 @@ NACHTRAEGE = [
 ]
 
 
+# Datenbank-Dateien, deren Schema dieser Prozess schon angelegt hat (Pfad + Inode: eine neu angelegte Datei zählt neu)
+_EINGERICHTET: set[tuple[str, int]] = set()
+_EINRICHTEN = threading.Lock()
+
+
 def verbinden(pfad: Path | str | None = None) -> sqlite3.Connection:
-    """Öffnet die Datenbank und legt fehlende Tabellen an."""
+    """Öffnet die Datenbank und legt beim ersten Mal fehlende Tabellen an.
+
+    Hintergrund-Jobs (Crawl, Suchvolumen) schreiben, während die Oberfläche alle paar hundert Millisekunden
+    nachfragt. Damit sich das nicht gegenseitig sperrt: WAL-Modus (Lesen blockiert Schreiben nicht), bis zu
+    30 s Warten auf eine Sperre statt 5 s, und das Schema nur einmal je Datei und Prozess ausführen
+    (executescript schreibt und braucht dafür die Schreibsperre)."""
     pfad = Path(pfad or config.DB_PFAD)
-    if str(pfad) != ":memory:":
+    im_speicher = str(pfad) == ":memory:"
+    if not im_speicher:
         pfad.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(pfad, check_same_thread=False)
+    conn = sqlite3.connect(pfad, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    if im_speicher:
+        _einrichten(conn)
+        return conn
+    schluessel = (str(pfad.resolve()), pfad.stat().st_ino)
+    if schluessel not in _EINGERICHTET:
+        with _EINRICHTEN:
+            if schluessel not in _EINGERICHTET:
+                conn.execute("PRAGMA journal_mode = WAL")
+                _einrichten(conn)
+                _EINGERICHTET.add(schluessel)
+    return conn
+
+
+def _einrichten(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA.read_text())
     _nachtragen(conn)
-    return conn
 
 
 def _nachtragen(conn: sqlite3.Connection) -> None:
