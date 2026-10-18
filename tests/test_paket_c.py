@@ -140,7 +140,8 @@ def test_js_css_checks(db):
         ("cdn.js", "script", 1, 404, None, None, None, None),
     ]
     for url, art, extern, status, bytes_, enc, cache, mini in dateien:
-        conn.execute("INSERT INTO ressourcen VALUES (?,?,?,?,?,?,?,?,?)", (c, B + url, art, status, extern, bytes_, enc, cache, mini))
+        conn.execute("INSERT INTO ressourcen (crawl_id, url, art, status_code, extern, bytes, content_encoding, gecacht,"
+                     " minifiziert) VALUES (?,?,?,?,?,?,?,?,?)", (c, B + url, art, status, extern, bytes_, enc, cache, mini))
         conn.execute("INSERT INTO links (crawl_id, seite_id, ziel_url, art, intern) VALUES (?,?,?,?,?)",
                      (c, ids[B + "a"], B + url, art, 1 - extern))
     conn.execute("INSERT INTO links (crawl_id, seite_id, ziel_url, art, intern) VALUES (?,?,?,?,1)", (c, ids[B + "b"], B + "gut.css", "css"))

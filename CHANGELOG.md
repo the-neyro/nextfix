@@ -22,6 +22,11 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 - Google-Extended moved to the training crawlers (it does not affect Google Search).
 - robots.txt: real format errors (missing colon, rule before User-agent) stay errors; unknown fields and the ignored
   `noindex:` are a new warning “Unknown fields in robots.txt”. Now 107 checks.
+- New notices: render-blocking stylesheets (3+ files or 100 KB+ in the head), short cache lifetimes for JS/CSS
+  (under 7 days), images without width and height (layout shift risk). Now 110 checks.
+- Targets of canonical, hreflang and llms.txt links that no page links to are checked with HEAD after the crawl
+  (max. 200). Canonicals or hreflang pointing to a 404 that is linked nowhere were missed before. The test bench
+  now has no known gaps left.
 
 ### Added
 - Test bench (“Prüfstand”): `python -m scripts.pruefstand` serves seven local test websites with a known truth for

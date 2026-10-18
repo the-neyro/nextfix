@@ -71,9 +71,13 @@ def groesse_und_tempo(w: Website) -> None:
 
 
 def defekte_dateien(w: Website) -> None:
-    w.seite("/bild-defekt", inhalt=absaetze("bild-defekt", 218) + '<img src="/bilder/fehlt.png" alt="Werkstatt"> ',
+    w.seite("/bild-defekt", inhalt=absaetze("bild-defekt", 218) + '<img width="40" height="40" src="/bilder/fehlt.png" alt="Werkstatt"> ',
             ja=["interne_bilder_defekt"])
-    w.seite("/bild-ok", inhalt=absaetze("bild-ok", 218) + '<img src="/bilder/ok.png" alt="Werkstatt">',
+    w.seite("/bild-ohne-masse", inhalt=absaetze("bild-ohne-masse", 218) + '<img src="/bilder/ok.png" alt="Werkstatt">',
+            ja=["bilder_ohne_masse"])
+    w.seite("/bild-masse-css", inhalt=absaetze("bild-masse-css", 218)
+            + '<img src="/bilder/ok.png" alt="Werkstatt" style="aspect-ratio: 4 / 3; width: 100%">', nein=["bilder_ohne_masse"])
+    w.seite("/bild-ok", inhalt=absaetze("bild-ok", 218) + '<img width="40" height="40" src="/bilder/ok.png" alt="Werkstatt">',
             nein=["interne_bilder_defekt"])
     w.seite("/js-defekt", nach_main='<script src="/js/fehlt.js"></script>', ja=["interne_js_css_defekt"])
     w.seite("/css-defekt", kopf='<link rel="stylesheet" href="/css/fehlt.css">', ja=["interne_js_css_defekt"])

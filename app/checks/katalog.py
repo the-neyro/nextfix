@@ -62,6 +62,13 @@ def check(id: str, name: str, schwere: str, kategorie: str, warum: str, beheben:
 HTML = "status_code = 200 AND woerter IS NOT NULL"
 
 
+def url_status(conn: sqlite3.Connection, crawl_id: int) -> dict[str, int | None]:
+    """Status je URL: gecrawlte Seiten (ohne robots-gesperrte) und nachträglich geprüfte Ziele (ziel_status)."""
+    status = dict(conn.execute("SELECT url, status_code FROM ziel_status WHERE crawl_id=?", (crawl_id,)))
+    status.update(conn.execute("SELECT url, status_code FROM seiten WHERE crawl_id=? AND blockiert=0", (crawl_id,)))
+    return status
+
+
 def fakten(conn: sqlite3.Connection, crawl_id: int) -> dict:
     """Site-weite Fakten des Crawls (siehe app/crawler/site.py)."""
     z = conn.execute("SELECT fakten FROM crawls WHERE id=?", (crawl_id,)).fetchone()

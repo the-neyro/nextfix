@@ -18,7 +18,7 @@ import zlib
 from dataclasses import dataclass, field
 
 LETZTE_AENDERUNG = "Sat, 17 Oct 2026 08:00:00 GMT"
-CACHE = {"Cache-Control": "max-age=86400"}
+CACHE = {"Cache-Control": "max-age=31536000"}   # ein Jahr: gilt als gut gecacht
 STIL = "body{font-family:sans-serif;max-width:40rem;margin:auto;padding:0 1rem}img{max-width:100%;height:auto}"
 
 WORTSCHATZ = (

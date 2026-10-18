@@ -93,6 +93,8 @@ CREATE TABLE IF NOT EXISTS seiten (
     link_rank        INTEGER,          -- interne Link-Stärke 0–100 (app/core/linkrank.py)
     geo              TEXT,             -- JSON: Signale für KI-Suche (app/crawler/geo.py)
     blockierend      TEXT,             -- JSON: externe Skripte im <head> ohne async/defer
+    css_blockierend  TEXT,             -- JSON: Stylesheets im <head>, die das Rendern anhalten
+    bilder_ohne_masse INTEGER,         -- Anzahl <img> ohne width/height
     woerter_roh      INTEGER,          -- Wörter ohne JavaScript (nur wenn gerendert wurde, sonst NULL)
     js_app           TEXT,             -- leerer App-Container (#root, #app …): Seite baut sich per JavaScript auf
     UNIQUE (crawl_id, url)
@@ -124,6 +126,7 @@ CREATE TABLE IF NOT EXISTS ressourcen (
     content_encoding TEXT,
     gecacht          INTEGER,
     minifiziert      INTEGER,            -- NULL = zu klein zum Bewerten
+    cache_sekunden   INTEGER,            -- max-age bzw. Expires in Sekunden, NULL = unbekannt
     PRIMARY KEY (crawl_id, url)
 );
 
@@ -155,6 +158,14 @@ CREATE TABLE IF NOT EXISTS sitemap_eintraege (
     status_code INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_sitemap_eintraege ON sitemap_eintraege(crawl_id, url);
+
+-- Ziele von Canonical, hreflang und llms.txt, die der Crawl nicht über Links erreicht hat (per HEAD geprüft)
+CREATE TABLE IF NOT EXISTS ziel_status (
+    crawl_id    INTEGER NOT NULL REFERENCES crawls(id) ON DELETE CASCADE,
+    url         TEXT NOT NULL,
+    status_code INTEGER,            -- NULL = nicht erreichbar
+    PRIMARY KEY (crawl_id, url)
+);
 
 -- Search-Console-Daten (Position Tracking), eigenes Archiv pro Projekt.
 -- Eine Zeile = ein Tag × Suchbegriff × Seite × Land × Gerät, wie die GSC-API sie liefert.

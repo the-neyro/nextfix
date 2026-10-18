@@ -2,7 +2,7 @@
 
 import re
 
-from app.checks.katalog import HTML, check, json_spalte
+from app.checks.katalog import HTML, check, json_spalte, url_status
 from app.crawler.urls import normalisieren
 
 # Google: Sprache nach ISO 639-1 (zwei Buchstaben), optional Schrift (ISO 15924), optional Region nach ISO 3166-1
@@ -74,7 +74,7 @@ def hreflang_doppelt(conn, crawl_id):
 
 
 def _seiten_status(conn, crawl_id) -> dict[str, int | None]:
-    return dict(conn.execute("SELECT url, status_code FROM seiten WHERE crawl_id=?", (crawl_id,)))
+    return url_status(conn, crawl_id)   # gecrawlte Seiten plus nachgeprüfte, nicht verlinkte Ziele
 
 
 @check("hreflang_ziel_defekt", "hreflang zeigt auf fehlerhafte Seite", "error", "international",

@@ -53,6 +53,8 @@ class SeitenInhalt:
     kaputte_links: list[str] = field(default_factory=list)  # hrefs mit ungültiger Syntax
     geo: dict = field(default_factory=dict)                 # Signale für KI-Suche, siehe geo.py
     blockierend: list[str] = field(default_factory=list)    # externe Skripte im <head> ohne async/defer
+    css_blockierend: list[str] = field(default_factory=list)  # Stylesheets im <head>, die das Rendern anhalten (URLs)
+    bilder_ohne_masse: int = 0                                 # <img> ohne width und height (Risiko für Layout-Sprünge)
     js_app: str | None = None   # leerer App-Container (z. B. "#root"): Inhalt entsteht erst per JavaScript
 
 
@@ -97,7 +99,7 @@ def zerlegen(html: str, basis_url: str) -> SeitenInhalt:
 
     _kopf(baum, inhalt, basis_url)
     _links(baum, inhalt, basis_url)
-    _technik(baum, inhalt)
+    _technik(baum, inhalt, basis_url)
 
     jsonld = [s.text() for s in baum.css('script[type="application/ld+json"]')]
     inhalt.markup = markup.jsonld_auswerten(jsonld)
@@ -192,7 +194,7 @@ def _js_app(baum) -> str | None:
     return None
 
 
-def _technik(baum, inhalt: SeitenInhalt) -> None:
+def _technik(baum, inhalt: SeitenInhalt, basis_url: str = "") -> None:
     inhalt.hat_frames = bool(baum.css_first("frameset, frame"))
     inhalt.hat_passwort = bool(baum.css_first('input[type="password" i]'))
     for node in baum.css("object, embed, applet"):
@@ -206,6 +208,20 @@ def _technik(baum, inhalt: SeitenInhalt) -> None:
         a = {k.lower(): (v or "").lower() for k, v in s.attributes.items()}
         if "async" not in a and "defer" not in a and a.get("type") != "module":
             inhalt.blockierend.append(s.attributes.get("src") or "")
+    # Stylesheets halten das Rendern an, außer sie gelten nur für andere Medien (z. B. print) oder sind abgeschaltet
+    for l in baum.css("head link[href]"):
+        a = {k.lower(): (v or "").lower() for k, v in l.attributes.items()}
+        rel = set(a.get("rel", "").split())
+        medium = a.get("media", "").strip()
+        if "stylesheet" in rel and "alternate" not in rel and "disabled" not in a and medium in ("", "all", "screen"):
+            inhalt.css_blockierend.append(urljoin(basis_url, l.attributes.get("href") or ""))
+    # Bilder ohne feste Maße: der Browser kennt den Platz erst nach dem Laden, das Layout springt
+    for img in baum.css("body img"):
+        a = {k.lower(): (v or "") for k, v in img.attributes.items()}
+        stil = a.get("style", "").lower().replace(" ", "")
+        hat_masse = ("width" in a and "height" in a) or ("width:" in stil and "height:" in stil) or "aspect-ratio" in stil
+        if not hat_masse and not a.get("src", "").startswith("data:"):
+            inhalt.bilder_ohne_masse += 1
 
 
 def hauptbereich(baum):

@@ -211,8 +211,10 @@ def crawl_starten(request: Request, projekt_id: int, conn: Conn = Depends(sitzun
 
 @app.get("/projekte/{projekt_id}/status", response_class=HTMLResponse)
 def crawl_status(request: Request, projekt_id: int, conn: Conn = Depends(sitzung)):
-    antwort = _status_fragment(request, conn, projekt_id)
+    # Status vor dem Rendern lesen: sonst kann der Crawl dazwischen fertig werden, und die Antwort sagt
+    # „fertig“ (HX-Refresh), zeigt aber noch den Fortschritt
     aktuell = _aktueller_crawl(conn, projekt_id)
+    antwort = _status_fragment(request, conn, projekt_id)
     if aktuell and aktuell["status"] != "laeuft":
         antwort.headers["HX-Refresh"] = "true"  # fertig → ganze Seite mit Übersicht neu laden
     return antwort
@@ -422,8 +424,8 @@ def _import_status(request: Request, conn: Conn, projekt_id: int, fehler: str | 
 
 @app.get("/projekte/{projekt_id}/positionen/import-status", response_class=HTMLResponse)
 def import_status(request: Request, projekt_id: int, conn: Conn = Depends(sitzung)):
+    imp = importe.letzter(conn, projekt_id)   # vor dem Rendern lesen, siehe crawl_status
     antwort = _import_status(request, conn, projekt_id)
-    imp = importe.letzter(conn, projekt_id)
     if imp and imp["status"] != "laeuft":
         antwort.headers["HX-Refresh"] = "true"  # fertig → Seite mit neuen Daten laden
     return antwort

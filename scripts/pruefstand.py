@@ -39,11 +39,7 @@ BROWSER_WEBSITES = {"js", "tempo"}
 BROWSER_CHECKS = {"inhalt_nur_per_js", "ladezeit_lcp", "ladezeit_cls", "ladezeit_tbt"}
 
 # Bekannte Abweichungen (bewusst noch nicht behoben), Schlüssel aus Ergebnis.abweichungen(): Grund
-NICHT_ABGERUFEN = "Crawler ruft Ziele von Canonical, hreflang und llms.txt nicht selbst ab, nur verlinkte Seiten"
 BEKANNT: dict[tuple[str, str, str], str] = {
-    ("verpasst", "canonical_defekt", "haupt:/canonical-auf-nie-verlinkt"): NICHT_ABGERUFEN,
-    ("verpasst", "hreflang_ziel_defekt", "haupt:/hl/ziel-nie-verlinkt"): NICHT_ABGERUFEN,
-    ("verpasst", "llms_tote_links", "haupt:* (/llms-nie-verlinkt-404)"): NICHT_ABGERUFEN,
 }
 
 

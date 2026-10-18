@@ -1,7 +1,7 @@
 """Checks auf Site-Ebene: HTTPS-Weiterleitung, www, Zertifikat, robots.txt-Format, KI-Suche."""
 
 
-from app.checks.katalog import check, fakten
+from app.checks.katalog import check, fakten, url_status
 from app.crawler.robots import RobotsTxt
 
 ROBOTS_FELDER = {"user-agent", "allow", "disallow", "sitemap", "crawl-delay", "host", "clean-param",
@@ -180,6 +180,6 @@ def llms_tote_links(conn, crawl_id):
     links = (fakten(conn, crawl_id).get("llms") or {}).get("links") or []
     if not links:
         return []
-    status = dict(conn.execute("SELECT url, status_code FROM seiten WHERE crawl_id=? AND blockiert=0", (crawl_id,)))
+    status = url_status(conn, crawl_id)   # auch nicht verlinkte Ziele der llms.txt (per HEAD nachgeprüft)
     return [(None, f"{url} ({status[url] or 'nicht erreichbar'})")
             for url in dict.fromkeys(links) if url in status and (status[url] is None or status[url] >= 400)]
