@@ -5,31 +5,32 @@ from app.checks.katalog import check, fakten
 from app.crawler.robots import RobotsTxt
 
 ROBOTS_FELDER = {"user-agent", "allow", "disallow", "sitemap", "crawl-delay", "host", "clean-param",
-                 "request-rate", "visit-time", "noindex", "content-signal"}
+                 "request-rate", "visit-time", "content-signal"}
 
 # Crawler von KI-Suchdiensten (Antworten mit Quellen), nicht reine Trainings-Crawler
-# (Google-Extended steuert die Quellen-Nutzung in Gemini; Applebot-Extended nur Training, daher nicht dabei)
+# Google-Extended beeinflusst laut Google die Google-Suche nicht (nur Gemini/Training), daher bei den Trainings-Bots
 KI_SUCH_BOTS = ("OAI-SearchBot", "ChatGPT-User", "PerplexityBot", "Perplexity-User", "Claude-SearchBot",
-                "Claude-User", "Google-Extended", "DuckAssistBot", "MistralAI-User")
+                "Claude-User", "DuckAssistBot", "MistralAI-User")
 # Reine Trainings-Crawler: Sperre ist eine bewusste Entscheidung, daher nur als Hinweis
 KI_TRAINING_BOTS = ("GPTBot", "ClaudeBot", "CCBot", "Applebot-Extended", "Meta-ExternalAgent", "Bytespider",
-                    "Amazonbot", "cohere-training-data-crawler")
+                    "Amazonbot", "cohere-training-data-crawler", "Google-Extended")
 LLMS_MIN_LINKS = 3
 
 
-def robots_pruefen(text: str) -> list[str]:
-    """Formatfehler in robots.txt: unbekannte Felder, fehlender Doppelpunkt, Regeln vor User-agent."""
-    fehler, hat_agent = [], False
+def _robots_zeilen(text: str):
+    """(Zeilennummer, Feld, Inhalt) je nicht leerer Zeile; Feld None, wenn der Doppelpunkt fehlt."""
     for nr, zeile in enumerate(text.removeprefix("\ufeff").splitlines(), 1):
         inhalt = zeile.split("#", 1)[0].strip()
-        if not inhalt:
-            continue
-        if ":" not in inhalt:
+        if inhalt:
+            yield nr, (inhalt.split(":", 1)[0].strip().lower() if ":" in inhalt else None), inhalt
+
+
+def robots_pruefen(text: str) -> list[str]:
+    """Echte Formatfehler in robots.txt: fehlender Doppelpunkt, Regeln vor dem ersten User-agent."""
+    fehler, hat_agent = [], False
+    for nr, feld, inhalt in _robots_zeilen(text):
+        if feld is None:
             fehler.append(f"Zeile {nr}: kein Doppelpunkt: {inhalt[:60]}")
-            continue
-        feld = inhalt.split(":", 1)[0].strip().lower()
-        if feld not in ROBOTS_FELDER:
-            fehler.append(f"Zeile {nr}: unbekanntes Feld „{feld}“")
         elif feld == "user-agent":
             hat_agent = True
         elif feld in ("allow", "disallow") and not hat_agent:
@@ -37,12 +38,33 @@ def robots_pruefen(text: str) -> list[str]:
     return fehler
 
 
+def robots_felder_pruefen(text: str) -> list[str]:
+    """Felder, die Google nicht kennt oder ignoriert (z. B. Tippfehler, noindex)."""
+    hinweise = []
+    for nr, feld, _ in _robots_zeilen(text):
+        if feld == "noindex":
+            hinweise.append(f"Zeile {nr}: „noindex“ ignoriert Google seit 2019, die Seiten bleiben im Index möglich")
+        elif feld is not None and feld not in ROBOTS_FELDER:
+            hinweise.append(f"Zeile {nr}: unbekanntes Feld „{feld}“")
+    return hinweise
+
+
 @check("robots_formatfehler", "Formatfehler in robots.txt", "error", "crawlbarkeit",
-       "Fehlerhafte Zeilen werden von Suchmaschinen ignoriert, Sperren greifen evtl. nicht.",
-       "Nur gültige Felder (User-agent, Allow, Disallow, Sitemap …) im Format 'Feld: Wert' verwenden.")
+       "Zeilen ohne Doppelpunkt oder Regeln vor dem ersten User-agent werden ignoriert, Sperren greifen dann nicht.",
+       "Jede Regel im Format 'Feld: Wert' schreiben und unter einen User-agent stellen.")
 def robots_formatfehler(conn, crawl_id):
     z = conn.execute("SELECT robots_text FROM crawls WHERE id=?", (crawl_id,)).fetchone()
     return [(None, f) for f in robots_pruefen(z[0] or "")]
+
+
+@check("robots_unbekannte_felder", "Unbekannte Felder in robots.txt", "warning", "crawlbarkeit",
+       "Google übergeht Felder, die es nicht kennt. Bei einem Tippfehler wie „Disalow“ versteht Google die Regel "
+       "zwar meist trotzdem, andere Suchmaschinen aber nicht. „noindex“ in der robots.txt wirkt bei Google gar nicht.",
+       "Feldnamen korrigieren (User-agent, Allow, Disallow, Sitemap). Statt „noindex“ in der robots.txt das Meta-Tag "
+       "noindex auf der Seite verwenden.")
+def robots_unbekannte_felder(conn, crawl_id):
+    z = conn.execute("SELECT robots_text FROM crawls WHERE id=?", (crawl_id,)).fetchone()
+    return [(None, f) for f in robots_felder_pruefen(z[0] or "")]
 
 
 @check("http_nicht_auf_https", "HTTP leitet nicht auf HTTPS um", "error", "https",

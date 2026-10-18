@@ -43,6 +43,7 @@ NACHTRAEGE = [
     ("seiten", "link_rank", "INTEGER"),
     ("seiten", "geo", "TEXT"),                          # JSON: Signale für KI-Suche (app/crawler/geo.py)
     ("seiten", "blockierend", "TEXT"),                  # JSON: render-blockierende Skripte im <head>
+    ("seiten", "etag", "TEXT"),                         # HTTP-Header ETag
     ("recherche_ideen", "volumen", "INTEGER"),          # Bing-Impressionen pro Monat (Ø der letzten Wochen)
     ("recherche_ideen", "volumen_quelle", "TEXT"),      # bing | bing_mock
     ("recherche_ideen", "trend", "TEXT"),               # JSON: Wochenwerte, älteste zuerst

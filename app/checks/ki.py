@@ -48,7 +48,10 @@ def ist_rechtsseite(url: str) -> bool:
 
 def _geo_seiten(conn, crawl_id, mit_url=False):
     """(seite_id, geo, markup-Typen[, url]) für HTML-Seiten mit GEO-Signalen."""
-    zeilen = conn.execute(f"SELECT id, geo, markup, url FROM seiten WHERE crawl_id=? AND {HTML} AND geo IS NOT NULL",
+    # Nur Seiten, die Google zeigen darf: noindex-Seiten (z. B. eine Demo) sollen keine KI-Hinweise auslösen
+    zeilen = conn.execute(f"SELECT id, geo, markup, url FROM seiten WHERE crawl_id=? AND {HTML} AND geo IS NOT NULL"
+                          " AND (meta_robots IS NULL OR meta_robots NOT LIKE '%noindex%')"
+                          " AND (x_robots_tag IS NULL OR x_robots_tag NOT LIKE '%noindex%')",
                           (crawl_id,))
     return [(seite_id, json.loads(geo), set(json.loads(markup)["typen"]) if markup else set()) + ((url,) if mit_url else ())
             for seite_id, geo, markup, url in zeilen]

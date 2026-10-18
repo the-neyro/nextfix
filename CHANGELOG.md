@@ -14,6 +14,14 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 - Texts corrected: FAQ rich results are gone since May 2026, llms.txt is not used by Google, lang matters for
   screen readers rather than Google, sitemaps are optional for small sites, lab vs. field data for Core Web Vitals.
 - Demo website: before 64.0 (was 48.7), after 90.6, tasks 8 → 3.
+- “Blocked for Google” now reads robots.txt the way Googlebot does (not with Nextfix's own user agent) and explains
+  that robots.txt only blocks fetching, while noindex keeps a page out of results.
+- The load-time sample skips noindex pages; AI checks ignore noindex pages.
+- ETag counts like Last-Modified; two identical canonical tags are no longer “multiple canonicals”.
+- hreflang follows Google: two-letter language (ISO 639-1), region ISO 3166-1 alpha-2 (es-419 and en-UK are invalid).
+- Google-Extended moved to the training crawlers (it does not affect Google Search).
+- robots.txt: real format errors (missing colon, rule before User-agent) stay errors; unknown fields and the ignored
+  `noindex:` are a new warning “Unknown fields in robots.txt”. Now 107 checks.
 
 ### Added
 - Test bench (“Prüfstand”): `python -m scripts.pruefstand` serves seven local test websites with a known truth for

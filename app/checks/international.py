@@ -5,8 +5,10 @@ import re
 from app.checks.katalog import HTML, check, json_spalte
 from app.crawler.urls import normalisieren
 
-# Sprache (ISO 639-1/-2), optional Schrift (ISO 15924), optional Region (ISO 3166 oder UN M.49)
-SPRACHCODE = re.compile(r"^[a-z]{2,3}(-[a-z]{4})?(-([a-z]{2}|\d{3}))?$", re.I)
+# Google: Sprache nach ISO 639-1 (zwei Buchstaben), optional Schrift (ISO 15924), optional Region nach ISO 3166-1
+# Alpha-2. Drei Buchstaben und UN-M.49-Regionen wie es-419 versteht Google nicht.
+SPRACHCODE = re.compile(r"^[a-z]{2}(-[a-z]{4})?(-[a-z]{2})?$", re.I)
+KEINE_REGIONEN = {"uk", "eu"}   # häufige Verwechslung: Großbritannien ist GB, EU ist kein Land
 
 
 def _eintraege(conn, crawl_id):
@@ -19,7 +21,9 @@ def _eintraege(conn, crawl_id):
 
 
 def _ist_gueltig(code: str) -> bool:
-    return code.lower() == "x-default" or bool(SPRACHCODE.match(code))
+    if code.lower() == "x-default":
+        return True
+    return bool(SPRACHCODE.match(code)) and code.lower().rsplit("-", 1)[-1] not in KEINE_REGIONEN
 
 
 @check("hreflang_code_ungueltig", "Ungültiger Sprachcode in hreflang", "error", "international",

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from app.checks.site import robots_pruefen
+from app.checks.site import robots_felder_pruefen, robots_pruefen
 from app.crawler import site
 
 
@@ -65,6 +65,10 @@ def test_zertifikat_bewerten():
 
 def test_robots_pruefen():
     assert robots_pruefen("User-agent: *\nDisallow: /a\n# Kommentar\nSitemap: https://x/s.xml\n") == []
-    fehler = robots_pruefen("Disallow: /vorher\nUser-agent: *\nDisalow: /x\nKaputt\n")
-    assert len(fehler) == 3
-    assert "Zeile 1" in fehler[0] and "Zeile 3" in fehler[1] and "Zeile 4" in fehler[2]
+    text = "Disallow: /vorher\nUser-agent: *\nDisalow: /x\nKaputt\nNoindex: /alt/\n"
+    fehler = robots_pruefen(text)   # echte Formatfehler: Regel vor User-agent, kein Doppelpunkt
+    assert len(fehler) == 2
+    assert "Zeile 1" in fehler[0] and "Zeile 4" in fehler[1]
+    hinweise = robots_felder_pruefen(text)   # unbekanntes Feld und das von Google ignorierte noindex
+    assert len(hinweise) == 2
+    assert "Zeile 3" in hinweise[0] and "disalow" in hinweise[0] and "Zeile 5" in hinweise[1] and "2019" in hinweise[1]

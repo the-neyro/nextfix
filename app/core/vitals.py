@@ -31,6 +31,9 @@ def seiten_auswahl(conn: sqlite3.Connection, crawl_id: int, anzahl: int) -> list
     crawl = audit.crawl_holen(conn, crawl_id)
     zeilen = conn.execute(
         "SELECT url FROM seiten WHERE crawl_id = ? AND status_code = 200 AND woerter IS NOT NULL AND blockiert = 0"
+        # noindex-Seiten zeigt Google nie: sie sollen die Ladezeit-Note nicht bestimmen
+        " AND (meta_robots IS NULL OR meta_robots NOT LIKE '%noindex%')"
+        " AND (x_robots_tag IS NULL OR x_robots_tag NOT LIKE '%noindex%')"
         " ORDER BY url = ? DESC, COALESCE(link_rank, 0) DESC, tiefe, url LIMIT ?",
         (crawl_id, crawl["start_url"], anzahl)).fetchall()
     return [z["url"] for z in zeilen]

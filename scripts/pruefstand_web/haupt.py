@@ -14,10 +14,10 @@ def bauen(w: Website) -> Website:
                                                          "meta_refresh", "unkomprimiert"])
 
     w.datei("/robots.txt", (
-        "User-agent: *\nDisallow: /gesperrt/\nDisalow: /tippfehler/\n\n"
+        "User-agent: *\nDisallow: /gesperrt/\nDisalow: /tippfehler/\nKaputte Zeile\n\n"
         "User-agent: OAI-SearchBot\nDisallow: /\n\nUser-agent: GPTBot\nDisallow: /\n\n"
         f"Sitemap: {w.basis}sitemap.xml\n"), "text/plain; charset=utf-8")
-    w.erwarte(ja=["robots_formatfehler", "ki_bots_blockiert", "ki_training_bots_blockiert"],
+    w.erwarte(ja=["robots_formatfehler", "robots_unbekannte_felder", "ki_bots_blockiert", "ki_training_bots_blockiert"],
               nein=["robots_fehlt", "sitemap_fehlt", "sitemap_nicht_in_robots", "sitemap_formatfehler", "llms_fehlt",
                     "llms_format"])
 

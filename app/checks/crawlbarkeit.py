@@ -1,6 +1,10 @@
 """Checks: Statuscodes, Erreichbarkeit, Redirects, robots.txt, Sitemap."""
 
 from app.checks.katalog import HTML, abfrage, check
+from app.crawler.robots import RobotsTxt
+
+# Gecrawlte HTML-Seiten und solche, die Nextfix wegen robots.txt nicht abrufen durfte
+HTML_ODER_GESPERRT = "(blockiert = 1 OR content_type LIKE '%html%')"
 
 MAX_REDIRECTS = 3
 
@@ -102,12 +106,23 @@ def sitemap_nicht_in_robots(conn, crawl_id):
 
 
 @check("blockiert", "Seiten für Google gesperrt", "notice", "crawlbarkeit",
-       "Diese Seiten erscheinen nie im Suchergebnis, weil robots.txt oder „noindex“ sie sperrt.",
-       "Geh die Liste durch: Login, Warenkorb und Danke-Seiten dürfen gesperrt sein. Alles andere entsperren lassen.")
+       "„noindex“: Die Seite erscheint nicht im Suchergebnis. robots.txt: Google darf die Seite nicht abrufen; sie "
+       "kann trotzdem auftauchen, dann ohne Beschreibung. Geprüft wird die robots.txt so, wie Googlebot sie liest.",
+       "Geh die Liste durch: Login, Warenkorb und Danke-Seiten dürfen gesperrt sein. Alles andere entsperren lassen. "
+       "Soll eine Seite sicher nicht erscheinen, nimm „noindex“ statt robots.txt.")
 def blockiert(conn, crawl_id):
-    return abfrage(conn, """
-        SELECT id, CASE WHEN blockiert=1 THEN 'robots.txt' ELSE 'meta robots: ' || meta_robots END
-        FROM seiten WHERE crawl_id=? AND (blockiert=1 OR meta_robots LIKE '%noindex%')""", crawl_id)
+    text = conn.execute("SELECT robots_text FROM crawls WHERE id=?", (crawl_id,)).fetchone()[0]
+    robots = RobotsTxt()
+    if text:
+        robots.parse(text.splitlines())
+    treffer = []
+    for sid, url, meta in conn.execute(f"SELECT id, url, meta_robots FROM seiten WHERE crawl_id=? AND {HTML_ODER_GESPERRT}",
+                                       (crawl_id,)):
+        if not robots.can_fetch("Googlebot", url):
+            treffer.append((sid, "robots.txt (für Googlebot)"))
+        elif meta and "noindex" in meta.lower():
+            treffer.append((sid, f"meta robots: {meta}"))
+    return treffer
 
 
 @check("x_robots_noindex", "noindex per X-Robots-Tag", "notice", "crawlbarkeit",

@@ -24,6 +24,8 @@ def kopf(w: Website) -> None:
 
 def canonical(w: Website) -> None:
     w.seite("/zwei-canonicals", canonical=["/zwei-canonicals", "/uebersicht"], ja=["mehrere_canonicals"])
+    w.seite("/canonical-doppelt-gleich", canonical=["/canonical-doppelt-gleich", "/canonical-doppelt-gleich"],
+            nein=["mehrere_canonicals"], warum={"mehrere_canonicals": "zweimal dasselbe Ziel (Theme + Plugin) widerspricht sich nicht"})
     w.seite("/canonical-auf-404", canonical="/fehlt-404", ja=["canonical_defekt"], nein=["mehrere_canonicals"])
     w.seite("/canonical-auf-301", canonical="/weiterleitung-301", ja=["canonical_defekt"])
     w.seite("/canonical-auf-nie-verlinkt", canonical="/nie-verlinkt-404", ja=["canonical_defekt"],

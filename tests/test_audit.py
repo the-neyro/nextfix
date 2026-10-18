@@ -71,7 +71,8 @@ def test_canonical_variante_kein_duplikat(crawl, testseite):
 
 def test_site_weite_checks(crawl):
     conn, crawl_id = crawl
-    assert _treffer(conn, crawl_id, "robots_formatfehler") == {"SITE"}
+    assert _treffer(conn, crawl_id, "robots_unbekannte_felder") == {"SITE"}   # „Disalow“
+    assert _treffer(conn, crawl_id, "robots_formatfehler") == set()
     assert _treffer(conn, crawl_id, "ki_bots_blockiert") == {"SITE"}
     assert _treffer(conn, crawl_id, "llms_format") == {"SITE"}
     assert _treffer(conn, crawl_id, "llms_fehlt") == set()
@@ -130,7 +131,8 @@ def test_robots_ignorieren(testseite):
     p = projekte.anlegen(conn, "127.0.0.1")
     audit.einstellungen_setzen(conn, p.id, start_url=testseite, crawl_delay=0, robots_beachten=False)
     c = audit.crawl_starten(conn, p.id, warten=True)
-    assert _treffer(conn, c["id"], "blockiert") == set()
+    # Nextfix durfte alles abrufen, für Google bleibt /privat/ trotzdem gesperrt (geprüft wird als Googlebot)
+    assert _treffer(conn, c["id"], "blockiert") == {testseite + "privat/geheim"}
 
 
 def test_zweiter_crawl_waehrend_laufendem_abgelehnt():
