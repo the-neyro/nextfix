@@ -54,9 +54,11 @@ def extern(w: Website) -> None:
     _mit_links(w, "/extern-defekt", f'<a href="{f}/fehlt/seite">Fremde Seite, die es nicht mehr gibt</a>',
                ja=["externe_links_defekt"])
     _mit_links(w, "/extern-ok", f'<a href="{f}/ok/seite">Fremde Seite</a> <a href="{f}/umleitung">Umgezogene Seite</a> '
-               f'<a href="{f}/nur-get">Server ohne HEAD</a> <a href="{f}/ok/werbung" rel="sponsored">Anzeige</a>',
+               f'<a href="{f}/nur-get">Server ohne HEAD</a> <a href="{f}/ok/werbung" rel="sponsored">Anzeige</a> '
+               '<a href="http://localhost:9/app">Programm öffnen</a>',
                nein=["externe_links_defekt", "externe_nofollow"],
-               warum={"externe_links_defekt": "Weiterleitung auf 200 und Server, der HEAD ablehnt, sind nicht defekt"})
+               warum={"externe_links_defekt": "Weiterleitung auf 200, Server ohne HEAD und ein Link auf den eigenen "
+                                              "Rechner (localhost) sind nicht defekt"})
     _mit_links(w, "/extern-nofollow", f'<a href="{f}/ok/partner" rel="nofollow">Partner</a>', ja=["externe_nofollow"])
     _mit_links(w, "/extern-bild-defekt", f'<img src="{f}/fehlt/bild.png" alt="Fremdes Bild">',
                ja=["externe_bilder_defekt"])
