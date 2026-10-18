@@ -60,6 +60,8 @@ def check(id: str, name: str, schwere: str, kategorie: str, warum: str, beheben:
 
 # Bedingung für "HTML-Seite erfolgreich geparst"
 HTML = "status_code = 200 AND woerter IS NOT NULL"
+# „JavaScript ausführen“ ist an der Seite gescheitert: Inhalt unbekannt, Inhalts-Prüfungen setzen dort aus
+GERENDERT = "render_fehler IS NULL"
 
 
 def url_status(conn: sqlite3.Connection, crawl_id: int) -> dict[str, int | None]:

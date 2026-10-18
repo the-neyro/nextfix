@@ -8,11 +8,20 @@ Für Text und Links braucht es sie nicht, und der Server wird weniger belastet.
 AUSLASSEN = {"image", "media", "font"}
 
 
+def grund(fehler: Exception, timeout_s: int) -> str:
+    """Kurzer, lesbarer Grund für die Meldung je Seite."""
+    if type(fehler).__name__ == "TimeoutError" or "Timeout" in str(fehler):
+        return f"nach {timeout_s} s nicht fertig geladen"
+    zeile = (str(fehler).strip().splitlines() or [type(fehler).__name__])[0]
+    return zeile.removeprefix("Page.goto: ").split(" at http", 1)[0][:200]   # URL steht ohnehin an der Meldung
+
+
 class Renderer:
     """Ein Chromium für viele Seiten. Benutzung: with Renderer(user_agent) as r: html = r.rendern(url)."""
 
     def __init__(self, user_agent: str, timeout_s: int = 20, ruhe_ms: int = 3000):
         self.user_agent, self.timeout_ms, self.ruhe_ms = user_agent, timeout_s * 1000, ruhe_ms
+        self.fehler: str | None = None   # Grund des letzten Fehlschlags von rendern()
 
     def __enter__(self):
         from playwright.sync_api import sync_playwright
@@ -29,7 +38,8 @@ class Renderer:
         self._pw.stop()
 
     def rendern(self, url: str) -> str | None:
-        """HTML nach Ausführung von JavaScript, None bei Fehler (dann gilt das Roh-HTML)."""
+        """HTML nach Ausführung von JavaScript, None bei Fehler (dann gilt das Roh-HTML, Grund in self.fehler)."""
+        self.fehler = None
         seite = self._kontext.new_page()
         try:
             seite.goto(url, wait_until="load", timeout=self.timeout_ms)
@@ -38,7 +48,8 @@ class Renderer:
             except Exception:
                 pass  # Dauer-Anfragen (Chat, Tracking): Stand nach der Wartezeit nehmen
             return seite.content()
-        except Exception:
+        except Exception as fehler:
+            self.fehler = grund(fehler, self.timeout_ms // 1000)
             return None
         finally:
             seite.close()

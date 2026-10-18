@@ -166,3 +166,13 @@ def inhalt_nur_per_js(conn, crawl_id):
                || ', mit JavaScript ' || woerter
         FROM seiten WHERE crawl_id=? AND {HTML} AND woerter_roh IS NOT NULL
           AND woerter >= 50 AND woerter_roh * 2 < woerter""", crawl_id)
+
+
+@check("js_rendern_fehlgeschlagen", "JavaScript ließ sich nicht ausführen – Inhalt ungeprüft", "warning", "crawlbarkeit",
+       "Nextfix konnte die Seite nicht im Browser laden (z. B. Zeitlimit oder abgebrochene Verbindung) und hat nur das "
+       "Roh-HTML gesehen. Titel, Text, Überschriften und Duplikate prüft Nextfix dort deshalb nicht, sonst gäbe es "
+       "Fehlalarme aus dem leeren HTML. Scheitert es wiederholt, kann auch Googles Renderer Probleme haben.",
+       "Erneut prüfen. Scheitert es wieder: Seite im Browser öffnen und auf Fehler oder sehr langes Laden achten. "
+       "Dauerhaft robuster: Inhalte schon im HTML ausliefern (Server-Rendering oder statische Seiten).")
+def js_rendern_fehlgeschlagen(conn, crawl_id):
+    return abfrage(conn, "SELECT id, render_fehler FROM seiten WHERE crawl_id=? AND render_fehler IS NOT NULL", crawl_id)

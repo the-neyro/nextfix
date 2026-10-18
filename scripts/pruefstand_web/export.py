@@ -35,7 +35,7 @@ def _statisch(a: Antwort) -> bool:
     """Lässt sich die Antwort als einfache Datei nachbauen? (404 = Datei fehlt)"""
     if a.status == 404:
         return True
-    if a.status != 200 or a.abbrechen or a.verzoegerung or not a.gzip:
+    if a.status != 200 or a.abbrechen or a.nur_erster_get or a.verzoegerung or not a.gzip:
         return False
     erlaubt = {"Last-Modified": LETZTE_AENDERUNG, **CACHE}
     return all(erlaubt.get(k) == v for k, v in a.header.items())

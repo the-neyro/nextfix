@@ -227,11 +227,13 @@ class Crawler:
             self._seite_speichern(url, tiefe, **daten)
             return []
 
-        html, woerter_roh = dekodieren(inhalt, daten["content_type"]), None
+        html, woerter_roh, render_fehler = dekodieren(inhalt, daten["content_type"]), None, None
         if self.renderer:
             gerendert = self.renderer.rendern(url)
             if gerendert:  # Wörter ohne JavaScript merken: zeigt, was Crawler ohne Rendering sehen
                 woerter_roh, html = zerlegen(html, url).woerter, gerendert
+            else:  # nicht still aufs Roh-HTML ausweichen: je Seite melden, Inhalts-Prüfungen setzen dort aus
+                render_fehler = getattr(self.renderer, "fehler", None) or "unbekannter Fehler"
         inhalt = zerlegen(html, url)
         for l in inhalt.links:  # ignorierte Parameter: Link zählt für die Seite ohne diese Parameter
             if l.art == "a" and ist_intern(l.url, self.start_host):
@@ -247,6 +249,7 @@ class Crawler:
             meta_robots=inhalt.meta_robots,
             woerter=inhalt.woerter,
             woerter_roh=woerter_roh,
+            render_fehler=render_fehler,
             js_app=inhalt.js_app,
             text_anteil=inhalt.text_anteil,
             hat_viewport=int(inhalt.hat_viewport),

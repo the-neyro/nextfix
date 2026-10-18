@@ -67,6 +67,7 @@ HANDLUNG = {
     "robots_unbekannte_felder": "Korrigiere unbekannte Felder in der robots.txt",
     "js_app_ohne_rendern": "Prüf {n} mit „JavaScript ausführen“ – sie bauen sich erst im Browser auf",
     "inhalt_nur_per_js": "Liefere den Inhalt von {n} schon im HTML aus, nicht erst per JavaScript",
+    "js_rendern_fehlgeschlagen": "Prüf {n} erneut – JavaScript ließ sich dort nicht ausführen",
     "ki_bots_blockiert": "Lass KI-Suchdienste in der robots.txt zu",
     "llms_tote_links": "Korrigiere tote Links in der llms.txt",
     "js_css_unkomprimiert": "Lass Skripte und Styles komprimiert ausliefern ({n})",

@@ -85,6 +85,8 @@ class Antwort:
     gzip: bool = True             # komprimieren, wenn der Client gzip annimmt
     verzoegerung: float = 0.0     # Sekunden vor der Antwort (nur GET)
     abbrechen: bool = False       # Verbindung ohne Antwort schließen
+    nur_erster_get: bool = False  # ab dem 2. GET Verbindung schließen (z. B. Chromium nach dem Crawler)
+    gets: int = 0                 # Zähler dafür
 
     def daten(self, gzip_erlaubt: bool) -> tuple[bytes, dict]:
         roh = self.body.encode() if isinstance(self.body, str) else self.body

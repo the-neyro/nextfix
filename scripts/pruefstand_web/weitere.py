@@ -89,13 +89,18 @@ def js(w: Website) -> Website:
     def skript(text: str, ziel: str) -> str:
         return f"<script>document.getElementById('{ziel}').insertAdjacentHTML('beforeend', {text!r});</script>"
     w.seite("/nur-js", inhalt='<div id="app"></div>', nach_main=skript(absaetze("nur-js", 250), "app"),
-            ja=["inhalt_nur_per_js"])
+            ja=["inhalt_nur_per_js"], nein=["js_rendern_fehlgeschlagen"],
+            warum={"js_rendern_fehlgeschlagen": "Chromium lädt die Seite normal"})
     w.seite("/teils-js", inhalt=absaetze("teils-js", 218) + '<div id="mehr"></div>',
             nach_main=skript(absaetze("teils-js-mehr", 40), "mehr"), nein=["inhalt_nur_per_js"])
     w.seite("/js-leer-bleibt", inhalt='<div id="root"></div>', nach_main="<script>window.x = 1;</script>",
             ja=["wenig_text"], nein=["js_app_ohne_rendern"],
             warum={"js_app_ohne_rendern": "mit JavaScript geprüft, der Hinweis ist dann überflüssig",
                    "wenig_text": "auch mit JavaScript nur 2 Wörter"})
+    w.seite("/js-rendern-scheitert", inhalt='<div id="root"></div>', nach_main="<script>window.x = 1;</script>",
+            nur_erster_get=True, ja=[("js_rendern_fehlgeschlagen", "ERR_EMPTY_RESPONSE")], nein=["wenig_text", "js_app_ohne_rendern"],
+            warum={"js_rendern_fehlgeschlagen": "Chromium bekommt beim zweiten Abruf keine Antwort",
+                   "wenig_text": "Rendern gescheitert: Inhalt unbekannt, kein Fehlalarm aus dem leeren HTML"})
     w.hubs(start_kopf=ORGANISATION)
     grundausstattung(w)
     return w

@@ -4,7 +4,7 @@ import json
 import re
 from urllib.parse import unquote, urlsplit
 
-from app.checks.katalog import HTML, check, json_spalte
+from app.checks.katalog import GERENDERT, HTML, check, json_spalte
 
 HAUPTBEREICH = ("main", "article")
 
@@ -13,7 +13,7 @@ HAUPTBEREICH = ("main", "article")
        "Ohne klar markierten Hauptbereich müssen Crawler und KI-Systeme raten, welcher Text der eigentliche Inhalt ist.",
        "Den Hauptinhalt in <main> (oder <article>) fassen, Navigation und Fußzeile außerhalb lassen.")
 def ki_ohne_hauptbereich(conn, crawl_id):
-    return [(seite_id, None) for seite_id, _, tags in json_spalte(conn, crawl_id, "semantik")
+    return [(seite_id, None) for seite_id, _, tags in json_spalte(conn, crawl_id, "semantik", GERENDERT)
             if not any(t in tags for t in HAUPTBEREICH)]
 
 
@@ -22,7 +22,7 @@ def ki_ohne_hauptbereich(conn, crawl_id):
        "Absätze kürzen, Sätze teilen, Überschriften ohne Sprünge (H2 → H3) gliedern.")
 def ki_schwer_lesbar(conn, crawl_id):
     return [(seite_id, "; ".join(probleme))
-            for seite_id, _, probleme in json_spalte(conn, crawl_id, "lesbarkeit", "lesbarkeit != '[]'")]
+            for seite_id, _, probleme in json_spalte(conn, crawl_id, "lesbarkeit", f"lesbarkeit != '[]' AND {GERENDERT}")]
 
 
 # ---------- GEO: Signale aus app/crawler/geo.py (Spalte seiten.geo) ----------
@@ -49,7 +49,7 @@ def ist_rechtsseite(url: str) -> bool:
 def _geo_seiten(conn, crawl_id, mit_url=False):
     """(seite_id, geo, markup-Typen[, url]) für HTML-Seiten mit GEO-Signalen."""
     # Nur Seiten, die Google zeigen darf: noindex-Seiten (z. B. eine Demo) sollen keine KI-Hinweise auslösen
-    zeilen = conn.execute(f"SELECT id, geo, markup, url FROM seiten WHERE crawl_id=? AND {HTML} AND geo IS NOT NULL"
+    zeilen = conn.execute(f"SELECT id, geo, markup, url FROM seiten WHERE crawl_id=? AND {HTML} AND {GERENDERT} AND geo IS NOT NULL"
                           " AND (meta_robots IS NULL OR meta_robots NOT LIKE '%noindex%')"
                           " AND (x_robots_tag IS NULL OR x_robots_tag NOT LIKE '%noindex%')",
                           (crawl_id,))

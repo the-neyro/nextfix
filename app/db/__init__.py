@@ -46,6 +46,7 @@ NACHTRAEGE = [
     ("seiten", "etag", "TEXT"),                         # HTTP-Header ETag
     ("seiten", "css_blockierend", "TEXT"),              # JSON: render-blockierende Stylesheets
     ("seiten", "bilder_ohne_masse", "INTEGER"),         # <img> ohne width/height
+    ("seiten", "render_fehler", "TEXT"),                # Grund, wenn JavaScript ausführen scheiterte
     ("ressourcen", "cache_sekunden", "INTEGER"),        # Cache-Dauer laut Header
     ("recherche_ideen", "volumen", "INTEGER"),          # Bing-Impressionen pro Monat (Ø der letzten Wochen)
     ("recherche_ideen", "volumen_quelle", "TEXT"),      # bing | bing_mock

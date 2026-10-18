@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS seiten (
     bilder_ohne_masse INTEGER,         -- Anzahl <img> ohne width/height
     woerter_roh      INTEGER,          -- Wörter ohne JavaScript (nur wenn gerendert wurde, sonst NULL)
     js_app           TEXT,             -- leerer App-Container (#root, #app …): Seite baut sich per JavaScript auf
+    render_fehler    TEXT,             -- „JavaScript ausführen“ gescheitert: Grund (dann gilt das Roh-HTML)
     UNIQUE (crawl_id, url)
 );
 
