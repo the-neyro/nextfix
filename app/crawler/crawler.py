@@ -210,6 +210,7 @@ class Crawler:
             content_encoding=h.get("content-encoding"),
             x_robots_tag=h.get("x-robots-tag"),
             last_modified=h.get("last-modified"),
+            etag=h.get("etag"),
             hat_hsts=int("strict-transport-security" in h),
             ladezeit_ms=ladezeit,
             html_bytes=groesse,
@@ -239,7 +240,7 @@ class Crawler:
             meta_description=inhalt.meta_description,
             h1_anzahl=len(inhalt.h1),
             h1_text=inhalt.h1[0] if inhalt.h1 else None,
-            canonical_anzahl=len(inhalt.canonicals),
+            canonical_anzahl=len(set(inhalt.canonicals)),   # zweimal dasselbe Canonical (Theme + Plugin) ist kein Widerspruch
             canonical=inhalt.canonicals[0] if inhalt.canonicals else None,
             meta_robots=inhalt.meta_robots,
             woerter=inhalt.woerter,

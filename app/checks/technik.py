@@ -178,11 +178,12 @@ def veraltete_plugins(conn, crawl_id):
             for seite_id, _, tags in json_spalte(conn, crawl_id, "plugins", "plugins != '[]'")]
 
 
-@check("ohne_last_modified", "Kein Last-Modified-Header", "notice", "technik",
-       "Ohne Änderungsdatum können Crawler nicht gezielt nur geänderte Seiten neu abrufen.",
+@check("ohne_last_modified", "Weder Last-Modified noch ETag", "notice", "technik",
+       "Ohne Änderungsdatum (Last-Modified) oder Versionskennung (ETag) können Crawler nicht gezielt nur geänderte "
+       "Seiten neu abrufen. Google kommt mit beidem zurecht und bevorzugt ETag.",
        "Server so einstellen, dass er den Header 'Last-Modified' (oder ein ETag) mitsendet.")
 def ohne_last_modified(conn, crawl_id):
     # Meist eine Server-Einstellung für alle Seiten: ein Hinweis für die Website statt einer pro Seite
     fehlend, gesamt = conn.execute(
-        f"SELECT SUM(COALESCE(last_modified, '') = ''), COUNT(*) FROM seiten WHERE crawl_id=? AND {HTML}", (crawl_id,)).fetchone()
+        f"SELECT SUM(COALESCE(last_modified, '') = '' AND COALESCE(etag, '') = ''), COUNT(*) FROM seiten WHERE crawl_id=? AND {HTML}", (crawl_id,)).fetchone()
     return [(None, f"{fehlend} von {gesamt} HTML-Seiten")] if fehlend else []

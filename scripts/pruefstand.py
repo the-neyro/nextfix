@@ -44,8 +44,6 @@ BEKANNT: dict[tuple[str, str, str], str] = {
     ("verpasst", "canonical_defekt", "haupt:/canonical-auf-nie-verlinkt"): NICHT_ABGERUFEN,
     ("verpasst", "hreflang_ziel_defekt", "haupt:/hl/ziel-nie-verlinkt"): NICHT_ABGERUFEN,
     ("verpasst", "llms_tote_links", "haupt:* (/llms-nie-verlinkt-404)"): NICHT_ABGERUFEN,
-    ("verpasst", "hreflang_code_ungueltig", "haupt:/hl/code-en-uk"):
-        "Regionscode wird nur auf Form geprüft (2 Buchstaben), nicht gegen die ISO-3166-Liste",
 }
 
 

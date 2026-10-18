@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS seiten (
     hat_frames       INTEGER,
     hat_hsts         INTEGER,
     last_modified    TEXT,             -- HTTP-Header Last-Modified
+    etag             TEXT,             -- HTTP-Header ETag (Google bevorzugt es sogar)
     hat_passwort     INTEGER,
     -- JSON-Felder (Listen/Objekte aus dem Parser)
     hreflang         TEXT,

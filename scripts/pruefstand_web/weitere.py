@@ -8,7 +8,7 @@ from scripts.pruefstand_web import ORGANISATION, Website, absaetze, grundausstat
 
 BOM = "﻿"
 KLEIN = {"nur_ein_eingehender_link": "kleine Website: die Übersicht verlinkt nur die Startseite"}
-SITE_WEIT = ["robots_fehlt", "robots_formatfehler", "sitemap_fehlt", "sitemap_nicht_in_robots", "sitemap_formatfehler",
+SITE_WEIT = ["robots_fehlt", "robots_formatfehler", "robots_unbekannte_felder", "sitemap_fehlt", "sitemap_nicht_in_robots", "sitemap_formatfehler",
              "llms_fehlt", "llms_format", "llms_duenn", "llms_tote_links", "ki_bots_blockiert",
              "ki_training_bots_blockiert", "ohne_last_modified", "sitemap_zu_gross"]
 

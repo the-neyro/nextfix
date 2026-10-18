@@ -24,8 +24,10 @@ def alles(w: Website) -> None:
     _seite(w, "/hl/code-en-uk", [("de", "/hl/code-en-uk"), ("en-UK", "/hl/code-en-uk")],
            ja=["hreflang_code_ungueltig"],
            warum={"hreflang_code_ungueltig": "UK ist kein ISO-3166-Code, richtig wäre en-GB (Google-Doku)"})
-    _seite(w, "/hl/code-ok", [("de", "/hl/code-ok"), ("zh-Hant-TW", "/hl/code-ok"), ("es-419", "/hl/code-ok"),
+    _seite(w, "/hl/code-ok", [("de", "/hl/code-ok"), ("zh-Hant-TW", "/hl/code-ok"), ("en-GB", "/hl/code-ok"),
                               ("x-default", "/hl/code-ok")], nein=["hreflang_code_ungueltig"])
+    _seite(w, "/hl/code-419", [("es-419", "/hl/code-419")], lang="es", ja=["hreflang_code_ungueltig"],
+           warum={"hreflang_code_ungueltig": "Google: Region nur nach ISO 3166-1 Alpha-2, 419 (UN M.49) gilt nicht"})
 
     _seite(w, "/hl/relativ", [("de", "/hl/relativ")], relativ=True, ja=["hreflang_relativ"])
     _seite(w, "/hl/ohne-selbst", [("en", "/hl/en")], ja=["hreflang_ohne_selbstbezug", "hreflang_ohne_rueckverweis"],
