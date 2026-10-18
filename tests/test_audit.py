@@ -221,6 +221,21 @@ def test_score_regeln():
     # Notices zählen nicht
     assert score.berechnen([("notice", 5, False), ("error", 0, False)], 10) == 100
     assert score.berechnen([("notice", 5, False)], 10) is None
+    # Ohne geprüfte Seite ist der Zustand unbekannt, nicht 100
+    assert score.berechnen([("error", 0, False), ("warning", 0, False)], 0) is None
+    assert score.berechnen([("error", 0, True)], 0) is None
+
+
+def test_leerer_crawl_zustand_unbekannt():
+    """Regression (Codex-Fund): leere Sitemap, 0 Seiten → Zustand stand auf 100."""
+    conn = verbinden()
+    p = projekte.anlegen(conn, "leer.de")
+    crawl_id = conn.execute("INSERT INTO crawls (projekt_id, start_url, status) VALUES (?, 'https://leer.de/', 'fertig')",
+                            (p.id,)).lastrowid
+    conn.commit()
+    assert audit._health(conn, crawl_id) is None
+    assert audit._health(conn, crawl_id, "ki") is None
+    assert audit.uebersicht(conn, crawl_id)["health"] is None
 
 
 def test_urls():
