@@ -2,7 +2,7 @@
 
 All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
-## Unreleased
+## 0.2.3 – 2026-10-28
 
 ### Added
 - Task priority uses Google Search Console data when imported: within the same impact level, tasks whose pages had
@@ -10,6 +10,7 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
   first, like Semrush and Ahrefs. Without GSC data the order is unchanged. Free, local, no extra API calls.
 
 ### Fixed
+- Website health is “unknown” (–) instead of 100 when no page could be checked, e.g. an empty sitemap (#32).
 - JavaScript rendering: if Chromium cannot load a page (timeout, dropped connection), Nextfix no longer falls back
   to the raw HTML silently. New warning `js_rendern_fehlgeschlagen` lists each URL with the reason; title, text,
   heading, duplicate and AI-search content checks skip those pages instead of raising false alarms. Now 111 checks.
