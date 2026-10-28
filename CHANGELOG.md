@@ -8,7 +8,7 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 - New look for the web UI and the PDF report: raspberry accent ladder instead of violet, DM Sans (local) instead of
   Fira Sans, ruled sidebar and top bar, the next task as the lead block of the overview, the website score as one calm
   number. Light and dark theme. Routes, forms and texts are unchanged.
-- New app icon (three drafts in `app/web/static/icon-varianten/`, draft 1 is in use for now).
+- New app icon: an N whose right stroke ends in a check mark.
 
 ## 0.2.3 – 2026-10-28
 

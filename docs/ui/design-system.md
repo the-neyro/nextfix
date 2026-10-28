@@ -31,4 +31,4 @@ Seitenleiste 232 px und Kopfleiste 64 px teilen einen Grund, getrennt nur durch 
 Lead-Block ist „Was jetzt tun“: die erste Aufgabe groß auf Tint-Fläche mit dem einzigen gefüllten Knopf, der Rest als Liste. Rechts eine Spalte (384 px): Website-Zustand als ruhige Zahl mit Spur (Striche bei 50 und 80), Teilnoten, Geprüfte Seiten.
 
 ## App-Icon
-Entwürfe in `static/icon-varianten/` (Vorschau: `vorschau.html`). `static/logo.svg` ist eine Kopie der gewählten Variante; Austausch ist eine Datei.
+Monogramm N, dessen rechter Abstrich in einen Haken ausläuft: `static/logo.svg` (auch Favicon und Kopf des PDF-Berichts). Kachel mit 22 % Eckradius, Himbeere plus ein Tint.
