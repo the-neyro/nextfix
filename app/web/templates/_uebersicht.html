@@ -11,6 +11,45 @@
 </div>
 {% endif %}
 
+<section class="messung" aria-label="Website-Zustand">
+  <div>
+    <div class="titel">Website-Zustand</div>
+    <div class="zahl">{{ '–' if h is none else h|round|int }}<small> von 100</small></div>
+    <p class="satz">
+      {% if h is none %}Noch kein Wert.
+      {% elif h >= 80 %}Gut gepflegt. Die Aufgaben unten holen die letzten Punkte.
+      {% elif h >= 50 %}Noch {{ (80 - h)|round(0, 'ceil')|int }} Punkte bis „gut“.
+      {% else %}Mehrere grobe Fehler. Fang oben in der Liste an.{% endif %}
+      {% if vorher_health is not none %}<br>Letzte Prüfung: {{ vorher_health|round|int }}
+        {% set d = (h - vorher_health)|round(1) %}{% if d > 0 %}<span class="gut">(▲ {{ d|zahl(1) }})</span>{% elif d < 0 %}<span class="error">(▼ {{ (-d)|zahl(1) }})</span>{% endif %}{% endif %}
+    </p>
+  </div>
+  <div class="skala {{ '' if h is none or h >= 80 else 'wichtig' if h >= 50 else 'dringend' }}" style="--wert: {{ h or 0 }}; --vorher: {{ vorher_health if vorher_health is not none else -10 }}">
+    {% if vorher_health is not none %}<span class="vorher" title="Letzte Prüfung: {{ vorher_health|round|int }}"></span>{% endif %}
+    <span class="zeiger" aria-hidden="true"></span>
+    <div class="band"></div>
+    <div class="zonen" aria-hidden="true"><span></span><span></span><span></span><div class="voll"></div></div>
+    <div class="marken" aria-hidden="true"><span style="left:0">0</span><span style="left:50%">50</span><span style="left:80%">80</span><span style="left:100%">100</span></div>
+  </div>
+</section>
+
+<div class="kennzahlen teilnoten" aria-label="Teilnoten">
+  {% for n in noten %}
+  {% set w = n.wert %}
+  <a href="{{ n.link }}">
+    <span class="klein">{{ n.name }}</span>
+    {% if n.skala %}{# eigene Skala ohne Ampel, z. B. Autorität 0–10 #}
+    <span class="wert">{{ '–' if w is none else w|zahl(1) }}</span>
+    <span class="balken" aria-hidden="true"><div class="neutral" style="width:{{ 100 * (w or 0) / n.skala }}%"></div></span>
+    {% else %}
+    <span class="wert {{ '' if w is none else 'gut' if w >= 80 else 'warning' if w >= 50 else 'error' }}">{{ '–' if w is none else w|round|int }}</span>
+    <span class="balken" aria-hidden="true"><div class="{{ '' if w is none or w >= 80 else 'wichtig' if w >= 50 else 'dringend' }}" style="width:{{ w or 0 }}%"></div></span>
+    {% endif %}
+    <span class="klein">{{ n.hinweis or '' }}</span>
+  </a>
+  {% endfor %}
+</div>
+
 <div class="spalten">
   <div>
     <section class="karte" aria-labelledby="was-jetzt">
@@ -19,7 +58,7 @@
         <span class="klein">Sortiert nach Wirkung auf den Website-Zustand{% if aufg.suchdaten %}, bei gleicher Wirkung nach Klicks bei Google ({{ aufg.suchdaten.von|datum }} bis {{ aufg.suchdaten.bis|datum }}{% if aufg.suchdaten.quellen == ['mock'] %}, Beispieldaten{% endif %}){% endif %}</span>
       </div>
       {% if aufg.aufgaben %}
-      <ol class="aufgaben lead">
+      <ol class="aufgaben">
         {% for a in aufg.aufgaben[:gezeigt] %}{% include "_aufgabe.html" %}{% endfor %}
       </ol>
       {% if aufg.aufgaben|length > gezeigt %}
@@ -51,6 +90,9 @@
       </table></div>
     </details>
     {% endif %}
+  </div>
+
+  <aside>
     <section class="karte">
       <h2>Bereiche</h2>
       <div class="bereiche">
@@ -65,50 +107,6 @@
       {% endfor %}
       </div>
     </section>
-  </div>
-
-  <aside>
-    <section class="karte">
-<section class="messung" aria-label="Website-Zustand">
-  <div>
-    <div class="titel">Website-Zustand</div>
-    <div class="zahl">{{ '–' if h is none else h|round|int }}<small> von 100</small></div>
-    <p class="satz">
-      {% if h is none %}Noch kein Wert.
-      {% elif h >= 80 %}Gut gepflegt. Die Aufgaben unten holen die letzten Punkte.
-      {% elif h >= 50 %}Noch {{ (80 - h)|round(0, 'ceil')|int }} Punkte bis „gut“.
-      {% else %}Mehrere grobe Fehler. Fang oben in der Liste an.{% endif %}
-      {% if vorher_health is not none %}<br>Letzte Prüfung: {{ vorher_health|round|int }}
-        {% set d = (h - vorher_health)|round(1) %}{% if d > 0 %}<span class="gut">(▲ {{ d|zahl(1) }})</span>{% elif d < 0 %}<span class="error">(▼ {{ (-d)|zahl(1) }})</span>{% endif %}{% endif %}
-    </p>
-  </div>
-  <div class="skala {{ '' if h is none or h >= 80 else 'wichtig' if h >= 50 else 'dringend' }}" style="--wert: {{ h or 0 }}; --vorher: {{ vorher_health if vorher_health is not none else -10 }}">
-    {% if vorher_health is not none %}<span class="vorher" title="Letzte Prüfung: {{ vorher_health|round|int }}"></span>{% endif %}
-    <span class="zeiger" aria-hidden="true"></span>
-    <div class="band"></div>
-    <div class="zonen" aria-hidden="true"><span></span><span></span><span></span><div class="voll"></div></div>
-    <div class="marken" aria-hidden="true"><span style="left:0">0</span><span style="left:50%">50</span><span style="left:80%">80</span><span style="left:100%">100</span></div>
-  </div>
-</section>
-<h2>Teilnoten</h2>
-<div class="kennzahlen teilnoten" aria-label="Teilnoten">
-  {% for n in noten %}
-  {% set w = n.wert %}
-  <a href="{{ n.link }}">
-    <span class="klein">{{ n.name }}</span>
-    {% if n.skala %}{# eigene Skala ohne Ampel, z. B. Autorität 0–10 #}
-    <span class="wert">{{ '–' if w is none else w|zahl(1) }}</span>
-    <span class="balken" aria-hidden="true"><div class="neutral" style="width:{{ 100 * (w or 0) / n.skala }}%"></div></span>
-    {% else %}
-    <span class="wert {{ '' if w is none else 'gut' if w >= 80 else 'warning' if w >= 50 else 'error' }}">{{ '–' if w is none else w|round|int }}</span>
-    <span class="balken" aria-hidden="true"><div class="{{ '' if w is none or w >= 80 else 'wichtig' if w >= 50 else 'dringend' }}" style="width:{{ w or 0 }}%"></div></span>
-    {% endif %}
-    <span class="klein">{{ n.hinweis or '' }}</span>
-  </a>
-  {% endfor %}
-</div>
-</section>
-
 
     <section class="karte">
       <h2>Geprüfte Seiten</h2>

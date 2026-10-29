@@ -5,23 +5,23 @@
 <title>Prüfbericht {{ projekt.domain }}</title>
 <style>
   {{ schriften|safe }}
-  /* Prüfbericht im Nextfix-Stil „Akzent-Leiter“ (siehe docs/ui/design-system.md): DM Sans, Himbeere nur auf kleinen
-     Marken, helle Tints für Flächen, Signalfarben nur für Status – immer mit Wort, nie nur Farbe. */
+  /* Prüfbericht im Nextfix-Stil „Prüfstand“ (siehe docs/ui/design-system.md): Fira Sans, Stempelviolett nur für
+     Marke und Nummern, Befundfarben nur für Status – immer mit Wort, nie nur Farbe. */
   :root {
-    --text: #111827; --gedaempft: #5f6672; --linie: #e5e0e3; --flaeche-2: #f5f1f2;
-    --akzent: #b8336a; --akzent-flaeche: #fdf2f7; --akzent-spur: #f8dbe8; --akzent-tinte: #6b1d3e;
-    --kritisch: #c4242a; --wichtig: #92400e; --hinweis: #5f6672; --gut: #247b50;
-    --kritisch-flaeche: #ffedea; --wichtig-flaeche: #fff4dc; --hinweis-flaeche: #f1eef0; --gut-flaeche: #e2f4ea;
+    --text: #1B1F2A; --gedaempft: #596070; --linie: #DCDFE4; --flaeche-2: #F6F7F9; --akzent: #5B3FBF; --akzent-flaeche: #EEEAFA;
+    --kritisch: #C0261A; --wichtig: #985400; --hinweis: #2D6688; --gut: #1D7544;
+    --kritisch-flaeche: #FBEAE8; --wichtig-flaeche: #FBF0DF; --hinweis-flaeche: #E6F0F6; --gut-flaeche: #E5F3EA;
   }
   * { box-sizing: border-box; }
-  body { font: 9.5pt/1.5 "DM Sans", Inter, -apple-system, "Helvetica Neue", Arial, sans-serif; color: var(--text); margin: 0;
+  body { font: 9.5pt/1.5 "Fira Sans", -apple-system, "Helvetica Neue", Arial, sans-serif; color: var(--text); margin: 0;
          font-variant-numeric: tabular-nums; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  h1 { font-size: 36pt; line-height: 1.05; font-weight: 700; margin: 0; }
+  h1 { font-size: 40pt; line-height: 1; font-weight: 600; margin: 0; letter-spacing: -.015em; }
   h2 { font-size: 18pt; line-height: 1.15; font-weight: 600; margin: 0 0 5mm; }
   h3 { font-size: 11pt; line-height: 1.25; font-weight: 600; margin: 0 0 1.5mm; }
   p { margin: 0 0 3mm; max-width: 150mm; }
   .leise { color: var(--gedaempft); font-size: 8.5pt; }
-    .neue-seite { break-before: page; }
+  .schmal { font-family: "Fira Sans Condensed", "Fira Sans", sans-serif; }
+  .neue-seite { break-before: page; }
   .zusammen { break-inside: avoid; }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 1.6mm 0; border-bottom: .5pt solid var(--linie); vertical-align: baseline; }
@@ -32,17 +32,17 @@
   .gut { color: var(--gut); } .wichtig { color: var(--wichtig); } .dringend { color: var(--kritisch); }
 
   /* Status-Marke: Form + Wort + Farbe */
-  .marke { display: inline-block; padding: .3mm 2.2mm; border-radius: 3mm; font-size: 8pt; font-weight: 500; white-space: nowrap; }
+  .marke { display: inline-block; padding: .2mm 1.6mm; border-radius: .8mm; font-size: 8pt; font-weight: 500; white-space: nowrap; }
   .marke::before { font-size: 6.5pt; margin-right: 1mm; }
   .marke.dringend { background: var(--kritisch-flaeche); color: var(--text); } .marke.dringend::before { content: "◆"; color: var(--kritisch); }
   .marke.wichtig { background: var(--wichtig-flaeche); color: var(--text); } .marke.wichtig::before { content: "▲"; color: var(--wichtig); }
   .marke.feinschliff { background: var(--hinweis-flaeche); color: var(--text); } .marke.feinschliff::before { content: "●"; color: var(--hinweis); }
-  .marke.leise { border: .5pt solid #c9c1c5; color: var(--gedaempft); }
+  .marke.leise { border: .5pt solid var(--linie); color: var(--gedaempft); }
 
   /* Bereichs-Leiste mit Grenzstrichen bei 50 und 80 */
-  .spur { position: relative; height: 1.8mm; border-radius: 1mm; background: var(--akzent-spur); }
-  .spur > div { height: 100%; border-radius: 1mm; background: var(--akzent); }
-  .spur::before, .spur::after { content: ""; position: absolute; top: -.8mm; height: 3.4mm; width: .4pt; background: #c9c1c5; }
+  .spur { position: relative; height: 1.8mm; background: var(--flaeche-2); border: .4pt solid var(--linie); }
+  .spur > div { height: 100%; }
+  .spur::before, .spur::after { content: ""; position: absolute; top: -.8mm; height: 3.4mm; width: .4pt; background: #868D9A; }
   .spur::before { left: 50%; } .spur::after { left: 80%; }
 
   /* Deckblatt */
@@ -50,8 +50,8 @@
   .marke-tool { display: flex; align-items: center; gap: 2.5mm; font-size: 11pt; font-weight: 600; }
   .deckblatt .titelzeile { margin: 26mm 0 3mm; font-size: 12pt; color: var(--gedaempft); }
   .deckblatt .zustand { margin-top: 20mm; }
-  .deckblatt .wert { font-size: 54pt; font-weight: 600; line-height: 1; }
-  .deckblatt .wert small { font-size: 16pt; color: var(--gedaempft); font-weight: 400; }
+  .deckblatt .wert { font-size: 54pt; font-weight: 500; line-height: 1; letter-spacing: -.02em; }
+  .deckblatt .wert small { font-size: 16pt; color: var(--gedaempft); font-weight: 400; letter-spacing: 0; }
   .deckblatt .befund { font-size: 12pt; line-height: 1.5; max-width: 140mm; margin-top: 10mm; }
   .deckblatt .fuss { margin-top: auto; border-top: .5pt solid var(--linie); padding-top: 3mm; }
 
@@ -62,39 +62,43 @@
 
   /* Maßnahmen: echte Reihenfolge nach Wirkung, daher nummeriert */
   .massnahme { display: grid; grid-template-columns: 10mm 1fr 24mm; gap: 0 3mm; padding: 3mm 0; border-bottom: .5pt solid var(--linie); }
-  .massnahme .nr { width: 8mm; height: 8mm; border-radius: 50%; background: var(--akzent); color: #fff; font-size: 11pt; font-weight: 600; line-height: 8mm; text-align: center; }
+  .massnahme .nr { font-size: 20pt; font-weight: 500; line-height: 1; color: var(--akzent); }
   .massnahme .wirkung { text-align: right; font-weight: 600; white-space: nowrap; }
   .wirkung.hoch { color: var(--gut); } .wirkung.gering { color: var(--gedaempft); font-weight: 500; }
   .massnahme .info { display: flex; gap: 1.5mm; flex-wrap: wrap; margin: 1mm 0 1.5mm; }
   .massnahme dl { margin: 0; display: grid; grid-template-columns: 22mm 1fr; gap: .6mm 2mm; line-height: 1.45; }
   .massnahme dt { color: var(--gedaempft); font-size: 8.5pt; }
   .massnahme dd { margin: 0; }
-  .url { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8pt; word-break: break-all; color: var(--gedaempft); }
+  .url { font-family: "Fira Sans Condensed", "Fira Sans", sans-serif; font-size: 8.5pt; word-break: break-all; color: var(--gedaempft); }
 
   /* Themen */
   .thema { margin-bottom: 9mm; }
-  .thema-kopf { display: flex; align-items: baseline; justify-content: space-between; border-bottom: .5pt solid var(--linie); padding-bottom: 2mm; margin-bottom: 3mm; }
+  .thema-kopf { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1.2pt solid var(--text); padding-bottom: 1.5mm; margin-bottom: 3mm; }
   .thema-kopf h2 { margin: 0; }
-  .thema-kopf .wert { font-size: 18pt; font-weight: 600; }
+  .thema-kopf .wert { font-size: 18pt; font-weight: 500; }
   .zwei { display: grid; grid-template-columns: 1fr 1fr; gap: 0 9mm; }
 </style>
 </head>
 <body>
 {% set c = ue.crawl %}
 {% set STUFE = {'error': ('dringend', 'Dringend'), 'warning': ('wichtig', 'Wichtig'), 'notice': ('feinschliff', 'Feinschliff')} %}
-{% macro klasse(h) %}{% endmacro %}  {# Zahlen bleiben ruhig; Signalfarbe tragen nur die Marken #}
-{% macro farbe(h) %}#b8336a{% endmacro %}
+{% macro klasse(h) %}{% if h is none %}{% elif h >= 80 %}gut{% elif h >= 50 %}wichtig{% else %}dringend{% endif %}{% endmacro %}
+{% macro farbe(h) %}{{ '#1D7544' if (h or 0) >= 80 else '#985400' if (h or 0) >= 50 else '#C0261A' }}{% endmacro %}
 {% macro zahl(w, stellen=0) %}{{ ('{:,.' ~ stellen ~ 'f}').format(w).replace(',', ' ').replace('.', ',').replace(' ', '.') }}{% endmacro %}
 
-{# Website-Zustand wie im Tool: eine Spur, Grenzstriche bei 50 und 80 #}
+{# Messskala wie im Tool: Ticks, Zonen bis 50 / 80 / 100, Zeiger beim Wert #}
 {% macro skala(h, breite=170) %}
 {% set w = h or 0 %}
-<svg width="{{ breite }}mm" height="{{ breite * 0.075 }}mm" viewBox="0 0 400 30" role="img" aria-label="Website-Zustand {{ w|round|int }} von 100">
-  <rect x="0" y="6" width="400" height="8" rx="4" fill="#f8dbe8"/>
-  <rect x="0" y="6" width="{{ 4 * w }}" height="8" rx="4" fill="#b8336a"/>
-  <line x1="200" x2="200" y1="3" y2="17" stroke="#c9c1c5" stroke-width="1"/><line x1="320" x2="320" y1="3" y2="17" stroke="#c9c1c5" stroke-width="1"/>
+<svg width="{{ breite }}mm" height="{{ breite * 0.13 }}mm" viewBox="0 0 400 52" role="img" aria-label="Website-Zustand {{ w|round|int }} von 100">
+  {% for i in range(51) %}
+  <line x1="{{ i * 8 }}" x2="{{ i * 8 }}" y1="{{ 6 if i % 5 == 0 else 13 }}" y2="20" stroke="#868D9A" stroke-width="{{ 0.9 if i % 5 == 0 else 0.5 }}"/>
+  {% endfor %}
+  <rect x="0" y="21" width="200" height="8" fill="#FBEAE8"/><rect x="200" y="21" width="120" height="8" fill="#FBF0DF"/><rect x="320" y="21" width="80" height="8" fill="#E5F3EA"/>
+  <rect x="0" y="23.5" width="{{ 4 * w }}" height="3" fill="{{ farbe(h) }}"/>
+  <line x1="{{ 4 * w }}" x2="{{ 4 * w }}" y1="2" y2="32" stroke="#1B1F2A" stroke-width="1.6"/>
+  <path d="M{{ 4 * w - 5 }} 0 h10 l-5 7 z" fill="#1B1F2A"/>
   {% for v in [0, 50, 80, 100] %}
-  <text x="{{ 4 * v }}" y="28" font-family="DM Sans, sans-serif" font-weight="500" font-size="10" fill="#5f6672"
+  <text x="{{ 4 * v }}" y="45" font-family="Fira Sans Condensed, sans-serif" font-weight="500" font-size="10" fill="#596070"
         text-anchor="{{ 'start' if v == 0 else 'end' if v == 100 else 'middle' }}">{{ v }}</text>
   {% endfor %}
 </svg>
@@ -104,9 +108,8 @@
 {% set n_aufg = aufg.aufgaben|length %}
 <section class="deckblatt">
   <div class="marke-tool">
-    <svg width="8mm" height="8mm" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#b8336a"/>
-      <path d="M9.5 24.5V7.5" fill="none" stroke="#f2b8cf" stroke-width="3.6" stroke-linecap="round"/>
-      <path d="M9.5 8l9.5 15 6.2-14.5" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg width="7mm" height="7mm" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5B3FBF"/>
+      <path d="M7.5 16.5l5.2 5.2L24.5 9.9M18.4 9.6h6.4v6.4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Nextfix
   </div>
   <div class="titelzeile">Prüfbericht Website</div>
@@ -139,8 +142,8 @@
   {% set s = ue.seiten %}{% set gesamt = s.gesamt or 1 %}
   <div class="zusammen" style="margin-bottom:8mm">
     <h3>Seitenbilanz</h3>
-    {% set teile = [('Ohne Probleme', s.gesund, '#247b50'), ('Mit Problemen', s.mit_problemen, '#92400e'),
-                    ('Nicht erreichbar', s.defekt, '#c4242a'), ('Weiterleitung', s.weiterleitung, '#9ca3af'), ('Für Google gesperrt', s.blockiert, '#e5e7eb')] %}
+    {% set teile = [('Ohne Probleme', s.gesund, '#1D7544'), ('Mit Problemen', s.mit_problemen, '#985400'),
+                    ('Nicht erreichbar', s.defekt, '#C0261A'), ('Weiterleitung', s.weiterleitung, '#9BA2B1'), ('Für Google gesperrt', s.blockiert, '#DCDFE4')] %}
     <div class="stapel">{% for label, wert, f in teile if wert %}<div style="width:{{ 100 * wert / gesamt }}%; background:{{ f }}"></div>{% endfor %}</div>
     <div class="legende">{% for label, wert, f in teile %}<span><i style="background:{{ f }}"></i>{{ label }}: <span class="zahl">{{ wert }}</span></span>{% endfor %}</div>
   </div>
@@ -248,7 +251,7 @@
           {% for z in kz.zeilen %}
           {% if z.wert is number %}
           <tr><td>{{ z.label }}</td>
-              <td style="width:32%">{% if maximum %}<div class="spur"><div style="width:{{ 100 * z.wert / maximum }}%; background:var(--akzent)"></div></div>{% endif %}</td>
+              <td style="width:32%">{% if maximum %}<div class="spur" style="border:0"><div style="width:{{ 100 * z.wert / maximum }}%; background:#5B3FBF; opacity:.7"></div></div>{% endif %}</td>
               <td class="r zahl">{{ z.wert }}</td></tr>
           {% else %}
           <tr><td>{{ z.label }}</td><td class="r" colspan="2">{{ z.wert }}</td></tr>

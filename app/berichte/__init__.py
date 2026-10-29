@@ -16,7 +16,7 @@ from app.core import audit, aufgaben, projekte, themen, vergleich, vitals
 
 VORLAGEN = Environment(loader=FileSystemLoader(Path(__file__).with_name("vorlagen")), autoescape=select_autoescape())
 
-FUSSZEILE = """<div style="font: 7.5px -apple-system, 'Helvetica Neue', Arial, sans-serif; color:#5f6672; width:100%; padding:0 18mm; display:flex; justify-content:space-between">
+FUSSZEILE = """<div style="font: 7.5px -apple-system, 'Helvetica Neue', Arial, sans-serif; color:#596070; width:100%; padding:0 18mm; display:flex; justify-content:space-between">
   <span>{titel}</span><span>Seite <span class="pageNumber"></span> von <span class="totalPages"></span></span></div>"""
 
 MONATE = ("Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
@@ -24,18 +24,22 @@ MONATE = ("Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August"
 BEISPIELE_JE_PROBLEM = 3
 MASSNAHMEN_MAX = 10
 SCHRIFTEN = Path(__file__).parent.parent / "web" / "static" / "fonts"
-SCHRIFT_DATEI = "dm-sans-latin-var"  # variabel, Gewichte 400 bis 700; Umlaute und ß liegen im Latin-Teil
+SCHNITTE = [("Fira Sans", 400, "normal", "fira-sans-latin-400-normal"), ("Fira Sans", 500, "normal", "fira-sans-latin-500-normal"),
+            ("Fira Sans", 600, "normal", "fira-sans-latin-600-normal"), ("Fira Sans", 400, "italic", "fira-sans-latin-400-italic"),
+            ("Fira Sans Condensed", 500, "normal", "fira-sans-condensed-latin-500-normal")]
 
 
 @cache
 def schriften_css() -> str:
     """@font-face mit eingebetteten Dateien – die PDF-Seite hat keine URL, von der sie laden könnte."""
-    pfad = SCHRIFTEN / f"{SCHRIFT_DATEI}.woff2"
-    if not pfad.exists():
-        return ""
-    daten = base64.b64encode(pfad.read_bytes()).decode()
-    return (f'@font-face {{ font-family: "DM Sans"; font-weight: 400 700; font-style: normal; '
-            f'src: url(data:font/woff2;base64,{daten}) format("woff2"); }}')
+    css = []
+    for familie, gewicht, stil, datei in SCHNITTE:
+        pfad = SCHRIFTEN / f"{datei}.woff2"
+        if pfad.exists():
+            daten = base64.b64encode(pfad.read_bytes()).decode()
+            css.append(f'@font-face {{ font-family: "{familie}"; font-weight: {gewicht}; font-style: {stil}; '
+                       f'src: url(data:font/woff2;base64,{daten}) format("woff2"); }}')
+    return "\n".join(css)
 
 
 def _ortszeit(wert: str | None) -> str:
