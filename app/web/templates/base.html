@@ -21,13 +21,28 @@
   <aside class="leiste" id="leiste">
     <div class="leiste-oben">
       <a class="marke-tool" href="/">
-        <img src="/static/logo.svg" width="28" height="28" alt="">
+        <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--akzent)"/>
+          <path d="M7.5 16.5l5.2 5.2L24.5 9.9M18.4 9.6h6.4v6.4" fill="none" stroke="var(--auf-akzent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Nextfix
       </a>
       <button class="zweit klein-knopf menue-knopf" type="button" aria-expanded="false" aria-controls="leiste"
               onclick="var l=document.getElementById('leiste');var o=l.classList.toggle('offen');this.setAttribute('aria-expanded',o)">Menü</button>
     </div>
     <div class="menue-inhalt">
+      <details class="projektwahl">
+        <summary>
+          <span style="min-width:0">
+            {% if p %}<span class="name">{{ p.name }}</span>{% if p.name != p.domain %}<span class="domain">{{ p.domain }}</span>{% endif %}
+            {% else %}<span class="name">Projekt wählen</span><span class="domain">{{ n.projekte|length }} Websites</span>{% endif %}
+          </span>
+        </summary>
+        <ul>
+          {% for x in n.projekte %}
+          <li><a href="/projekte/{{ x.id }}" {% if p and x.id == p.id %}aria-current="true"{% endif %}>{{ x.name }}{% if x.name != x.domain %}<br><span class="klein">{{ x.domain }}</span>{% endif %}</a></li>
+          {% endfor %}
+          <li class="neu"><a href="/">Alle Projekte und neues anlegen</a></li>
+        </ul>
+      </details>
 
       {% if p %}
       <nav aria-label="Module">
@@ -61,25 +76,6 @@
       </div>
     </div>
   </aside>
-  <header class="oben">
-    <div class="oben-objekt">
-      <span class="name">{{ p.domain if p else 'Alle Projekte' }}</span>
-    </div>
-  <details class="projektwahl">
-    <summary>
-      <span style="min-width:0">
-        {% if p %}<span class="name">{{ p.name }}</span><span class="domain">{{ n.projekte|length }} {{ 'Website' if n.projekte|length == 1 else 'Websites' }}</span>
-        {% else %}<span class="name">Projekt wählen</span><span class="domain">{{ n.projekte|length }} Websites</span>{% endif %}
-      </span>
-    </summary>
-    <ul>
-      {% for x in n.projekte %}
-      <li><a href="/projekte/{{ x.id }}" {% if p and x.id == p.id %}aria-current="true"{% endif %}>{{ x.name }}{% if x.name != x.domain %}<br><span class="klein">{{ x.domain }}</span>{% endif %}</a></li>
-      {% endfor %}
-      <li class="neu"><a href="/">Alle Projekte und neues anlegen</a></li>
-    </ul>
-  </details>
-  </header>
   <main class="inhalt">{% block inhalt %}{% endblock %}</main>
 </div>
 <script>
