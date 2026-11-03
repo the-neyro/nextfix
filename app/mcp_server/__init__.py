@@ -377,6 +377,7 @@ def keywords_csv(projekt_id: int, tage: int = 28, land: str | None = None, gerae
                  auswahl: str | None = None, tag: str | None = None, suchmaschine: str = "google") -> str:
     """Suchbegriffe als CSV-Datei speichern (für Excel: Semikolon, UTF-8 mit BOM, Dezimalkomma);
     gibt den Dateipfad zurück. Filter wie positionen_keywords; land z. B. deu, aut, che."""
+    land = positionen.land_normalisieren(land)
     with _db() as conn:
         inhalt = export.keywords_csv(conn, projekt_id, tage, land, geraet, auswahl, tag, suchmaschine=suchmaschine)
     ordner = config.DB_PFAD.parent / "export"
