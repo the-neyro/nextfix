@@ -386,14 +386,17 @@ class Crawler:
         for url in [u for u in self._ziel_urls() if u not in gecrawlt][:MAX_ZIEL_PRUEFUNG]:
             if self._abbruch_gewuenscht():
                 return
+            if ist_lokal(url) and not ist_intern(url, self.start_host):
+                continue
             if self.e.robots_beachten and not self._erlaubt(url):
                 continue
             status = None
             try:
-                r = _mit_wiederholung(lambda: self.client.head(url))
-                if r.status_code in (405, 501):
-                    r = _mit_wiederholung(lambda: _lesen(self.client, url, MAX_HTML_BYTES, folgen=False))
-                status = r.status_code
+                status = _mit_wiederholung(lambda: _sicher_status(
+                    self.client, url, "HEAD", start_host=self.start_host))
+                if status in (405, 501):
+                    status = _mit_wiederholung(lambda: _sicher_status(
+                        self.client, url, "GET", start_host=self.start_host))
             except httpx.HTTPError:
                 pass
             self.conn.execute("INSERT OR REPLACE INTO ziel_status (crawl_id, url, status_code) VALUES (?,?,?)",
@@ -441,14 +444,26 @@ def _status(client: httpx.Client, url: str, folgen: bool = False) -> int:
     return r.status_code
 
 
+def _sicher_status(client: httpx.Client, url: str, methode: str, folgen: bool = False,
+                   headers: dict | None = None, start_host: str | None = None) -> int:
+    """Jeden Redirect vor dem Abruf prüfen; Statusabfragen laden nie einen Body."""
+    for _ in range(client.max_redirects + 1):
+        if ist_lokal(url) and not (start_host and ist_intern(url, start_host)):
+            raise httpx.RequestError("Lokales Ziel wird nicht automatisch abgerufen")
+        with client.stream(methode, url, follow_redirects=False, headers=headers) as r:
+            if folgen and r.has_redirect_location:
+                url = str(r.next_request.url)
+                continue
+            return r.status_code
+    raise httpx.TooManyRedirects("Zu viele Weiterleitungen")
+
+
 def _extern_status(client: httpx.Client, url: str) -> int:
-    """HEAD mit Bot-Kennung; bei Ablehnung einmal per GET mit Browser-Kennung nachprüfen.
-    Gemeldet wird nur, was auch für einen normalen Browser fehlschlägt."""
-    r = client.head(url, follow_redirects=True)
-    if r.status_code in EXTERN_NACHPRUEFEN:
-        with client.stream("GET", url, follow_redirects=True, headers={"User-Agent": BROWSER_UA}) as r:
-            pass
-    return r.status_code
+    """HEAD mit Bot-Kennung, bei Ablehnung GET als Browser; private Redirect-Ziele sperren."""
+    status = _sicher_status(client, url, "HEAD", folgen=True)
+    if status in EXTERN_NACHPRUEFEN:
+        status = _sicher_status(client, url, "GET", folgen=True, headers={"User-Agent": BROWSER_UA})
+    return status
 
 
 def _datei_laden(client: httpx.Client, url: str) -> dict:
