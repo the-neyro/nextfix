@@ -32,6 +32,24 @@ async def lebenszyklus(_app: FastAPI):
 
 app = FastAPI(title="Nextfix", lifespan=lebenszyklus)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
+
+@app.middleware("http")
+async def nur_eigene_seite(request: Request, call_next):
+    """Browser dürfen nur lokal ändern; Skripte ohne Herkunftsheader bleiben möglich."""
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        herkunft = request.headers.get("origin")
+        try:
+            teile = urlsplit(herkunft) if herkunft else None
+            lokal = herkunft is None or (teile is not None and teile.scheme in ("http", "https")
+                                      and teile.hostname in ("localhost", "127.0.0.1")
+                                      and teile.username is None and teile.password is None)
+        except ValueError:
+            lokal = False
+        if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none") or not lokal:
+            return Response("Fremde Herkunft abgelehnt", status_code=403)
+    return await call_next(request)
+
+
 app.include_router(api_router)
 templates = Jinja2Templates(directory=Path(__file__).with_name("templates"))
 app.mount("/static", StaticFiles(directory=Path(__file__).with_name("static")), name="static")
