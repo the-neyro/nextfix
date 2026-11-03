@@ -14,6 +14,7 @@ import httpx
 
 from app.crawler import filter, rendern, ressourcen, site, sitemap
 from app.crawler.parser import dekodieren, zerlegen
+from app.crawler.lesen import _lesen
 from app.crawler.robots import RobotsTxt
 from app.crawler.urls import host, ist_intern, ist_lokal, normalisieren
 
@@ -109,7 +110,7 @@ class Crawler:
         wurzel = f"{teile.scheme}://{teile.netloc}"
         status, text, sitemaps = None, None, []
         try:
-            r = self.client.get(wurzel + "/robots.txt", follow_redirects=True)
+            r = _lesen(self.client, wurzel + "/robots.txt", MAX_HTML_BYTES)
             status = r.status_code
             if r.status_code == 200:
                 text = r.text.removeprefix("\ufeff")   # BOM (Windows-Editoren): Google ignoriert ihn
@@ -354,7 +355,8 @@ class Crawler:
             try:
                 r = self.client.head(url)
                 if r.status_code in (405, 501):
-                    r = self.client.get(url)
+                    with self.client.stream("GET", url) as r:
+                        pass
                 status = r.status_code
             except httpx.HTTPError:
                 pass
@@ -390,7 +392,7 @@ class Crawler:
             try:
                 r = _mit_wiederholung(lambda: self.client.head(url))
                 if r.status_code in (405, 501):
-                    r = _mit_wiederholung(lambda: self.client.get(url))
+                    r = _mit_wiederholung(lambda: _lesen(self.client, url, MAX_HTML_BYTES, folgen=False))
                 status = r.status_code
             except httpx.HTTPError:
                 pass
@@ -450,7 +452,7 @@ def _extern_status(client: httpx.Client, url: str) -> int:
 
 
 def _datei_laden(client: httpx.Client, url: str) -> dict:
-    r = client.get(url)
+    r = _lesen(client, url, MAX_HTML_BYTES, folgen=False)
     werte = {"status_code": r.status_code}
     if r.status_code == 200:
         text = r.text

@@ -14,6 +14,9 @@ from urllib.parse import urljoin, urlsplit
 
 import httpx
 
+from app.crawler.lesen import _lesen
+
+MAX_BYTES = 5 * 1024 * 1024
 ZERTIFIKAT_WARNUNG_TAGE = 30
 LLMS_MAX_LINKS = 300
 
@@ -45,7 +48,7 @@ def _ist_ip_oder_lokal(host: str) -> bool:
 def _endziel(client: httpx.Client, url: str) -> dict:
     """Folgt Weiterleitungen und liefert Endziel + Kette."""
     try:
-        r = client.get(url, follow_redirects=True)
+        r = _lesen(client, url, MAX_BYTES)
     except httpx.HTTPError as fehler:
         return {"url": url, "fehler": f"{type(fehler).__name__}: {fehler}"[:200]}
     kette = [f"{h.status_code} {h.url}" for h in r.history]
@@ -78,7 +81,7 @@ def _www(client: httpx.Client, teile, haupt_ziel: dict) -> dict:
 def _llms(client: httpx.Client, wurzel: str) -> dict:
     """llms.txt: Markdown-Datei, die mit einer H1-Zeile ('# Name') beginnen soll."""
     try:
-        r = client.get(wurzel + "/llms.txt", follow_redirects=True)
+        r = _lesen(client, wurzel + "/llms.txt", MAX_BYTES)
     except httpx.HTTPError:
         return {"status": None}
     ergebnis = {"status": r.status_code}

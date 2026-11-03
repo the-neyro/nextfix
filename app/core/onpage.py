@@ -13,10 +13,12 @@ import httpx
 
 from app.core import audit, projekte
 from app.crawler.urls import normalisieren
+from app.crawler.lesen import _lesen
 from app.keywords.suggest import MODIFIKATOREN, W_FRAGEN, Suggest, SuggestFehler
 from app.onpage import abgleich, ki, semantik
 from app.onpage.seite import lesen
 
+MAX_HTML_BYTES = 5 * 1024 * 1024
 MAX_MITBEWERBER = 3
 TIMEOUT_S = 20
 
@@ -31,7 +33,8 @@ class OnpageFehler(ValueError):
 def abrufen(url: str, user_agent: str) -> tuple[int, str, str]:
     """(Status, HTML, endgültige URL nach Weiterleitungen)."""
     try:
-        r = httpx.get(url, headers={"User-Agent": user_agent}, follow_redirects=True, timeout=TIMEOUT_S)
+        with httpx.Client(headers={"User-Agent": user_agent}, timeout=TIMEOUT_S) as client:
+            r = _lesen(client, url, MAX_HTML_BYTES)
     except httpx.HTTPError as e:
         raise OnpageFehler(f"{url} nicht erreichbar ({type(e).__name__})") from None
     if "html" not in r.headers.get("content-type", "html"):
