@@ -57,7 +57,7 @@ def _lesen(client: httpx.Client, url: str, max_bytes: int, folgen: bool = True) 
     """GET mit Grenze für übertragene und entpackte Bytes; Redirect-Bodies nie laden."""
     geschichte = []
     for _ in range(client.max_redirects + 1):
-        with client.stream("GET", url, follow_redirects=False, headers={"Accept-Encoding": "identity"}) as r:
+        with client.stream("GET", url, follow_redirects=False, headers={"Accept-Encoding": "gzip, deflate"}) as r:
             if folgen and r.has_redirect_location:
                 geschichte.append(r)
                 url = str(r.next_request.url)

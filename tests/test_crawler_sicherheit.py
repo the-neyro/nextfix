@@ -147,3 +147,16 @@ def test_defektes_gzip_ergibt_dateifehler(daten):
     client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=daten)))
     datei = sitemap.laden(client, ["https://example.de/sitemap.gz"]).dateien[0]
     assert datei.fehler and datei.fehler.startswith("gzip:")
+
+
+
+def test_begrenzter_leser_bietet_http_kompression_an():
+    from app.crawler.lesen import _lesen
+    def antwort(r):
+        assert r.headers["Accept-Encoding"] == "gzip, deflate"
+        return httpx.Response(200, headers={"Content-Encoding": "gzip"},
+                              stream=ZaehlerStrom(gzip.compress(b"var x = 1;")))
+    client = httpx.Client(transport=httpx.MockTransport(antwort))
+    r = _lesen(client, "https://example.de/app.js", 1000)
+    assert r.text == "var x = 1;"
+    assert r.headers["Content-Encoding"] == "gzip"
