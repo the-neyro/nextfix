@@ -35,3 +35,26 @@ def test_lokale_und_skript_aenderungen_bleiben_moeglich(headers):
 
 def test_fremdes_lesen_braucht_keinen_csrf_check():
     assert TestClient(app).get("/openapi.json", headers={"Origin": "https://evil.example"}).status_code == 200
+
+
+@pytest.mark.parametrize("methode,pfad,headers,status", [
+    ("GET", "/openapi.json", {}, 200),
+    ("GET", "/static/logo.svg", {}, 200),
+    ("GET", "/fehlt", {}, 404),
+    ("GET", "/openapi.json", {"Host": "evil.example"}, 400),
+    ("POST", "/api/projekte", {"Origin": "https://evil.example"}, 403),
+    ("POST", "/api/projekte", {}, 422),
+    ("GET", "/", {}, 500),
+])
+def test_sicherheitsheader_auch_bei_fehlern(monkeypatch, methode, pfad, headers, status):
+    from app.core import projekte
+
+    def kaputt(*args):
+        raise RuntimeError("Testfehler")
+    if status == 500:
+        monkeypatch.setattr(projekte, "liste", kaputt)
+    antwort = TestClient(app, raise_server_exceptions=False).request(methode, pfad, headers=headers)
+    assert antwort.status_code == status
+    assert antwort.headers["X-Frame-Options"] == "DENY"
+    assert antwort.headers["Content-Security-Policy"] == "frame-ancestors 'none'"
+    assert antwort.headers["X-Content-Type-Options"] == "nosniff"

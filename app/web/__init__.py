@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi import Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -19,6 +19,7 @@ from app.api import router as api_router
 from app.core import audit, aufgaben, ausblenden, autoritaet, export, teilnoten, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import sitzung, verbinden
 from app.gsc.laender import land_name
+from app.web.sicherheit import LokaleApp
 
 
 
@@ -30,7 +31,7 @@ async def lebenszyklus(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Nextfix", lifespan=lebenszyklus)
+app = LokaleApp(title="Nextfix", lifespan=lebenszyklus)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
 
 @app.middleware("http")
