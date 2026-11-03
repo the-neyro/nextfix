@@ -12,6 +12,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import checks, gsc
 from app.api import router as api_router
@@ -30,6 +31,7 @@ async def lebenszyklus(_app: FastAPI):
 
 
 app = FastAPI(title="Nextfix", lifespan=lebenszyklus)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
 app.include_router(api_router)
 templates = Jinja2Templates(directory=Path(__file__).with_name("templates"))
 app.mount("/static", StaticFiles(directory=Path(__file__).with_name("static")), name="static")
