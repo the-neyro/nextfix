@@ -58,3 +58,12 @@ def test_sicherheitsheader_auch_bei_fehlern(monkeypatch, methode, pfad, headers,
     assert antwort.headers["X-Frame-Options"] == "DENY"
     assert antwort.headers["Content-Security-Policy"] == "frame-ancestors 'none'"
     assert antwort.headers["X-Content-Type-Options"] == "nosniff"
+
+
+
+def test_lifespan_typen_sind_aufloesbar():
+    # Python 3.12 wertet diese Annotation schon beim Import aus, 3.14 erst bei Bedarf.
+    from typing import get_type_hints
+    from fastapi import FastAPI
+    from app.web import lebenszyklus
+    assert get_type_hints(lebenszyklus.__wrapped__)["_app"] is FastAPI
