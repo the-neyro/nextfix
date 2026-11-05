@@ -104,6 +104,10 @@ Then add a domain and click “Website prüfen” (audit website). No website of
 Create a project with the start URL `http://127.0.0.1:8798/`. Rankings can be tried out without access using test
 data.
 
+Audits of public sites block connections to private and loopback addresses. To audit a local site, set the
+start URL to its `localhost` address or a private IP literal and the site's port. The exception covers that
+host and port only.
+
 ### With Claude (MCP)
 
 Connect Claude Code once (the installer prints this command with your real path; here for `~/nextfix`):

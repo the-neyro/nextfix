@@ -13,8 +13,9 @@ from urllib.parse import urlsplit
 import httpx
 
 from app.crawler import filter, rendern, ressourcen, site, sitemap
-from app.crawler.parser import dekodieren, zerlegen
 from app.crawler.lesen import _inhalt_begrenzt, _lesen
+from app.crawler.netz import http_client
+from app.crawler.parser import dekodieren, zerlegen
 from app.crawler.robots import RobotsTxt
 from app.crawler.urls import host, ist_intern, ist_lokal, normalisieren
 
@@ -58,8 +59,9 @@ class Crawler:
         self.conn = conn
         self.crawl_id = crawl_id
         self.e = e
-        self.client = client or httpx.Client(
-            timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": e.user_agent}
+        self._eigener_client = client is None
+        self.client = client if client is not None else http_client(
+            e.start_url, user_agent=e.user_agent, timeout=TIMEOUT
         )
         self.start_host = host(e.start_url)
         self.robots = RobotsTxt()   # ohne robots.txt: alles erlaubt
@@ -71,10 +73,17 @@ class Crawler:
     # ---------- Ablauf ----------
 
     def ausfuehren(self) -> None:
+        try:
+            self._ausfuehren()
+        finally:
+            if self._eigener_client:
+                self.client.close()
+
+    def _ausfuehren(self) -> None:
         self._robots_und_sitemap()
         if self.e.js_rendern:
             try:
-                with RENDERER_FABRIK(self.e.user_agent) as self.renderer:
+                with RENDERER_FABRIK(self.e.user_agent, start_url=self.e.start_url) as self.renderer:
                     self._seiten_crawlen()
             except ImportError as fehler:
                 raise RuntimeError("JavaScript ausführen braucht Playwright: .venv/bin/pip install -r requirements.txt"

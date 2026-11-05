@@ -6,7 +6,6 @@ Jeder Teil fängt seine Fehler selbst ab, damit ein Problem nicht den ganzen Cra
 
 import ipaddress
 import re
-import socket
 import ssl
 import warnings
 from datetime import datetime, timezone
@@ -15,6 +14,7 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 
 from app.crawler.lesen import _lesen
+from app.crawler.netz import Zielbereich
 
 MAX_BYTES = 5 * 1024 * 1024
 ZERTIFIKAT_WARNUNG_TAGE = 30
@@ -113,7 +113,7 @@ def tls_pruefen(host: str, port: int = 443, timeout: float = 10.0) -> dict:
     ergebnis: dict = {}
     try:
         kontext = ssl.create_default_context()
-        with socket.create_connection((host, port), timeout=timeout) as roh:
+        with Zielbereich().verbinden(host, port, timeout) as roh:
             with kontext.wrap_socket(roh, server_hostname=host) as tls:
                 zertifikat = tls.getpeercert()
                 ergebnis["protokoll"] = tls.version()
@@ -151,7 +151,7 @@ def _altes_tls_erlaubt(host: str, port: int, timeout: float) -> bool | None:
     except (ValueError, ssl.SSLError):
         return None
     try:
-        with socket.create_connection((host, port), timeout=timeout) as roh:
+        with Zielbereich().verbinden(host, port, timeout) as roh:
             with kontext.wrap_socket(roh, server_hostname=host):
                 return True
     except ssl.SSLError:

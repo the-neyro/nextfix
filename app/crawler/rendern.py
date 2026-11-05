@@ -5,6 +5,11 @@ viele andere Crawler (u. a. die der KI-Suchdienste) nicht. Bilder, Schriften und
 Für Text und Links braucht es sie nicht, und der Server wird weniger belastet.
 """
 
+from contextlib import ExitStack
+
+from app.crawler.browser_netz import browser
+from app.crawler.netz import Zielbereich
+
 AUSLASSEN = {"image", "media", "font"}
 
 
@@ -19,27 +24,30 @@ def grund(fehler: Exception, timeout_s: int) -> str:
 class Renderer:
     """Ein Chromium für viele Seiten. Benutzung: with Renderer(user_agent) as r: html = r.rendern(url)."""
 
-    def __init__(self, user_agent: str, timeout_s: int = 20, ruhe_ms: int = 3000):
+    def __init__(self, user_agent: str, timeout_s: int = 20, ruhe_ms: int = 3000, *, start_url: str | None = None):
+        self.start_url = start_url
         self.user_agent, self.timeout_ms, self.ruhe_ms = user_agent, timeout_s * 1000, ruhe_ms
         self.fehler: str | None = None   # Grund des letzten Fehlschlags von rendern()
 
     def __enter__(self):
-        from playwright.sync_api import sync_playwright
-        self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch()
-        self._kontext = self._browser.new_context(user_agent=self.user_agent)
-        self._kontext.route("**/*", lambda route: route.abort() if route.request.resource_type in AUSLASSEN
-                            else route.continue_())
+        with ExitStack() as cleanup:
+            chromium, self._proxy = cleanup.enter_context(browser(self.start_url))
+            self._kontext = chromium.new_context(user_agent=self.user_agent)
+            cleanup.callback(self._kontext.close)
+            self._kontext.route("**/*", lambda route: route.abort() if route.request.resource_type in AUSLASSEN
+                                else route.continue_())
+            self._cleanup = cleanup.pop_all()
         return self
 
-    def __exit__(self, *_):
-        self._kontext.close()
-        self._browser.close()
-        self._pw.stop()
+    def __exit__(self, *fehler):
+        return self._cleanup.__exit__(*fehler)
 
     def rendern(self, url: str) -> str | None:
         """HTML nach Ausführung von JavaScript, None bei Fehler (dann gilt das Roh-HTML, Grund in self.fehler)."""
         self.fehler = None
+        if self.start_url is None:
+            self.start_url = url
+            self._proxy.zielbereich = Zielbereich(url)
         seite = self._kontext.new_page()
         try:
             seite.goto(url, wait_until="load", timeout=self.timeout_ms)
