@@ -8,6 +8,7 @@ Positionen sind Google-Durchschnitte (gewichtet nach Impressionen), keine
 täglichen Momentaufnahmen wie bei Semrush.
 """
 
+import re
 import sqlite3
 from datetime import date, timedelta
 
@@ -125,7 +126,17 @@ def _zeitraeume(conn, projekt_id: int, tage: int, suchmaschine: str = "google") 
             "vorher_bis": (von - timedelta(days=1)).isoformat(), "tage": tage}
 
 
+def land_normalisieren(land: str | None) -> str | None:
+    if not land:
+        return None
+    land = land.lower()
+    if not re.fullmatch(r"[a-z]{3}", land):
+        raise PositionenFehler("Land muss aus drei Buchstaben bestehen (z. B. deu)")
+    return land
+
+
 def _filter(land: str | None, geraet: str | None, suchmaschine: str = "google") -> tuple[str, list]:
+    land = land_normalisieren(land)
     sql, werte = _quellen_sql(suchmaschine)
     if land:
         sql += " AND land = ?"

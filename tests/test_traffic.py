@@ -45,13 +45,21 @@ def test_zeitraum_28_tage_bis_zum_neuesten_datum():
     d = traffic.pro_seite(conn, p)
     assert (d["von"], d["bis"]) == ("2026-09-18", "2026-10-15")
     assert d["seiten"] == {"ex.de/a": (6, 60)} and d["summe"] == (6, 60)
-    assert traffic.fuer_urls(d, ["http://ex.de/a", "https://www.ex.de/a", "https://ex.de/fehlt"]) == (6, 60)
+    assert traffic.fuer_urls(d, ["http://ex.de/a", "https://www.ex.de/a", "https://ex.de/fehlt"]) == (6, 60, "teilweise")
+
+
+def test_url_parameter_und_nullwerte():
+    daten = {"seiten": {"ex.de/a": (0, 0)}}
+    assert traffic.fuer_urls(daten, ["https://ex.de/a"]) == (0, 0, "passend")
+    assert traffic.fuer_urls(daten, ["https://ex.de/a?variante=2"]) == (None, None, "keine")
+    assert traffic.fuer_urls(daten, ["https://ex.de/a", "https://ex.de/a?variante=2"]) == (0, 0, "teilweise")
 
 
 def test_text():
     assert traffic.text(1340, 12400, 28) == "1.340 Klicks, 12.400 Impressionen bei Google in 28 Tagen"
     assert traffic.text(1, 3, 28).startswith("1 Klick,")
-    assert traffic.text(0, 0, 28) == "Keine Impressionen bei Google in 28 Tagen"
+    assert traffic.text(0, 0, 28) == "Keine Impressionen bei Google in 28 Tagen (importierte Daten)"
+    assert traffic.text(None, None, 28, "keine") == "Keine passenden Google-Daten für die betroffenen Seiten"
 
 
 def test_ohne_gsc_bleibt_reihenfolge(crawl):
@@ -82,7 +90,8 @@ def test_klicks_ordnen_innerhalb_der_stufe(crawl, testseite):
     gehoben = next(a for a in neu if a["id"] == letzte["id"])
     assert gehoben["klicks"] >= 40 and "Klicks" in gehoben["traffic_text"]
     assert neu.index(gehoben) < len(neu) - 1   # vorher Letzte ihrer Stufe, jetzt nicht mehr
-    assert [a["klicks"] for a in neu] == sorted((a["klicks"] for a in neu), reverse=True)
+    assert [a["klicks"] or 0 for a in neu] == sorted((a["klicks"] or 0 for a in neu), reverse=True)
+    assert any(a["klicks"] is None and a["traffic_status"] == "keine" for a in nachher["aufgaben"])
     # Stufen bleiben in ihrer Reihenfolge: Traffic hebt keine Warnung über einen Fehler mit höherer Wirkung
     rang = [aufgaben.WIRKUNG_RANG[a["wirkung"]] for a in nachher["aufgaben"]]
     assert rang == sorted(rang)

@@ -46,13 +46,15 @@ def test_vergleich(zwei_crawls):
     r = vergleich.vergleich(conn, neu)
     assert r["vorher"]["id"] == alt
     status = {a["id"]: (a["status"], a["differenz"]) for a in r["aenderungen"]}
-    assert status == {"title_fehlt": ("mehr", 1), "mixed_content": ("behoben", -1), "kein_hsts": ("neu", 1)}
+    assert status == {"title_fehlt": ("nicht_nachgeprueft", 1),
+                      "mixed_content": ("nicht_nachgeprueft", -1), "kein_hsts": ("neu", 1)}
 
 
 def test_treffer_vergleich(zwei_crawls):
     conn, p, alt, neu = zwei_crawls
     r = vergleich.treffer_vergleich(conn, neu, "title_fehlt")
-    assert r["neu"] == [B + "c", B + "d"] and r["behoben"] == [B + "a"]
+    assert r["neu"] == [B + "c", B + "d"]
+    assert r["behoben"] == [] and r["nicht_nachgeprueft"] == [B + "a"]
     assert vergleich.treffer_vergleich(conn, neu, "kein_hsts")["neu"] == [None]
 
 

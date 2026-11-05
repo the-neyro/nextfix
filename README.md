@@ -72,7 +72,8 @@ On Windows (PowerShell):
 irm https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.ps1 | iex
 ```
 
-The installer checks out the newest release tag, not the development branch. For the development version, set
+The installer checks out the newest stable release tag. It stops if no stable tag is available or the remote
+cannot be reached. For the development version, set
 `NEXTFIX_BRANCH=main` (e.g. `curl … | NEXTFIX_BRANCH=main bash`); running it again updates an existing install.
 
 Or step by step:
@@ -102,6 +103,10 @@ Then add a domain and click “Website prüfen” (audit website). No website of
 
 Create a project with the start URL `http://127.0.0.1:8798/`. Rankings can be tried out without access using test
 data.
+
+Audits of public sites block connections to private and loopback addresses. To audit a local site, set the
+start URL to its `localhost` address or a private IP literal and the site's port. The exception covers that
+host and port only.
 
 ### With Claude (MCP)
 

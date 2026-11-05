@@ -7,6 +7,7 @@
     <span class="marke leise">{{ 'machst du selbst' if a.wer == 'selbst' else 'für deine Technik' }}</span>
     {% if a.verlauf == 'neu' %}<span class="klein">neu seit der letzten Prüfung</span>
     {% elif a.verlauf == 'besser' %}<span class="klein gut">▼ besser: {{ a.vorher }} → {{ a.seiten }}</span>
+    {% elif a.verlauf == 'nicht_nachgeprueft' %}<span class="klein">Frühere Fundstellen nicht nachgeprüft</span>
     {% elif a.verlauf == 'schlimmer' %}<span class="klein error">▲ mehr: {{ a.vorher }} → {{ a.seiten }}</span>{% endif %}
     {% if a.traffic_text %}<span class="klein">{{ a.traffic_text }}</span>{% endif %}
   </div>

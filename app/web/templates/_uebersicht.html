@@ -20,7 +20,7 @@
       {% elif h >= 80 %}Gut gepflegt. Die Aufgaben unten holen die letzten Punkte.
       {% elif h >= 50 %}Noch {{ (80 - h)|round(0, 'ceil')|int }} Punkte bis „gut“.
       {% else %}Mehrere grobe Fehler. Fang oben in der Liste an.{% endif %}
-      {% if vorher_health is not none %}<br>Letzte Prüfung: {{ vorher_health|round|int }}
+      {% if h is not none and vorher_health is not none and aufg.auswertung == 'fertig' %}<br>Letzte Prüfung: {{ vorher_health|round|int }}
         {% set d = (h - vorher_health)|round(1) %}{% if d > 0 %}<span class="gut">(▲ {{ d|zahl(1) }})</span>{% elif d < 0 %}<span class="error">(▼ {{ (-d)|zahl(1) }})</span>{% endif %}{% endif %}
     </p>
   </div>
@@ -57,6 +57,11 @@
         <h2 id="was-jetzt">Was jetzt tun</h2>
         <span class="klein">Sortiert nach Wirkung auf den Website-Zustand{% if aufg.suchdaten %}, bei gleicher Wirkung nach Klicks bei Google ({{ aufg.suchdaten.von|datum }} bis {{ aufg.suchdaten.bis|datum }}{% if aufg.suchdaten.quellen == ['mock'] %}, Beispieldaten{% endif %}){% endif %}</span>
       </div>
+      {% if aufg.auswertung != 'fertig' %}
+      <p class="klein">{% if aufg.auswertung == 'keine_seiten' %}Keine auswertbaren HTML-Seiten in dieser Prüfung.
+        {% elif aufg.auswertung == 'abgebrochen' %}Prüfung abgebrochen. Die Ergebnisse sind unvollständig.
+        {% else %}Die Prüfung ist noch nicht vollständig ausgewertet.{% endif %}</p>
+      {% endif %}
       {% if aufg.aufgaben %}
       <ol class="aufgaben">
         {% for a in aufg.aufgaben[:gezeigt] %}{% include "_aufgabe.html" %}{% endfor %}
@@ -69,13 +74,17 @@
         </ol>
       </details>
       {% endif %}
-      {% else %}
-      <p><span class="marke gut">Alles erledigt</span> Keine dringenden oder wichtigen Probleme. Prüf die Website wieder, wenn du etwas geändert hast.</p>
+      {% elif aufg.auswertung == 'fertig' %}
+      <p>Keine dringenden oder wichtigen Probleme auf den geprüften Seiten gefunden.</p>
       {% endif %}
 
       {% if aufg.erledigt %}
       <p class="klein" style="margin:12px 0 0"><span class="symbol gut">✓</span> Seit der letzten Prüfung erledigt:
         {% for e in aufg.erledigt %}{{ e.name }}{{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
+      {% if aufg.nicht_nachgeprueft %}
+      <p class="klein" style="margin:12px 0 0">Seit der letzten Prüfung nicht nachgeprüft:
+        {% for e in aufg.nicht_nachgeprueft %}{{ e.name }}{{ ', ' if not loop.last }}{% endfor %}</p>
       {% endif %}
     </section>
 

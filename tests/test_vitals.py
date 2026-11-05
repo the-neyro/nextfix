@@ -34,6 +34,9 @@ def test_score_und_ampel():
 
 class FakeMesser:
     """Liefert feste Werte: Startseite schnell, alles andere langsam auf Mobil."""
+    def __init__(self, *, start_url):
+        pass
+
     def __enter__(self):
         return self
 

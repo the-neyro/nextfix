@@ -7,6 +7,7 @@ import base64
 import sqlite3
 from datetime import date, datetime, timezone
 from functools import cache
+from html import escape
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -89,7 +90,7 @@ def html_zu_pdf(html: str, fusszeile: str = "") -> bytes:
             seite = browser.new_page()
             seite.set_content(html, wait_until="load")
             return seite.pdf(format="A4", print_background=True, display_header_footer=True,
-                             header_template="<span></span>", footer_template=FUSSZEILE.format(titel=fusszeile),
+                             header_template="<span></span>", footer_template=FUSSZEILE.format(titel=escape(fusszeile)),
                              margin={"top": "16mm", "bottom": "18mm", "left": "18mm", "right": "18mm"})
         finally:
             browser.close()
