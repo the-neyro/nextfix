@@ -131,7 +131,7 @@ def _vorheriger_crawl(conn: sqlite3.Connection, crawl_id: int) -> int | None:
 def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
     """{"aufgaben": [...], "feinschliff": [...], "erledigt": [...], "vorher_id": int | None,
     "suchdaten": {"von", "bis", "tage", "quellen"} | None}. Mit Search-Console-Daten je Aufgabe klicks, impressionen,
-    traffic_text, sonst None."""
+    traffic_text und traffic_status, sonst None."""
     from app.core import audit   # zirkulären Import vermeiden
 
     treffer = audit._treffer_pro_check(conn, crawl_id)
@@ -167,10 +167,15 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
              "seiten": seiten, "ganze_site": ganze_site, "seiten_text": _seiten_text(seiten, ganze_site),
              "gewinn": round(gewinn, 1), "wirkung": wirkung(abzug[c.id]), "aufwand": _aufwand(c), "aufwand_text": AUFWAND_TEXT[_aufwand(c)],
              "wer": _wer(c), "verlauf": verlauf, "vorher": vorher.get(c.id, (0, 0, False))[1],
-             "klicks": None, "impressionen": None, "traffic_text": None}
+             "klicks": None, "impressionen": None, "traffic_text": None, "traffic_status": None}
         if suchdaten:
-            k, i = suchdaten["summe"] if ganze_site else traffic.fuer_urls(suchdaten, urls.get(c.id, ()))
-            a.update(klicks=k, impressionen=i, traffic_text=traffic.text(k, i, suchdaten["tage"]))
+            if ganze_site:
+                k, i = suchdaten["summe"] if suchdaten["seiten"] else (None, None)
+                status = "passend" if k is not None else "keine"
+            else:
+                k, i, status = traffic.fuer_urls(suchdaten, urls.get(c.id, ()))
+            a.update(klicks=k, impressionen=i, traffic_status=status,
+                     traffic_text=traffic.text(k, i, suchdaten["tage"], status))
         (feinschliff if c.schwere == "notice" else aufgaben).append(a)
 
     aufgaben.sort(key=lambda a: (WIRKUNG_RANG[a["wirkung"]], -(a["klicks"] or 0), -(a["impressionen"] or 0),

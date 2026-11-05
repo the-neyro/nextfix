@@ -45,19 +45,29 @@ def pro_seite(conn: sqlite3.Connection, projekt_id: int, tage: int = TAGE) -> di
             "seiten": seiten, "summe": summe}
 
 
-def fuer_urls(daten: dict, urls) -> tuple[int, int]:
-    """Klicks und Impressionen der genannten Seiten (jede Seite einmal)."""
-    gefunden = [daten["seiten"].get(s, (0, 0)) for s in {schluessel(u) for u in urls}]
-    return sum(k for k, _ in gefunden), sum(i for _, i in gefunden)
+def fuer_urls(daten: dict, urls) -> tuple[int | None, int | None, str]:
+    """Importierte Klicks und Impressionen und Abdeckung der genannten URLs."""
+    schluesselmenge = {schluessel(u) for u in urls}
+    gefunden = [daten["seiten"][s] for s in schluesselmenge if s in daten["seiten"]]
+    if not gefunden:
+        return None, None, "keine"
+    status = "passend" if len(gefunden) == len(schluesselmenge) else "teilweise"
+    return sum(k for k, _ in gefunden), sum(i for _, i in gefunden), status
 
 
 def _zahl(n: int) -> str:
     return f"{n:,}".replace(",", ".")
 
 
-def text(klicks: int, impressionen: int, tage: int) -> str:
-    """Zeile für die Aufgabe, z. B. „340 Klicks, 12.400 Impressionen bei Google in 28 Tagen“."""
-    if not impressionen:
-        return f"Keine Impressionen bei Google in {tage} Tagen"
-    k = "1 Klick" if klicks == 1 else f"{_zahl(klicks)} Klicks"
-    return f"{k}, {_zahl(impressionen)} Impressionen bei Google in {tage} Tagen"
+def text(klicks: int | None, impressionen: int | None, tage: int, status: str = "passend") -> str:
+    """Zeile für die Aufgabe. Fehlende Zuordnungen sind keine Nullmessung."""
+    if klicks is None or impressionen is None:
+        return "Keine passenden Google-Daten für die betroffenen Seiten"
+    if impressionen == 0:
+        zeile = f"Keine Impressionen bei Google in {tage} Tagen (importierte Daten)"
+    else:
+        k = "1 Klick" if klicks == 1 else f"{_zahl(klicks)} Klicks"
+        zeile = f"{k}, {_zahl(impressionen)} Impressionen bei Google in {tage} Tagen"
+    if status == "teilweise":
+        zeile += " · Google-Daten für einen Teil der betroffenen Seiten"
+    return zeile
