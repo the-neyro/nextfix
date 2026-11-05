@@ -14,7 +14,7 @@ import httpx
 
 from app.crawler import filter, rendern, ressourcen, site, sitemap
 from app.crawler.parser import dekodieren, zerlegen
-from app.crawler.lesen import _lesen
+from app.crawler.lesen import _inhalt_begrenzt, _lesen
 from app.crawler.robots import RobotsTxt
 from app.crawler.urls import host, ist_intern, ist_lokal, normalisieren
 
@@ -420,18 +420,13 @@ def _mit_wiederholung(aufruf):
 def _abrufen(client: httpx.Client, url: str) -> tuple[httpx.Response, bytes, int | None]:
     """GET als Stream: nur HTML-Seiten mit Status 200 werden gelesen, und das höchstens bis MAX_HTML_BYTES.
     PDFs, Videos und Fehlerseiten kosten so keine Zeit und keinen Speicher. Liefert (Antwort, Inhalt, Größe)."""
-    with client.stream("GET", url) as r:
+    with client.stream("GET", url, headers={"Accept-Encoding": "gzip, deflate"}) as r:
         laenge = r.headers.get("content-length")
         groesse = int(laenge) if laenge and laenge.isdigit() else None
         if r.status_code != 200 or "html" not in (r.headers.get("content-type") or "").lower():
             return r, b"", groesse
-        teile, gelesen = [], 0
-        for stueck in r.iter_bytes():
-            teile.append(stueck)
-            gelesen += len(stueck)
-            if gelesen > MAX_HTML_BYTES:
-                break
-        inhalt = b"".join(teile)[:MAX_HTML_BYTES]
+        inhalt, gekuerzt = _inhalt_begrenzt(r, MAX_HTML_BYTES)
+        gelesen = MAX_HTML_BYTES + 1 if gekuerzt else len(inhalt)
         return r, inhalt, max(gelesen, groesse or 0)
 
 

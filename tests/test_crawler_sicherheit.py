@@ -128,6 +128,39 @@ def test_http_kompression_wird_beim_entpacken_begrenzt(kodierung):
     assert strom.geschlossen
 
 
+def test_html_behaelt_begrenztes_praefix_eines_gzip_blocks(monkeypatch):
+    from app.crawler import lesen
+
+    limit = 1024
+    monkeypatch.setattr(crawler, "MAX_HTML_BYTES", limit)
+    dekoder = lesen.zlib.decompressobj
+    ausgabelaengen = []
+
+    class MessenderDekoder:
+        def __init__(self, *args):
+            self.dekoder = dekoder(*args)
+
+        def decompress(self, daten, max_length=0):
+            inhalt = self.dekoder.decompress(daten, max_length)
+            ausgabelaengen.append(len(inhalt))
+            return inhalt
+
+        def __getattr__(self, name):
+            return getattr(self.dekoder, name)
+
+    monkeypatch.setattr(lesen.zlib, "decompressobj", MessenderDekoder)
+    html = b"<title>Beispiel</title>" + b"x" * 100_000
+    strom = ZaehlerStrom(gzip.compress(html))
+    client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(
+        200, headers={"Content-Type": "text/html", "Content-Encoding": "gzip"}, stream=strom)))
+
+    _, inhalt, groesse = crawler._abrufen(client, "https://example.de/")
+
+    assert inhalt == html[:limit] and groesse > limit
+    assert sum(ausgabelaengen) == limit + 1
+    assert strom.geschlossen
+
+
 def test_redirect_body_wird_nicht_gelesen():
     from app.crawler.lesen import _lesen
     strom = ZaehlerStrom()

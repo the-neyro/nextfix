@@ -24,11 +24,17 @@ def _entpacken(inhalt: bytes, max_bytes: int) -> bytes:
 
 
 def _inhalt(antwort: httpx.Response, max_bytes: int) -> bytes:
+    inhalt, gekuerzt = _inhalt_begrenzt(antwort, max_bytes)
+    if gekuerzt:
+        raise AntwortZuGross(max_bytes)
+    return inhalt
+
+
+def _inhalt_begrenzt(antwort: httpx.Response, max_bytes: int) -> tuple[bytes, bool]:
+    """Liefert ein begrenztes Präfix und meldet, ob das Roh- oder Ausgabelimit erreicht wurde."""
     # Vorab geladene Antworten kommen z. B. aus MockTransport.
     if antwort.is_stream_consumed:
-        if len(antwort.content) > max_bytes:
-            raise AntwortZuGross(max_bytes)
-        return antwort.content
+        return antwort.content[:max_bytes], len(antwort.content) > max_bytes
     kodierung = antwort.headers.get("content-encoding", "identity").lower().strip()
     if kodierung not in ("identity", "", "gzip", "deflate"):
         raise httpx.DecodingError(f"Nicht unterstützte Content-Encoding: {kodierung}")
@@ -37,20 +43,22 @@ def _inhalt(antwort: httpx.Response, max_bytes: int) -> bytes:
     daten = bytearray()
     roh_bytes = 0
     for stueck in antwort.iter_raw():
+        roh_rest = max_bytes - roh_bytes
+        roh_zu_gross = len(stueck) > roh_rest
+        stueck = stueck[:roh_rest]
         roh_bytes += len(stueck)
-        if roh_bytes > max_bytes:
-            raise AntwortZuGross(max_bytes)
         if entpacker:
             try:
                 stueck = entpacker.decompress(stueck, max_bytes - len(daten) + 1)
             except zlib.error as fehler:
                 raise httpx.DecodingError(str(fehler)) from None
-        if len(daten) + len(stueck) > max_bytes:
-            raise AntwortZuGross(max_bytes)
-        daten.extend(stueck)
+        rest = max_bytes - len(daten)
+        daten.extend(stueck[:rest])
+        if roh_zu_gross or len(stueck) > rest:
+            return bytes(daten), True
     if entpacker and (not entpacker.eof or entpacker.unused_data):
         raise httpx.DecodingError("Unvollständige komprimierte Antwort oder zusätzliche Daten")
-    return bytes(daten)
+    return bytes(daten), False
 
 
 def _lesen(client: httpx.Client, url: str, max_bytes: int, folgen: bool = True) -> httpx.Response:
