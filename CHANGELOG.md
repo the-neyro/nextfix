@@ -4,6 +4,16 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
 ## Unreleased
 
+### Security
+- Website audits reject private network destinations from public sites, including redirects, nested sitemaps, and browser requests. An explicitly selected local audit can reach its own host and port.
+- The HTML crawler limits decompression and keeps the bounded prefix for analysis.
+- The local web server checks Host and request origin, and MCP tools identify destructive actions and content from external sites.
+
+### Fixed
+- A repeat audit marks earlier findings as fixed only after a comparable check. Findings outside the new crawl's coverage are shown as awaiting another check.
+- Task traffic distinguishes missing Search Console data from imported zeroes and labels partial matches.
+- The one-line installer stops when it cannot select a stable release and verifies the selected tag before checking it out.
+
 ### Changed
 - New app icon: an N whose right stroke ends in a check mark. The rest of the interface keeps its look.
 
