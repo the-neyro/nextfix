@@ -72,7 +72,8 @@ On Windows (PowerShell):
 irm https://raw.githubusercontent.com/the-neyro/nextfix/main/scripts/install.ps1 | iex
 ```
 
-The installer checks out the newest release tag, not the development branch. For the development version, set
+The installer checks out the newest stable release tag. It stops if no stable tag is available or the remote
+cannot be reached. For the development version, set
 `NEXTFIX_BRANCH=main` (e.g. `curl … | NEXTFIX_BRANCH=main bash`); running it again updates an existing install.
 
 Or step by step:

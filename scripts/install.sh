@@ -44,22 +44,37 @@ if [ -n "$SKRIPT" ] && [ -f "$SKRIPT" ] && [ -d "$(dirname "$SKRIPT")/../app/web
   echo "Nutze vorhandenen Ordner: $ZIEL"
 else
   command -v git >/dev/null 2>&1 || abbruch "git fehlt. macOS: xcode-select --install · Linux: sudo apt install git"
-  # Standard: neuestes Release (höchstes Tag v…); ohne Release oder mit NEXTFIX_BRANCH: dieser Branch
-  if [ -z "$BRANCH" ]; then
-    BRANCH="$(git ls-remote --tags --refs --sort=-v:refname "$REPO" 'v*' 2>/dev/null | sed -n '1s|.*refs/tags/||p' || true)"
-    [ -n "$BRANCH" ] || BRANCH=main
-  fi
   if [ -d "$ZIEL/.git" ]; then
-    # Tag oder Branch gezielt holen: der flache Klon kennt sonst nur den Stand, mit dem er angelegt wurde
-    echo "Aktualisiere $ZIEL auf $BRANCH"
-    git -C "$ZIEL" fetch --quiet --depth 1 origin "$BRANCH"
-    git -C "$ZIEL" -c advice.detachedHead=false checkout --quiet --detach FETCH_HEAD
+    REPO="$(git -C "$ZIEL" remote get-url origin)" || abbruch "Der vorhandenen Installation fehlt die Git-Quelle origin."
   elif [ -e "$ZIEL" ]; then
     abbruch "$ZIEL gibt es schon, ist aber kein Nextfix-Ordner. Anderen Ordner wählen: NEXTFIX_DIR=~/anderer-ordner"
-  else
-    echo "Hole Nextfix $BRANCH nach $ZIEL"
-    git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$BRANCH" "$REPO" "$ZIEL"
   fi
+
+  REF="$BRANCH"
+  TAG_ID=""
+  if [ -z "$REF" ]; then
+    TAGS="$(git ls-remote --tags --refs --sort=-v:refname -- "$REPO" 'v*')" ||
+      abbruch "Release-Tags konnten nicht abgerufen werden. Bitte Verbindung und Git-Quelle prüfen."
+    while read -r tag_id tag_ref; do
+      if [[ "$tag_ref" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        REF="$tag_ref"
+        TAG_ID="$tag_id"
+        break
+      fi
+    done <<< "$TAGS"
+    [ -n "$REF" ] || abbruch "Kein stabiles Release gefunden. Für die Entwicklung NEXTFIX_BRANCH=main setzen."
+  fi
+
+  if [ ! -d "$ZIEL/.git" ]; then
+    git init --quiet -- "$ZIEL"
+    git -C "$ZIEL" remote add -- origin "$REPO"
+  fi
+  echo "Hole Nextfix ${REF#refs/tags/} nach $ZIEL"
+  git -C "$ZIEL" fetch --quiet --depth 1 -- origin "$REF"
+  if [ -n "$TAG_ID" ] && [ "$(git -C "$ZIEL" rev-parse --verify FETCH_HEAD)" != "$TAG_ID" ]; then
+    abbruch "Das Release-Tag hat sich beim Abruf geändert. Bitte erneut starten."
+  fi
+  git -C "$ZIEL" -c advice.detachedHead=false checkout --quiet --detach FETCH_HEAD
 fi
 cd "$ZIEL"
 
