@@ -18,16 +18,22 @@
 <div class="karte">
   {% if v %}
   <h2>Änderungen seit Crawl #{{ v.vorher.id }}</h2>
-  <p class="klein">Health {{ v.vorher.health }}% → {{ v.jetzt.health }}% · Seiten {{ v.vorher.seiten }} → {{ v.jetzt.seiten }}</p>
+  <p class="klein">Health {{ '–' if v.vorher.health is none else v.vorher.health ~ '%' }} →
+    {{ '–' if v.jetzt.health is none else v.jetzt.health ~ '%' }} · Seiten {{ v.vorher.seiten }} → {{ v.jetzt.seiten }}</p>
+  {% if v.jetzt.status != 'fertig' %}
+  <p class="klein">Die aktuelle Prüfung ist unvollständig. Verschwundene Fundstellen bleiben offen.</p>
+  {% endif %}
   {% for a in v.aenderungen %}
   <details style="border-bottom:1px solid var(--line); padding:.6rem 0"
            hx-get="/crawls/{{ crawl.id }}/vergleich/{{ a.id }}?vorher_id={{ v.vorher.id }}" hx-trigger="toggle once" hx-target="find .treffer">
     <summary><span class="badge {{ a.schwere }}">{{ STUFE[a.schwere][1] }}</span> <strong>{{ a.name }}</strong>
       – {{ a.vorher }} → {{ a.jetzt }}
-      <span class="{{ 'gut' if a.differenz < 0 else 'error' }}">({{ '%+d'|format(a.differenz) }}, {{ a.status }})</span></summary>
+      {% if a.nicht_nachgeprueft %}<span class="klein">({{ a.nicht_nachgeprueft }} nicht nachgeprüft)</span>
+      {% else %}<span class="{{ 'gut' if a.differenz < 0 else 'error' if a.differenz > 0 else 'klein' }}">
+        ({{ '%+d'|format(a.differenz) }}, {{ 'geändert' if a.status == 'geaendert' else a.status }})</span>{% endif %}</summary>
     <div class="treffer klein">lädt …</div>
   </details>
-  {% else %}<p class="gut">Keine Änderungen seit der vorherigen Prüfung.</p>{% endfor %}
+  {% else %}<p class="klein">Keine Änderungen an den erfassten Fundstellen.</p>{% endfor %}
   {% else %}<p class="klein">Noch keine frühere Prüfung zum Vergleich. Prüf die Website erneut, dann siehst du hier, was sich verändert hat.</p>{% endif %}
 </div>
 {% endblock %}

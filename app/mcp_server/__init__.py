@@ -155,8 +155,10 @@ def uebersicht(crawl_id: int | None = None, projekt_id: int | None = None) -> di
 def was_jetzt_tun(projekt_id: int | None = None, crawl_id: int | None = None) -> dict:
     """Die Liste „Was jetzt tun“ wie in der Oberfläche: aufgaben (nach Wirkung sortiert, je Aufgabe was, warum,
     beheben, wirkung hoch|mittel|gering, aufwand_text, wer, seiten_text, verlauf; mit Search-Console-Daten auch
-    klicks, impressionen, traffic_text der betroffenen Seiten in 28 Tagen – sie ordnen innerhalb derselben Wirkung),
-    feinschliff (Kleinigkeiten), erledigt (seit dem vorigen Crawl behoben), suchdaten (Zeitraum oder None).
+    klicks, impressionen und traffic_text für zugeordnete Seiten in 28 Tagen sowie traffic_status
+    (passend/teilweise/keine, None ohne Import). Klicks ordnen innerhalb derselben Wirkung.
+    feinschliff (Kleinigkeiten), erledigt (bestätigt behoben), nicht_nachgeprueft (offene Nachprüfungen),
+    auswertung (Crawl-Status oder keine_seiten), suchdaten (Zeitraum oder None).
     Ohne crawl_id: letzter fertiger Crawl des Projekts."""
     with _db() as conn:
         cid = _crawl_id(conn, crawl_id, projekt_id)
@@ -230,7 +232,7 @@ def verlauf(projekt_id: int) -> list[dict]:
 @server.tool(annotations=ToolAnnotations(read_only_hint=True))
 def crawl_vergleich(crawl_id: int | None = None, projekt_id: int | None = None,
                     vorher_id: int | None = None) -> dict:
-    """Was hat sich geändert? Checks mit Status neu/behoben/mehr/weniger gegenüber dem vorherigen
+    """Was hat sich geändert? Checks mit Status neu/behoben/mehr/weniger/geaendert/nicht_nachgeprueft gegenüber dem vorherigen
     (oder vorher_id) Crawl. Ohne crawl_id: letzter fertiger Crawl des Projekts."""
     with _db() as conn:
         return vergleich.vergleich(conn, _crawl_id(conn, crawl_id, projekt_id), vorher_id)
@@ -239,7 +241,7 @@ def crawl_vergleich(crawl_id: int | None = None, projekt_id: int | None = None,
 @server.tool(annotations=ToolAnnotations(read_only_hint=True))
 def treffer_vergleich(check_id: str, crawl_id: int | None = None, projekt_id: int | None = None,
                       vorher_id: int | None = None) -> dict:
-    """Für einen Check: URLs, die neu betroffen sind, und URLs, bei denen das Problem behoben ist."""
+    """Für einen Check: neue, bestätigt behobene und nicht nachgeprüfte Fundstellen."""
     with _db() as conn:
         return vergleich.treffer_vergleich(conn, _crawl_id(conn, crawl_id, projekt_id), check_id, vorher_id)
 

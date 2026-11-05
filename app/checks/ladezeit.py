@@ -19,6 +19,13 @@ def gemessen(conn, crawl_id) -> int:
                         " AND fehler IS NULL", (crawl_id,)).fetchone()[0]
 
 
+def messwerte(conn, crawl_id) -> dict:
+    """Messwerte je URL aus derselben mobilen Stichprobe wie die drei Prüfungen."""
+    return {z["url"]: dict(z) for z in conn.execute(
+        f"SELECT url, lcp, cls, tbt FROM vitals WHERE lauf_id = {_LETZTER_LAUF} AND geraet = 'mobile'"
+        " AND fehler IS NULL", (crawl_id,))}
+
+
 def _schlecht(conn, crawl_id, metrik: str, text) -> list:
     zeilen = conn.execute(f"""
         SELECT s.id, v.{metrik} FROM vitals v JOIN seiten s ON s.crawl_id = ? AND s.url = v.url
