@@ -73,5 +73,9 @@ def ist_lokal(url: str) -> bool:
         except ValueError:
             adressen = _adressen(name)
         return not adressen or any(not ipaddress.ip_address(a).is_global for a in adressen)
+    except socket.gaierror:
+        # Tote Domain ist nicht lokal: der Abruf scheitert und wird als defekt gemeldet.
+        # Ein späteres privates DNS-Ergebnis sperrt netz.Zielbereich beim Verbinden.
+        return False
     except (ValueError, OSError):
         return True  # Keine belastbare Auflösung: keinen automatischen Abruf wagen.

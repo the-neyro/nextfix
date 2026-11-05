@@ -17,7 +17,7 @@ def test_private_ip_adressen_sind_lokal(adresse):
     assert urls.ist_lokal(f"http://{adresse}/")
 
 
-def test_dns_prueft_alle_adressen_und_schliesst_bei_fehlern(monkeypatch):
+def test_dns_prueft_alle_adressen_und_meldet_tote_domains(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: [
         (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0)),
         (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("fd00::1", 0, 0, 0))])
@@ -28,7 +28,32 @@ def test_dns_prueft_alle_adressen_und_schliesst_bei_fehlern(monkeypatch):
     def fehlt(*a, **k):
         raise socket.gaierror("Test: kein DNS")
     monkeypatch.setattr(socket, "getaddrinfo", fehlt)
-    assert urls.ist_lokal("https://fehlt.example/")
+    assert not urls.ist_lokal("https://fehlt.example/")
+
+
+def test_externer_link_auf_tote_domain_wird_als_defekt_gespeichert(monkeypatch):
+    def fehlt(*a, **k):
+        raise socket.gaierror("Test: kein DNS")
+    monkeypatch.setattr(socket, "getaddrinfo", fehlt)
+    def antwort(r):
+        raise httpx.ConnectError("Test: kein DNS", request=r)
+    conn = verbinden()
+    p = projekte.anlegen(conn, "example.de")
+    cid = conn.execute("INSERT INTO crawls (projekt_id,start_url) VALUES (?,?)",
+                       (p.id, "https://example.de/")).lastrowid
+    sid = conn.execute("INSERT INTO seiten (crawl_id,url,tiefe) VALUES (?,?,0)",
+                       (cid, "https://example.de/")).lastrowid
+    conn.execute("INSERT INTO links (crawl_id,seite_id,ziel_url,art,intern) VALUES (?,?,?,?,0)",
+                 (cid, sid, "https://abgelaufen.example/", "a"))
+    conn.commit()
+    c = Crawler(conn, cid, CrawlEinstellungen(start_url="https://example.de/", crawl_delay=0),
+                httpx.Client(transport=httpx.MockTransport(antwort)))
+    monkeypatch.setattr(crawler, "EXTERN_PAUSE", 0)
+    monkeypatch.setattr(crawler.time, "sleep", lambda s: None)
+    c._extern_pruefen()
+    zeile = conn.execute("SELECT status_code FROM ressourcen WHERE crawl_id=? AND url=?",
+                         (cid, "https://abgelaufen.example/")).fetchone()
+    assert zeile is not None and zeile[0] is None
 
 
 def test_private_links_und_metaziele_werden_nie_abgerufen(monkeypatch):
