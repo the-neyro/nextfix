@@ -2,7 +2,7 @@
 
 All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 
-## Unreleased
+## 0.2.4 – 2026-11-27
 
 ### Security
 - Require patched certifi and OpenTelemetry API versions, including when updating an existing installation

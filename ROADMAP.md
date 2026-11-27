@@ -7,16 +7,18 @@ change when real users report problems. Ideas and bugs: [issues](https://github.
 
 Work in this order. Each stage has a checkable outcome before the next one expands the scope.
 
-### 1. Finish the release candidate
+### 1. Validate the release
 
-- [PR #38](https://github.com/the-neyro/nextfix/pull/38) includes the follow-up fixes for empty compressed HTTP
-  responses, organization-markup rechecks, and the slow-response task text. Review the final combined diff.
-- Check dependencies against published advisories and decide how release artifacts will be verified.
+- Changes for 0.2.4 in [PR #38](https://github.com/the-neyro/nextfix/pull/38) include empty compressed HTTP responses,
+  organization-markup rechecks, persistent unverified findings, and corrected task text.
+- Keep checking dependencies against published advisories. Security minimums for certifi and OpenTelemetry API
+  prevent existing installations from retaining the vulnerable versions found in the November 27 check.
 - Run the full tests, local test bench, and clean-install/update checks on the final release commit.
 - **Ready when:** all seven CI jobs pass on that commit; installation and updating an existing project preserve
-  its data; the maintainer approves the merge and release. The published release remains 0.2.3 until then.
-- **Windows:** tests and installer passed on the PR's November 5 commit. Keep CI coverage and add a manual
-  first-launch/update check before changing the supported-platform claim.
+  its data; the maintainer approves the merge and release. Verify that the published tag resolves to the reviewed
+  commit and that the public installer selects that tag.
+- **Windows:** CI covers tests, installation, data-preserving updates, and the start file. Add a manual
+  first-launch/update check before changing the experimental-platform claim.
 
 ### 2. Make the audit → fix → recheck workflow dependable
 

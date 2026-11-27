@@ -47,8 +47,10 @@ date, organization markup, based on the GEO study (Princeton, KDD 2024).
 - **Tasks, not a wall of numbers.** Every issue becomes one sentence with an action, the effort involved
   (“configure once”, “write text”), who does it (yourself in the CMS, or your developer/host) and its impact
   (high / medium / low). No fake precision like “+4.2 points”: nobody can predict what a fix does to rankings.
-- **An honest health score.** The formula does not dilute problems across checks that never fire, and thin content
-  on many pages weighs as much as an error (`app/core/score.py`).
+- **An honest health score.** The formula does not dilute problems across checks that never fire. Thin content
+  is a warning, and an audit with no checked pages has an unknown score (`app/core/score.py`).
+- **Verified progress.** A missing finding counts as fixed only when a comparable recheck confirms it. Unverified
+  findings stay visible across incomplete audits until checked again or deliberately hidden.
 - **Plain language.** Urgent / Important / Polish instead of Error / Warning / Notice, technical terms explained.
 - **Zero cost.** No paid APIs and no scraping of Google results (terms of service). Rankings come only from Search
   Console and Bing, the sources website owners already have access to.
@@ -92,8 +94,8 @@ Close the window to stop Nextfix. If macOS blocks the file (e.g. after downloadi
 
 **On Windows without the terminal:** double-click `Nextfix starten.bat` in the project folder, same behaviour (first
 start runs `scripts/install.ps1`). If Windows shows “Windows protected your PC”, click “More info” → “Run anyway”.
-Windows is not officially supported yet: installation and start are checked automatically, but one test still fails
-there now and then.
+Windows support is experimental: installation, upgrades with existing data, startup, and tests are checked
+automatically. Manual Windows testing is still limited.
 
 Then add a domain and click “Website prüfen” (audit website). No website of your own? Start the demo site:
 
