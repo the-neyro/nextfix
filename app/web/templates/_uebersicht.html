@@ -83,7 +83,7 @@
         {% for e in aufg.erledigt %}{{ e.name }}{{ ', ' if not loop.last }}{% endfor %}</p>
       {% endif %}
       {% if aufg.nicht_nachgeprueft %}
-      <p class="klein" style="margin:12px 0 0">Seit der letzten Prüfung nicht nachgeprüft:
+      <p class="klein" style="margin:12px 0 0">Aus früheren Prüfungen noch nicht nachgeprüft:
         {% for e in aufg.nicht_nachgeprueft %}{{ e.name }}{{ ', ' if not loop.last }}{% endfor %}</p>
       {% endif %}
     </section>

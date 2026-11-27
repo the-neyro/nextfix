@@ -6,7 +6,7 @@ import json
 import pytest
 
 from app import checks
-from app.core import aufgaben, projekte, vergleich
+from app.core import aufgaben, ausblenden, projekte, vergleich
 from app.db import verbinden
 
 START = "https://vergleich.example/"
@@ -182,6 +182,112 @@ def test_vitals_brauchen_den_messwert_fuer_dieselbe_url(wiederholung):
     assert vergleich.treffer_vergleich(conn, jetzt, "ladezeit_lcp")["behoben"] == [URL]
 
 
+def test_offene_fundstelle_bleibt_ueber_mehrere_audits_erhalten(wiederholung):
+    conn, projekt_id, vorher, luecke = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    conn.execute("UPDATE crawls SET status='abgebrochen' WHERE id=?", (luecke,))
+    jetzt = _crawl(conn, projekt_id)
+    _seite(conn, jetzt, START + "andere-seite")
+
+    offen = aufgaben.liste(conn, jetzt)["nicht_nachgeprueft"]
+    assert [(a["id"], a["fundstellen"]) for a in offen] == [("title_fehlt", 1)]
+
+    # Erst die tatsächliche Nachprüfung entfernt den alten offenen Befund.
+    _seite(conn, jetzt)
+    checks.ausfuehren(conn, jetzt)
+    assert aufgaben.liste(conn, jetzt)["nicht_nachgeprueft"] == []
+
+
+def test_bestaetigte_reparatur_wird_spaeter_nicht_wieder_offen(wiederholung):
+    conn, projekt_id, vorher, repariert = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    _seite(conn, repariert)
+    checks.ausfuehren(conn, repariert)
+    luecke = _crawl(conn, projekt_id)
+    _seite(conn, luecke, START + "andere-seite")
+    assert "title_fehlt" not in {a["id"] for a in aufgaben.liste(conn, luecke)["nicht_nachgeprueft"]}
+
+
+def test_erneuter_fehler_bleibt_nach_frueherer_reparatur_offen(wiederholung):
+    conn, projekt_id, vorher, repariert = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    _seite(conn, repariert)
+    checks.ausfuehren(conn, repariert)
+    rueckfall = _crawl(conn, projekt_id)
+    _fund(conn, rueckfall, "title_fehlt", _seite(conn, rueckfall, title=None))
+    _crawl(conn, projekt_id)
+    jetzt = _crawl(conn, projekt_id)
+    assert "title_fehlt" in {a["id"] for a in aufgaben.liste(conn, jetzt)["nicht_nachgeprueft"]}
+
+
+@pytest.mark.parametrize("art", ["problem", "seite", "fundstelle"])
+def test_alter_offener_befund_respektiert_bewusst_so(wiederholung, art):
+    conn, projekt_id, vorher, _ = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    jetzt = _crawl(conn, projekt_id)
+    regel = ausblenden.ausblenden(conn, projekt_id,
+                                 check_id=None if art == "seite" else "title_fehlt",
+                                 url=None if art == "problem" else URL)
+    assert aufgaben.liste(conn, jetzt)["nicht_nachgeprueft"] == []
+    ausblenden.einblenden(conn, projekt_id, regel["id"])
+    assert [a["id"] for a in aufgaben.liste(conn, jetzt)["nicht_nachgeprueft"]] == ["title_fehlt"]
+
+
+def test_aktuelle_und_alte_offene_fundstellen_werden_zusammengezaehlt(wiederholung):
+    conn, projekt_id, vorher, zwischen = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    andere = START + "andere-seite"
+    _fund(conn, zwischen, "title_fehlt", _seite(conn, zwischen, andere, title=None))
+    jetzt = _crawl(conn, projekt_id)
+    offen = aufgaben.liste(conn, jetzt)["nicht_nachgeprueft"]
+    assert [(a["id"], a["fundstellen"]) for a in offen] == [("title_fehlt", 2)]
+
+
+def test_spaetere_und_fremde_audits_bestaetigen_keinen_alten_fix(wiederholung):
+    conn, projekt_id, vorher, _ = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    anderer_id = projekte.anlegen(conn, "anderes.example").id
+    _seite(conn, _crawl(conn, anderer_id))
+    jetzt = _crawl(conn, projekt_id)
+    _seite(conn, _crawl(conn, projekt_id))
+    assert [a["id"] for a in aufgaben.liste(conn, jetzt)["nicht_nachgeprueft"]] == ["title_fehlt"]
+
+
+def test_teilreparatur_verdeckt_keine_aeltere_offene_fundstelle(wiederholung):
+    conn, projekt_id, vorher, zwischen = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    andere = START + "andere-seite"
+    _fund(conn, zwischen, "title_fehlt", _seite(conn, zwischen, andere, title=None))
+    jetzt = _crawl(conn, projekt_id)
+    _seite(conn, jetzt, andere)
+    checks.ausfuehren(conn, jetzt)
+    daten = aufgaben.liste(conn, jetzt)
+    assert "title_fehlt" not in {a["id"] for a in daten["erledigt"]}
+    assert [(a["id"], a["fundstellen"]) for a in daten["nicht_nachgeprueft"]] == [("title_fehlt", 1)]
+
+
+def test_alter_offener_befund_ueber_ui_rest_und_mcp(wiederholung):
+    from fastapi.testclient import TestClient
+
+    from app.mcp_server import server
+    from app.web import app
+
+    conn, projekt_id, vorher, _ = wiederholung
+    _fund(conn, vorher, "title_fehlt", _seite(conn, vorher, title=None))
+    jetzt = _crawl(conn, projekt_id)
+    _seite(conn, jetzt, START + "andere-seite")
+    conn.commit()
+    with TestClient(app) as client:
+        api = client.get(f"/api/crawls/{jetzt}/aufgaben").json()
+        assert api["nicht_nachgeprueft"] == [
+            {"id": "title_fehlt", "name": checks.REGISTER["title_fehlt"].name, "fundstellen": 1}]
+        html = client.get(f"/projekte/{projekt_id}").text
+        assert "Aus früheren Prüfungen noch nicht nachgeprüft" in html
+        assert checks.REGISTER["title_fehlt"].name in html
+    mcp = asyncio.run(server.call_tool("was_jetzt_tun", {"projekt_id": projekt_id}))
+    assert "title_fehlt" in str(mcp) and "nicht_nachgeprueft" in str(mcp)
+
+
 @pytest.mark.parametrize(("status", "auswertung", "meldung"), [
     ("fertig", "keine_seiten", "Keine auswertbaren HTML-Seiten"),
     ("abgebrochen", "abgebrochen", "Prüfung abgebrochen"),
@@ -201,7 +307,7 @@ def test_leere_oder_abgebrochene_pruefung_ueber_ui_rest_und_mcp(wiederholung, st
     client = TestClient(app)
     uebersicht = client.get(f"/projekte/{projekt_id}")
     assert uebersicht.status_code == 200 and meldung in uebersicht.text
-    assert "Seit der letzten Prüfung nicht nachgeprüft" in uebersicht.text
+    assert "Aus früheren Prüfungen noch nicht nachgeprüft" in uebersicht.text
     assert "Alles erledigt" not in uebersicht.text
 
     api = client.get(f"/api/crawls/{jetzt}/aufgaben").json()

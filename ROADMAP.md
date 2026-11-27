@@ -9,8 +9,8 @@ Work in this order. Each stage has a checkable outcome before the next one expan
 
 ### 1. Finish the release candidate
 
-- Review and integrate the follow-up fixes for empty compressed HTTP responses, organization-markup rechecks,
-  and the slow-response task text into [PR #38](https://github.com/the-neyro/nextfix/pull/38).
+- [PR #38](https://github.com/the-neyro/nextfix/pull/38) includes the follow-up fixes for empty compressed HTTP
+  responses, organization-markup rechecks, and the slow-response task text. Review the final combined diff.
 - Check dependencies against published advisories and decide how release artifacts will be verified.
 - Run the full tests, local test bench, and clean-install/update checks on the final release commit.
 - **Ready when:** all seven CI jobs pass on that commit; installation and updating an existing project preserve
@@ -20,8 +20,9 @@ Work in this order. Each stage has a checkable outcome before the next one expan
 
 ### 2. Make the audit → fix → recheck workflow dependable
 
-- Exercise three or more consecutive audits: a finding, an interrupted or narrower crawl, and another recheck.
-  Ensure unresolved findings remain visible until their original URLs are checked again or deliberately hidden.
+- The task list now retains unverified findings across three or more audits, including interrupted or narrower
+  crawls. Regression cases cover later confirmation, recurring issues, partial fixes, and deliberate hiding.
+- Extend these cases to real crawl runs with a finding, an interrupted or narrower crawl, and another recheck.
 - Test changed crawl limits, excluded checks, rendering modes, redirects, and missing resource measurements.
 - Give users a clear next action for findings that were not rechecked, with the affected URLs and reason.
 - **Ready when:** UI, REST, and MCP agree on current, confirmed-fixed, and unverified findings; skipped coverage

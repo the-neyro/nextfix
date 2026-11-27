@@ -10,6 +10,8 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 - The local web server checks Host and request origin, and MCP tools identify destructive actions and content from external sites.
 
 ### Fixed
+- Findings awaiting a recheck remain in the task list across multiple incomplete audits. Confirmed repairs and
+  intentionally hidden findings stay cleared; fixing another page cannot hide an older unresolved finding.
 - Empty HTTP bodies with gzip or deflate headers preserve their status instead of raising a decoding error;
   truncated and oversized compressed responses are still rejected.
 - Repeat audits recognize repaired organization markup on the original page, even when the crawl starts elsewhere.

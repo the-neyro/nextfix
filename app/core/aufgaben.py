@@ -137,6 +137,7 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
     vorher_id = vergleich.vorheriger_crawl_id(conn, crawl_id)
     vorher = audit._treffer_pro_check(conn, vorher_id) if vorher_id else {}
     aenderungen = {a["id"]: a for a in vergleich.vergleich(conn, crawl_id, vorher_id)["aenderungen"]} if vorher_id else {}
+    offene_fundstellen = vergleich.offene_nachpruefungen(conn, crawl_id)
     projekt_id = conn.execute("SELECT projekt_id FROM crawls WHERE id=?", (crawl_id,)).fetchone()[0]
     suchdaten = traffic.pro_seite(conn, projekt_id)
     urls = _betroffene_urls(conn, crawl_id) if suchdaten else {}
@@ -147,7 +148,7 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
             continue
         _, seiten, ganze_site = treffer[c.id]
         gewinn = score.aus_abzug(gesamt - abzug[c.id]) - score.aus_abzug(gesamt)
-        if aenderungen.get(c.id, {}).get("nicht_nachgeprueft"):
+        if offene_fundstellen.get(c.id):
             verlauf = "nicht_nachgeprueft"
         elif vorher_id is None:
             verlauf = None
@@ -177,9 +178,11 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
     feinschliff.sort(key=lambda a: (-(a["klicks"] or 0), -(a["impressionen"] or 0), -a["seiten"]))
     erledigt = [{"id": cid, "name": checks.REGISTER[cid].name, "seiten": v[1]}
                 for cid, v in vorher.items()
-                if aenderungen.get(cid, {}).get("status") == "behoben" and checks.REGISTER[cid].schwere != "notice"]
-    nicht_nachgeprueft = [{"id": a["id"], "name": a["name"], "fundstellen": a["nicht_nachgeprueft"]}
-                         for a in aenderungen.values() if a["nicht_nachgeprueft"] and a["schwere"] != "notice"]
+                if aenderungen.get(cid, {}).get("status") == "behoben" and not offene_fundstellen.get(cid)
+                and checks.REGISTER[cid].schwere != "notice"]
+    nicht_nachgeprueft = [{"id": cid, "name": checks.REGISTER[cid].name, "fundstellen": len(urls)}
+                         for cid, urls in sorted(offene_fundstellen.items())
+                         if cid in checks.REGISTER and checks.REGISTER[cid].schwere != "notice"]
     crawl = audit.crawl_holen(conn, crawl_id)
     auswertung = crawl["status"]
     if auswertung == "fertig" and not conn.execute(f"""

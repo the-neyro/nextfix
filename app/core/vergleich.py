@@ -81,6 +81,52 @@ def _unterschiede(conn, jetzt, vorher, check_id=None):
         yield cid, len(a[cid]), len(b[cid]), neu - alt, alt - neu - unbestaetigt, unbestaetigt
 
 
+def offene_nachpruefungen(conn: sqlite3.Connection, crawl_id: int) -> dict[str, set[str | None]]:
+    """Offene Aufgaben über mehrere Crawls erhalten, bis Messdaten oder „Bewusst so“ sie klären."""
+    jetzt = crawl_holen(conn, crawl_id)
+    vorher_id = vorheriger_crawl_id(conn, crawl_id)
+    if vorher_id is None:
+        return {}
+    # Der direkte Vergleich berücksichtigt auch weniger Treffer auf derselben Seite.
+    offen = defaultdict(set)
+    for cid, _, _, _, _, unbestaetigt in _unterschiede(conn, jetzt, crawl_holen(conn, vorher_id)):
+        if unbestaetigt:
+            offen[cid].update(unbestaetigt)
+
+    aktuell = {cid: set(urls) for cid, urls in _fundstellen(conn, crawl_id).items()}
+    gruppen = defaultdict(set)
+    for cid, url, ursprung_id in conn.execute(f"""
+            SELECT i.check_id, s.url, MAX(i.crawl_id)
+            FROM issues i JOIN crawls c ON c.id=i.crawl_id LEFT JOIN seiten s ON s.id=i.seite_id
+            WHERE c.projekt_id=? AND c.id<? AND c.status IN ('fertig', 'abgebrochen')
+              AND {ausblenden.NICHT_AUSGEBLENDET}
+            GROUP BY i.check_id, s.url
+            """, (jetzt["projekt_id"], crawl_id)):
+        check = checks.REGISTER.get(cid)
+        if (check is not None and check.schwere != "notice" and ursprung_id != vorher_id
+                and url not in aktuell.get(cid, ())):
+            gruppen[ursprung_id].add((cid, url))
+    if not gruppen:
+        return dict(offen)
+
+    crawls = {z["id"]: dict(z) for z in conn.execute("""
+        SELECT id, status, start_url, js_rendern FROM crawls
+        WHERE projekt_id=? AND id>=? AND id<? AND status IN ('fertig', 'abgebrochen') ORDER BY id DESC
+        """, (jetzt["projekt_id"], min(gruppen), crawl_id))}
+    for ursprung_id, fundstellen in gruppen.items():
+        # Eine schon früher bestätigte Reparatur darf bei späteren Lücken nicht wieder offen werden.
+        for messung in [jetzt, *crawls.values()]:
+            if messung["id"] <= ursprung_id or messung["status"] != "fertig":
+                continue
+            nachpruefung = Nachpruefung(conn, messung, crawls[ursprung_id])
+            fundstellen = {(cid, url) for cid, url in fundstellen if not nachpruefung.bestaetigt(cid, url)}
+            if not fundstellen:
+                break
+        for cid, url in fundstellen:
+            offen[cid].add(url)
+    return dict(offen)
+
+
 def vergleich(conn: sqlite3.Connection, crawl_id: int, vorher_id: int | None = None) -> dict:
     """Was hat sich seit dem vorherigen (oder angegebenen) Crawl geändert? Nur Checks mit Änderung."""
     jetzt, vorher = _vorher(conn, crawl_id, vorher_id)
