@@ -80,6 +80,35 @@ def test_wirklich_reparierter_titel_gilt_als_behoben(wiederholung):
     assert a["nicht_nachgeprueft"] == []
 
 
+@pytest.mark.parametrize("typ", ["Organization", "Person", "LocalBusiness"])
+def test_reparierte_organisationsdaten_gelten_als_behoben(wiederholung, typ):
+    conn, _, vorher, jetzt = wiederholung
+    _seite(conn, vorher, START, markup=json.dumps({"typen": [], "fehler": []}))
+    checks.ausfuehren(conn, vorher)
+    _seite(conn, jetzt, START, markup=json.dumps({"typen": [typ], "fehler": []}))
+    checks.ausfuehren(conn, jetzt)
+
+    ergebnis = vergleich.treffer_vergleich(conn, jetzt, "ki_ohne_entitaet")
+    assert ergebnis["behoben"] == [START]
+    assert ergebnis["nicht_nachgeprueft"] == []
+
+
+@pytest.mark.parametrize("markup", [None, {"typen": [], "fehler": []}, {"typen": ["WebSite"], "fehler": []}])
+def test_andere_startseite_belegt_keine_reparierten_organisationsdaten(wiederholung, markup):
+    conn, _, vorher, jetzt = wiederholung
+    _seite(conn, vorher, START, markup=json.dumps({"typen": [], "fehler": []}))
+    checks.ausfuehren(conn, vorher)
+    # Der Check wählt nun eine andere Startseite. Die alte ist weiterhin ohne Organisationsdaten.
+    conn.execute("UPDATE crawls SET start_url=? WHERE id=?", (URL, jetzt))
+    _seite(conn, jetzt, START, markup=json.dumps(markup) if markup is not None else None)
+    _seite(conn, jetzt, URL, markup=json.dumps({"typen": ["Organization"], "fehler": []}))
+    checks.ausfuehren(conn, jetzt)
+
+    ergebnis = vergleich.treffer_vergleich(conn, jetzt, "ki_ohne_entitaet")
+    assert ergebnis["behoben"] == []
+    assert ergebnis["nicht_nachgeprueft"] == [START]
+
+
 def test_geaenderter_renderingmodus_bestaetigt_keinen_inhaltsfix(wiederholung):
     conn, _, vorher, jetzt = wiederholung
     conn.execute("UPDATE crawls SET js_rendern=1 WHERE id=?", (vorher,))

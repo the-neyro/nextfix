@@ -10,6 +10,10 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 - The local web server checks Host and request origin, and MCP tools identify destructive actions and content from external sites.
 
 ### Fixed
+- Empty HTTP bodies with gzip or deflate headers preserve their status instead of raising a decoding error;
+  truncated and oversized compressed responses are still rejected.
+- Repeat audits recognize repaired organization markup on the original page, even when the crawl starts elsewhere.
+- The slow HTML response task now shows the check's actual 1.8-second threshold.
 - A repeat audit marks earlier findings as fixed only after a comparable check. Findings outside the new crawl's coverage are shown as awaiting another check.
 - Task traffic distinguishes missing Search Console data from imported zeroes and labels partial matches.
 - The one-line installer stops when it cannot select a stable release and verifies the selected tag before checking it out.

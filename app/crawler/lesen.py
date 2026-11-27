@@ -56,7 +56,9 @@ def _inhalt_begrenzt(antwort: httpx.Response, max_bytes: int) -> tuple[bytes, bo
         daten.extend(stueck[:rest])
         if roh_zu_gross or len(stueck) > rest:
             return bytes(daten), True
-    if entpacker and (not entpacker.eof or entpacker.unused_data):
+    # Ein leerer HTTP-Body kann trotzdem einen Kompressionsheader tragen (z. B. 204).
+    # Sobald Bytes vorliegen, muss der komprimierte Stream vollständig und gültig sein.
+    if entpacker and roh_bytes and (not entpacker.eof or entpacker.unused_data):
         raise httpx.DecodingError("Unvollständige komprimierte Antwort oder zusätzliche Daten")
     return bytes(daten), False
 

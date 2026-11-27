@@ -3,6 +3,7 @@
 import gzip
 import multiprocessing
 import time
+import zlib
 
 import httpx
 import pytest
@@ -117,7 +118,6 @@ def test_robots_txt_stream_wird_begrenzt(monkeypatch):
 
 @pytest.mark.parametrize("kodierung", ["gzip", "deflate"])
 def test_http_kompression_wird_beim_entpacken_begrenzt(kodierung):
-    import zlib
     from app.crawler.lesen import AntwortZuGross, _lesen
     daten = b"x" * 100_000
     strom = ZaehlerStrom(gzip.compress(daten) if kodierung == "gzip" else zlib.compress(daten))
@@ -193,3 +193,35 @@ def test_begrenzter_leser_bietet_http_kompression_an():
     r = _lesen(client, "https://example.de/app.js", 1000)
     assert r.text == "var x = 1;"
     assert r.headers["Content-Encoding"] == "gzip"
+
+
+@pytest.mark.parametrize("kodierung", ["gzip", "deflate"])
+@pytest.mark.parametrize("status", [200, 204, 404])
+def test_leere_http_antwort_mit_kompressionsheader(kodierung, status):
+    from app.crawler.lesen import _lesen
+    strom = ZaehlerStrom(b"")
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(
+            status, headers={"Content-Encoding": kodierung}, stream=strom))) as client:
+        antwort = _lesen(client, "https://example.de/", 1500)
+    assert antwort.status_code == status and antwort.content == b""
+    assert strom.geschlossen
+
+
+@pytest.mark.parametrize("komprimieren,kodierung", [(gzip.compress, "gzip"), (zlib.compress, "deflate")])
+@pytest.mark.parametrize("art", ["leer", "abgeschnitten", "zusaetzlich"])
+def test_komprimierter_http_stream_bleibt_streng(komprimieren, kodierung, art):
+    from app.crawler.lesen import _lesen
+    daten = komprimieren(b"")
+    if art == "abgeschnitten":
+        daten = daten[:-1]
+    elif art == "zusaetzlich":
+        daten += b"x"
+    strom = ZaehlerStrom(daten)
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(
+            200, headers={"Content-Encoding": kodierung}, stream=strom))) as client:
+        if art == "leer":
+            assert _lesen(client, "https://example.de/", 1500).content == b""
+        else:
+            with pytest.raises(httpx.DecodingError):
+                _lesen(client, "https://example.de/", 1500)
+    assert strom.geschlossen

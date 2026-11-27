@@ -58,7 +58,7 @@ HANDLUNG = {
     "mehrere_canonicals": "Lass nur eine Hauptversion (Canonical) je Seite stehen ({n})",
     "markup_fehlerhaft": "Korrigiere fehlerhafte strukturierte Daten auf {n}",
     "viewport_fehlt": "Mach {n} handytauglich (Viewport-Tag)",
-    "langsame_seite": "Mach {n} schneller (Server antwortet über 1 s)",
+    "langsame_seite": "Mach {n} schneller (HTML-Antwort dauert über 1,8 s)",
     "ladezeit_lcp": "Lass den Hauptinhalt auf {n} schneller laden (Handy)",
     "ladezeit_cls": "Verhindere, dass das Layout auf {n} beim Laden springt",
     "ladezeit_tbt": "Mach {n} reaktionsschneller (weniger JavaScript)",

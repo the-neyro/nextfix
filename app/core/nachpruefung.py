@@ -1,9 +1,10 @@
 """Messdaten, die einen verschwundenen Treffer als nachgeprüft belegen."""
 
 from functools import cached_property
+import json
 from urllib.parse import urlsplit
 
-from app.checks import inhalt, international, ladezeit, sitemap
+from app.checks import inhalt, international, ki, ladezeit, sitemap
 from app.checks.katalog import GERENDERT, HTML, fakten, url_status
 from app.crawler.crawler import MAX_HTML_BYTES
 from app.crawler.filter import liste
@@ -177,6 +178,11 @@ class Nachpruefung:
             return antwort_ok
         if not self._html_fuer(check_id, url):
             return False
+        if check_id == "ki_ohne_entitaet":
+            # Bei geänderter Startseite prüft der Check eventuell eine andere URL.
+            # Nur Organisationsdaten auf der früheren Fundstelle belegen die Reparatur.
+            return seite["markup"] is not None and bool(
+                set(json.loads(seite["markup"])["typen"]) & ki.ENTITAET_TYPEN)
         if check_id in ladezeit.STICHPROBE:
             return self.messwerte.get(url, {}).get(check_id.removeprefix("ladezeit_")) is not None
         if check_id in _DUPLIKATE:
