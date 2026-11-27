@@ -5,6 +5,8 @@ All notable changes to Nextfix. Dates are in ISO format (YYYY-MM-DD).
 ## Unreleased
 
 ### Security
+- Require patched certifi and OpenTelemetry API versions, including when updating an existing installation
+  (GHSA-6q48-6c7w-9gw2, GHSA-mf5v-w3w3-f6cg).
 - Website audits reject private network destinations from public sites, including redirects, nested sitemaps, and browser requests. An explicitly selected local audit can reach its own host and port.
 - The HTML crawler limits decompression and keeps the bounded prefix for analysis.
 - The local web server checks Host and request origin, and MCP tools identify destructive actions and content from external sites.
