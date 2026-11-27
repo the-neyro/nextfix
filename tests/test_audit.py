@@ -9,8 +9,12 @@ from app.db import verbinden
 
 
 @pytest.fixture
-def crawl(testseite):
+def crawl(testseite, monkeypatch):
     """Fertiger Crawl der Testseite → (conn, crawl_id)."""
+    from app.crawler import crawler, urls
+    # Die reservierte externe Beispieldomain wird deterministisch als öffentliche 404 simuliert.
+    monkeypatch.setattr(urls, "_adressen", lambda name: ["93.184.216.34"])
+    monkeypatch.setattr(crawler, "_extern_status", lambda client, url: 404)
     conn = verbinden()
     p = projekte.anlegen(conn, "127.0.0.1")
     audit.einstellungen_setzen(conn, p.id, start_url=testseite, crawl_delay=0)

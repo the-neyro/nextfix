@@ -16,6 +16,9 @@ Ohne Speed Index.
 import math
 from dataclasses import asdict, dataclass
 
+from app.crawler.browser_netz import browser
+from app.crawler.netz import Zielbereich
+
 GERAETE = {
     "mobile": {
         "kontext": {"viewport": {"width": 412, "height": 823}, "device_scale_factor": 1.75, "is_mobile": True,
@@ -122,20 +125,23 @@ def bewertung(metrik: str, wert: float | None) -> str | None:
 class Messer:
     """Ein Chromium für viele Messungen. Benutzung: with Messer() as m: m.messen(url, "mobile")."""
 
-    def __init__(self, drosseln: bool = True, timeout_s: int = 45, nachlauf_ms: int = 2500):
+    def __init__(self, drosseln: bool = True, timeout_s: int = 45, nachlauf_ms: int = 2500, *,
+                 start_url: str | None = None):
+        self.start_url = start_url
         self.drosseln, self.timeout_ms, self.nachlauf_ms = drosseln, timeout_s * 1000, nachlauf_ms
 
     def __enter__(self):
-        from playwright.sync_api import sync_playwright
-        self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch()
+        self._browser_kontext = browser(self.start_url)
+        self._browser, self._proxy = self._browser_kontext.__enter__()
         return self
 
-    def __exit__(self, *_):
-        self._browser.close()
-        self._pw.stop()
+    def __exit__(self, *fehler):
+        return self._browser_kontext.__exit__(*fehler)
 
     def messen(self, url: str, geraet: str = "mobile") -> Messung:
+        if self.start_url is None:
+            self.start_url = url
+            self._proxy.zielbereich = Zielbereich(url)
         g = GERAETE[geraet]
         m = Messung(url, geraet)
         kontext = self._browser.new_context(**g["kontext"])

@@ -5,13 +5,59 @@ change when real users report problems. Ideas and bugs: [issues](https://github.
 
 ## Planned
 
-- **Windows, officially.** Installer and the double-click start file already work on Windows and are checked
-  automatically; the tests do not pass there reliably yet (one background-import test times out, and the whole run
-  is much slower). Once they are green every time, Windows becomes a supported platform.
-- **Plain-language guides for the remaining tasks.** The ten most common tasks already have them (see below); the
-  other checks still explain the fix in shorter, more technical words.
-- **Referring domains from open data.** A rough count of linking domains from the Common Crawl web graph, if it
-  works without paid APIs and without huge downloads for every user.
+Work in this order. Each stage has a checkable outcome before the next one expands the scope.
+
+### 1. Validate the release
+
+- Changes for 0.2.4 in [PR #38](https://github.com/the-neyro/nextfix/pull/38) include empty compressed HTTP responses,
+  organization-markup rechecks, persistent unverified findings, and corrected task text.
+- Keep checking dependencies against published advisories. Security minimums for certifi and OpenTelemetry API
+  prevent existing installations from retaining the vulnerable versions found in the November 27 check.
+- Run the full tests, local test bench, and clean-install/update checks on the final release commit.
+- **Ready when:** all seven CI jobs pass on that commit; installation and updating an existing project preserve
+  its data; the maintainer approves the merge and release. Verify that the published tag resolves to the reviewed
+  commit and that the public installer selects that tag.
+- **Windows:** CI covers tests, installation, data-preserving updates, and the start file. Add a manual
+  first-launch/update check before changing the experimental-platform claim.
+
+### 2. Make the audit → fix → recheck workflow dependable
+
+- The task list now retains unverified findings across three or more audits, including interrupted or narrower
+  crawls. Regression cases cover later confirmation, recurring issues, partial fixes, and deliberate hiding.
+- Extend these cases to real crawl runs with a finding, an interrupted or narrower crawl, and another recheck.
+- Test changed crawl limits, excluded checks, rendering modes, redirects, and missing resource measurements.
+- Give users a clear next action for findings that were not rechecked, with the affected URLs and reason.
+- **Ready when:** UI, REST, and MCP agree on current, confirmed-fixed, and unverified findings; skipped coverage
+  cannot make the task list imply that the work is complete. Add regression cases to the existing test bench.
+
+### 3. Validate prioritization and finish practical fix guides
+
+- Validate a real Search Console import on an owned property: URL matching, date range, missing versus zero
+  data, and partial coverage. Check the resulting task order in the browser against the imported rows.
+- Extend plain-language guides to the most frequent remaining tasks, using beta findings to choose the order.
+  Include the location of the CMS setting where it is known, plus how to verify the fix.
+- **Ready when:** the first three recommended actions have evidence, affected pages, a clear instruction, and
+  a repeatable check; the interface shows the source and period of traffic data.
+
+### 4. Run a controlled beta and update the product website
+
+- Audit 10–20 approved websites sequentially, covering small static sites, WordPress, shops, and JavaScript sites.
+- Manually check each site's top three recommendations. Record false alarms, missed issues, unclear instructions,
+  crawl failures, and time needed to complete one fix. Keep site-specific evidence out of the public repository.
+- Fix reproducible blockers and turn them into local fixtures. Refresh demo numbers, screenshots, and website
+  claims from the accepted release rather than copying old counts.
+- **Ready when:** every top recommendation in the beta sample has been reviewed, no known release blockers
+  remain, and another person can install the app, complete one task, and verify it without developer help.
+
+### 5. Expand from observed demand
+
+- Choose the next module from beta feedback: clearer task guidance, better own-site search data, or competitor
+  content gaps from crawls. Keep missing data explicit; do not invent traffic or ranking estimates.
+- **Referring domains from open data:** consider a separate Common Crawl feasibility experiment after approval.
+  Establish coverage, freshness, local resource limits, and a useful no-data state before adding it to the app.
+- **English UI and website:** after the core workflow passes the beta. Keep new UI text centralized meanwhile.
+- **Ready when:** one scoped proposal has a user problem, data source, cost/resource limit, and acceptance case.
+  Implement it as a separate feature branch.
 
 ## Done
 

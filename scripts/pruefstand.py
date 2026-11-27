@@ -13,6 +13,7 @@ import time
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from scripts.pruefstand_web import Antwort, Soll, Website, haupt, weitere
 
@@ -218,6 +219,7 @@ def ausfuehren(mit_browser: bool | None = None, melden=print) -> Ergebnis:
     from app import checks
     from app.core import audit, projekte, vitals
     from app.crawler import crawler as crawler_modul
+    from app.crawler.netz import Zielbereich
     from app.db import verbinden
 
     t0 = time.perf_counter()
@@ -233,11 +235,20 @@ def ausfuehren(mit_browser: bool | None = None, melden=print) -> Ergebnis:
 
     # Links auf localhost prüft Nextfix absichtlich nicht (Rechner des Besuchers). Der fremde Testserver läuft aber
     # dort: nur ihn von der Ausnahme nehmen, andere localhost-Links bleiben Grenzfall (/extern-ok)
+    fremdes_ziel = urlsplit(fremd)
     original = crawler_modul.ist_lokal
+    erlaubt_lokal = Zielbereich.erlaubt_lokal
+
+    def testserver_erlauben(bereich, host, port, adressen):
+        return ((host, port) == (fremdes_ziel.hostname, fremdes_ziel.port)
+                and all(ip.is_loopback for ip in adressen)) or erlaubt_lokal(bereich, host, port, adressen)
+
     crawler_modul.ist_lokal = lambda url: original(url) and not url.startswith(fremd)
+    Zielbereich.erlaubt_lokal = testserver_erlauben
     treffer: list[Treffer] = []
-    conn = verbinden()
+    conn = None
     try:
+        conn = verbinden()
         for n in namen:
             w = websites[n]
             p = projekte.anlegen(conn, f"{n}.pruefstand.test", f"Prüfstand {n}")
@@ -254,7 +265,9 @@ def ausfuehren(mit_browser: bool | None = None, melden=print) -> Ergebnis:
             melden(f"{n}: {status['seiten_anzahl']} Seiten, {len(neu)} Treffer")
     finally:
         crawler_modul.ist_lokal = original
-        conn.close()
+        Zielbereich.erlaubt_lokal = erlaubt_lokal
+        if conn is not None:
+            conn.close()
         for s in [*server.values(), fremd_server]:
             s.shutdown()
 

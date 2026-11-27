@@ -58,7 +58,7 @@ HANDLUNG = {
     "mehrere_canonicals": "Lass nur eine Hauptversion (Canonical) je Seite stehen ({n})",
     "markup_fehlerhaft": "Korrigiere fehlerhafte strukturierte Daten auf {n}",
     "viewport_fehlt": "Mach {n} handytauglich (Viewport-Tag)",
-    "langsame_seite": "Mach {n} schneller (Server antwortet über 1 s)",
+    "langsame_seite": "Mach {n} schneller (HTML-Antwort dauert über 1,8 s)",
     "ladezeit_lcp": "Lass den Hauptinhalt auf {n} schneller laden (Handy)",
     "ladezeit_cls": "Verhindere, dass das Layout auf {n} beim Laden springt",
     "ladezeit_tbt": "Mach {n} reaktionsschneller (weniger JavaScript)",
@@ -121,18 +121,9 @@ def handlung(c, seiten: int, ganze_site: bool) -> str:
     return vorlage.format(n=_seiten_text(seiten, ganze_site)) if vorlage else c.name
 
 
-def _vorheriger_crawl(conn: sqlite3.Connection, crawl_id: int) -> int | None:
-    z = conn.execute("""SELECT v.id FROM crawls v JOIN crawls c ON c.projekt_id = v.projekt_id
-                        WHERE c.id = ? AND v.id < c.id AND v.status IN ('fertig', 'abgebrochen')
-                        ORDER BY v.id DESC LIMIT 1""", (crawl_id,)).fetchone()
-    return z[0] if z else None
-
-
 def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
-    """{"aufgaben": [...], "feinschliff": [...], "erledigt": [...], "vorher_id": int | None,
-    "suchdaten": {"von", "bis", "tage", "quellen"} | None}. Mit Search-Console-Daten je Aufgabe klicks, impressionen,
-    traffic_text, sonst None."""
-    from app.core import audit   # zirkulären Import vermeiden
+    """Priorisierte Aufgaben, bestätigte Behebungen und offene Nachprüfungen."""
+    from app.core import audit, vergleich   # zirkulären Import vermeiden
 
     treffer = audit._treffer_pro_check(conn, crawl_id)
     aus = audit._ausgeschlossen(conn, crawl_id)
@@ -143,8 +134,10 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
              for c in aktiv if c.id in treffer}
     gesamt = sum(abzug.values())
 
-    vorher_id = _vorheriger_crawl(conn, crawl_id)
+    vorher_id = vergleich.vorheriger_crawl_id(conn, crawl_id)
     vorher = audit._treffer_pro_check(conn, vorher_id) if vorher_id else {}
+    aenderungen = {a["id"]: a for a in vergleich.vergleich(conn, crawl_id, vorher_id)["aenderungen"]} if vorher_id else {}
+    offene_fundstellen = vergleich.offene_nachpruefungen(conn, crawl_id)
     projekt_id = conn.execute("SELECT projekt_id FROM crawls WHERE id=?", (crawl_id,)).fetchone()[0]
     suchdaten = traffic.pro_seite(conn, projekt_id)
     urls = _betroffene_urls(conn, crawl_id) if suchdaten else {}
@@ -155,7 +148,9 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
             continue
         _, seiten, ganze_site = treffer[c.id]
         gewinn = score.aus_abzug(gesamt - abzug[c.id]) - score.aus_abzug(gesamt)
-        if vorher_id is None:
+        if offene_fundstellen.get(c.id):
+            verlauf = "nicht_nachgeprueft"
+        elif vorher_id is None:
             verlauf = None
         elif c.id not in vorher:
             verlauf = "neu"
@@ -167,10 +162,15 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
              "seiten": seiten, "ganze_site": ganze_site, "seiten_text": _seiten_text(seiten, ganze_site),
              "gewinn": round(gewinn, 1), "wirkung": wirkung(abzug[c.id]), "aufwand": _aufwand(c), "aufwand_text": AUFWAND_TEXT[_aufwand(c)],
              "wer": _wer(c), "verlauf": verlauf, "vorher": vorher.get(c.id, (0, 0, False))[1],
-             "klicks": None, "impressionen": None, "traffic_text": None}
+             "klicks": None, "impressionen": None, "traffic_text": None, "traffic_status": None}
         if suchdaten:
-            k, i = suchdaten["summe"] if ganze_site else traffic.fuer_urls(suchdaten, urls.get(c.id, ()))
-            a.update(klicks=k, impressionen=i, traffic_text=traffic.text(k, i, suchdaten["tage"]))
+            if ganze_site:
+                k, i = suchdaten["summe"] if suchdaten["seiten"] else (None, None)
+                status = "passend" if k is not None else "keine"
+            else:
+                k, i, status = traffic.fuer_urls(suchdaten, urls.get(c.id, ()))
+            a.update(klicks=k, impressionen=i, traffic_status=status,
+                     traffic_text=traffic.text(k, i, suchdaten["tage"], status))
         (feinschliff if c.schwere == "notice" else aufgaben).append(a)
 
     aufgaben.sort(key=lambda a: (WIRKUNG_RANG[a["wirkung"]], -(a["klicks"] or 0), -(a["impressionen"] or 0),
@@ -178,11 +178,21 @@ def liste(conn: sqlite3.Connection, crawl_id: int) -> dict:
     feinschliff.sort(key=lambda a: (-(a["klicks"] or 0), -(a["impressionen"] or 0), -a["seiten"]))
     erledigt = [{"id": cid, "name": checks.REGISTER[cid].name, "seiten": v[1]}
                 for cid, v in vorher.items()
-                if cid in checks.REGISTER and cid not in treffer and cid not in aus
+                if aenderungen.get(cid, {}).get("status") == "behoben" and not offene_fundstellen.get(cid)
                 and checks.REGISTER[cid].schwere != "notice"]
+    nicht_nachgeprueft = [{"id": cid, "name": checks.REGISTER[cid].name, "fundstellen": len(urls)}
+                         for cid, urls in sorted(offene_fundstellen.items())
+                         if cid in checks.REGISTER and checks.REGISTER[cid].schwere != "notice"]
+    crawl = audit.crawl_holen(conn, crawl_id)
+    auswertung = crawl["status"]
+    if auswertung == "fertig" and not conn.execute(f"""
+            SELECT 1 FROM seiten WHERE crawl_id=? AND {checks.katalog.HTML} AND {checks.katalog.GERENDERT}
+            AND (woerter_roh IS NOT NULL OR (? = 0 AND js_app IS NULL)) LIMIT 1
+            """, (crawl_id, crawl["js_rendern"])).fetchone():
+        auswertung = "keine_seiten"
     suche = {k: suchdaten[k] for k in ("von", "bis", "tage", "quellen")} if suchdaten else None
     return {"aufgaben": aufgaben, "feinschliff": feinschliff, "erledigt": erledigt, "vorher_id": vorher_id,
-            "suchdaten": suche}
+            "nicht_nachgeprueft": nicht_nachgeprueft, "auswertung": auswertung, "suchdaten": suche}
 
 
 def _betroffene_urls(conn: sqlite3.Connection, crawl_id: int) -> dict[str, set[str]]:

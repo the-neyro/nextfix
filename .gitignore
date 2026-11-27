@@ -8,6 +8,12 @@ data/*.db-shm
 .env
 
 # Zugangsschlüssel nie committen
+.env.*
+*.pem
+*.key
+*.p12
+*api-key*.txt
+dataforseo.txt
 *service-account*.json
 
 # Fremde Berichte (z. B. OpenSEO-Benchmark) – nur lokal, nie committen

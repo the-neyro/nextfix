@@ -77,7 +77,7 @@ SEITEN = {"https://ex.de/seo-check/": (200, GUT), "https://mb.de/a": (200, f"<ma
 
 @pytest.fixture
 def conn(monkeypatch):
-    def holer(url, ua):
+    def holer(url, ua, *, start_url=None):
         if url not in SEITEN:
             raise onpage.OnpageFehler(f"{url} nicht erreichbar (ConnectError)")
         return SEITEN[url][0], SEITEN[url][1], url

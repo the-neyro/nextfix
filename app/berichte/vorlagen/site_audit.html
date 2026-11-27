@@ -127,7 +127,9 @@
       {{ n_aufg }} {{ 'Aufgabe bringt' if n_aufg == 1 else 'Aufgaben bringen' }} die Website weiter{% if aufg.aufgaben %} –
       die wichtigste: <strong>{{ aufg.aufgaben[0].was }}</strong>{% endif %}. Die Reihenfolge steht unter „Maßnahmen“.
     {% else %}
-      Es gibt keine dringenden oder wichtigen Probleme, nur Feinschliff.
+      {% if aufg.auswertung == 'keine_seiten' %}Keine auswertbaren HTML-Seiten in dieser Prüfung.
+      {% elif aufg.auswertung != 'fertig' %}Die Prüfung ist unvollständig.
+      {% else %}Keine dringenden oder wichtigen Probleme auf den geprüften Seiten gefunden.{% endif %}
     {% endif %}</p>
   </div>
   <div class="fuss leise">

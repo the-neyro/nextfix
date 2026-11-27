@@ -1,6 +1,7 @@
 """Crawler-Robustheit: Umlaut-Domains, Zeichensätze, robots.txt wie Google, große Dateien."""
 
 import httpx
+import pytest
 
 from app.core import projekte
 from app.crawler import crawler as crawler_modul
@@ -9,6 +10,13 @@ from app.crawler.parser import dekodieren
 from app.crawler.robots import RobotsTxt
 from app.crawler.urls import host, ist_intern, ist_lokal, normalisieren
 from app.db import verbinden
+
+@pytest.fixture(autouse=True)
+def oeffentliches_test_dns(monkeypatch):
+    # MockTransport-Domains brauchen ein deterministisches DNS, keine echten Netzabfragen.
+    from app.crawler import urls
+    monkeypatch.setattr(urls, "_adressen", lambda name: ["93.184.216.34"])
+
 
 PUNY = "xn--bckerei-mller-bfb28a.de"   # bäckerei-müller.de
 

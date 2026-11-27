@@ -9,18 +9,16 @@ import re
 from dataclasses import dataclass, field
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from app.crawler.robots import _passt
+
 
 def liste(text: str | None) -> list[str]:
     """Eingabe aus einem Textfeld: ein Eintrag pro Zeile (oder durch Komma getrennt)."""
     return [t.strip() for t in re.split(r"[\n,]", text or "") if t.strip()]
 
 
-def _muster(maske: str) -> re.Pattern:
-    ende = maske.endswith("$")
-    kern = re.escape(maske.rstrip("$")).replace(r"\*", ".*")
-    if not kern.startswith(("/", ".*")):
-        kern = ".*" + kern   # "?sort=" oder "tag" darf irgendwo vorkommen
-    return re.compile(kern + ("$" if ende else ""))
+def _muster(maske: str) -> str:
+    return maske if maske.startswith(("/", "*")) else "*" + maske
 
 
 @dataclass
@@ -37,9 +35,9 @@ class UrlFilter:
     def erlaubt(self, url: str) -> bool:
         teile = urlsplit(url)
         pfad = (teile.path or "/") + (f"?{teile.query}" if teile.query else "")
-        if self._erlauben and not any(m.match(pfad) for m in self._erlauben):
+        if self._erlauben and not any(_passt(m, pfad) for m in self._erlauben):
             return False
-        return not any(m.match(pfad) for m in self._sperren)
+        return not any(_passt(m, pfad) for m in self._sperren)
 
     def bereinigen(self, url: str) -> str:
         if not self._parameter:

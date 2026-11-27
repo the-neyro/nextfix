@@ -67,7 +67,7 @@ def starten(conn: sqlite3.Connection, crawl_id: int, anzahl: int = 10, geraete: 
     lauf_id = conn.execute("INSERT INTO vitals_laeufe (crawl_id, gesamt, lebenszeichen) VALUES (?, ?, datetime('now'))",
                            (crawl_id, len(urls) * len(geraete))).lastrowid
     conn.commit()
-    args = (lauf_id, urls, tuple(geraete))
+    args = (lauf_id, urls, tuple(geraete), crawl["start_url"])
     if warten:
         _ausfuehren(*args)
     else:
@@ -75,11 +75,11 @@ def starten(conn: sqlite3.Connection, crawl_id: int, anzahl: int = 10, geraete: 
     return lauf_holen(conn, lauf_id)
 
 
-def _ausfuehren(lauf_id: int, urls: list[str], geraete: tuple[str, ...]) -> None:
+def _ausfuehren(lauf_id: int, urls: list[str], geraete: tuple[str, ...], start_url: str) -> None:
     with closing(verbinden()) as conn:
         fehler = None
         try:
-            with MESSER_FABRIK() as m:
+            with MESSER_FABRIK(start_url=start_url) as m:
                 n = 0
                 for url in urls:
                     for g in geraete:

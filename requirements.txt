@@ -1,5 +1,6 @@
 fastapi==0.143.1
 httpx==0.28.1
+httpcore==1.0.9
 Jinja2==3.1.6
 mcp==2.3.0
 pytest==9.1.1
@@ -8,3 +9,6 @@ uvicorn[standard]==0.54.0
 playwright==1.64.0
 PyJWT==2.15.1
 cryptography==50.0.2
+# Sicherheitsuntergrenzen für indirekte Abhängigkeiten, auch bei bestehenden Installationen:
+certifi>=2026.10.19  # GHSA-6q48-6c7w-9gw2: kompromittierte emSign-Zertifikate entfernt
+opentelemetry-api>=1.45.2  # GHSA-mf5v-w3w3-f6cg: begrenztes traceparent-Parsing

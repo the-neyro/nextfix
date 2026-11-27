@@ -2,14 +2,26 @@
 bei Gleichstand gewinnt Allow. Pythons urllib.robotparser kennt weder Platzhalter noch diesen Vorrang.
 """
 
-import re
 from urllib.parse import urlsplit
 
 
-def _muster(pfad: str) -> re.Pattern:
-    ende = pfad.endswith("$")
-    kern = re.escape(pfad.rstrip("$")).replace(r"\*", ".*")
-    return re.compile(kern + ("$" if ende else ""))
+def _passt(muster: str, pfad: str) -> bool:
+    """Google-Muster mit * und $ ohne exponentielles Regex-Zurückspringen."""
+    ende = muster.endswith("$")
+    teile = muster.rstrip("$").split("*")
+    if not pfad.startswith(teile[0]):
+        return False
+    if len(teile) == 1:
+        return pfad == teile[0] if ende else True
+    pos = len(teile[0])
+    for teil in teile[1:-1]:
+        i = pfad.find(teil, pos)
+        if i < 0:
+            return False
+        pos = i + len(teil)
+    if ende:
+        return pfad.endswith(teile[-1]) and len(pfad) - len(teile[-1]) >= pos
+    return pfad.find(teile[-1], pos) >= 0
 
 
 class RobotsTxt:
@@ -62,7 +74,7 @@ class RobotsTxt:
         pfad = (teile.path or "/") + (f"?{teile.query}" if teile.query else "")
         bester: tuple[int, bool] | None = None   # (Länge der Regel, erlaubt)
         for erlaubt, regel in self._regeln_fuer(agent):
-            if _muster(regel).match(pfad):
+            if _passt(regel, pfad):
                 kandidat = (len(regel), erlaubt)
                 if bester is None or kandidat > bester:   # länger gewinnt, bei Gleichstand Allow (True > False)
                     bester = kandidat

@@ -1,5 +1,8 @@
 """URL-Hilfen: normalisieren, intern/extern bestimmen."""
 
+import ipaddress
+import socket
+
 from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 STANDARD_PORTS = {"http": "80", "https": "443"}
@@ -55,10 +58,24 @@ def ist_intern(url: str, start_host: str) -> bool:
     return ohne_www(host(url)) == ohne_www(_netloc(start_host, ""))
 
 
+def _adressen(name: str) -> list[str]:
+    return [e[4][0] for e in socket.getaddrinfo(name, None, type=socket.SOCK_STREAM)]
+
+
 def ist_lokal(url: str) -> bool:
-    """Zeigt auf den eigenen Rechner (localhost, 127.0.0.1, ::1, *.localhost) – von außen nie erreichbar."""
+    """Private, Loopback- und Link-Local-Ziele einschließlich DNS-Namen nicht automatisch prüfen."""
     try:
-        name = (urlsplit(url).hostname or "").rstrip(".")
-    except ValueError:
+        name = (urlsplit(url).hostname or "").rstrip(".").lower()
+        if not name or name == "localhost" or name.endswith(".localhost"):
+            return True
+        try:
+            adressen = [str(ipaddress.ip_address(name))]
+        except ValueError:
+            adressen = _adressen(name)
+        return not adressen or any(not ipaddress.ip_address(a).is_global for a in adressen)
+    except socket.gaierror:
+        # Tote Domain ist nicht lokal: der Abruf scheitert und wird als defekt gemeldet.
+        # Ein späteres privates DNS-Ergebnis sperrt netz.Zielbereich beim Verbinden.
         return False
-    return name in ("localhost", "127.0.0.1", "::1") or name.endswith(".localhost")
+    except (ValueError, OSError):
+        return True  # Keine belastbare Auflösung: keinen automatischen Abruf wagen.

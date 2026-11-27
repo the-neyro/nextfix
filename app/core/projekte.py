@@ -1,5 +1,6 @@
 """Service: Projekte (eine Website = ein Projekt)."""
 
+import re
 import sqlite3
 from dataclasses import asdict, dataclass
 from urllib.parse import urlparse
@@ -27,8 +28,12 @@ def domain_normalisieren(eingabe: str) -> str:
         raise ProjektFehler("Domain fehlt")
     if "://" not in text:
         text = "http://" + text
-    host = urlparse(text).hostname
-    if not host or "." not in host:
+    try:
+        host = urlparse(text).hostname
+        host = host.encode("idna").decode("ascii") if host else ""
+    except (ValueError, UnicodeError):
+        raise ProjektFehler(f"Ungültige Domain: {eingabe!r}") from None
+    if not host or "." not in host or not re.fullmatch(r"[a-z0-9.-]+(:\d+)?", host):
         raise ProjektFehler(f"Ungültige Domain: {eingabe!r}")
     return host
 

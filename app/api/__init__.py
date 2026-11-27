@@ -115,7 +115,7 @@ def crawl_abbrechen(crawl_id: int, conn: Conn = Depends(sitzung)) -> dict:
 
 @router.get("/crawls/{crawl_id}/aufgaben")
 def was_jetzt_tun(crawl_id: int, conn: Conn = Depends(sitzung)) -> dict:
-    """„Was jetzt tun“: aufgaben, feinschliff, erledigt."""
+    """„Was jetzt tun“: Aufgaben, Feinschliff, bestätigte Behebungen und offene Nachprüfungen."""
     try:
         audit.crawl_holen(conn, crawl_id)
         return aufgaben.liste(conn, crawl_id)

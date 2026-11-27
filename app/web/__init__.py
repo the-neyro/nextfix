@@ -12,12 +12,14 @@ from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import checks, gsc
 from app.api import router as api_router
 from app.core import audit, aufgaben, ausblenden, autoritaet, export, teilnoten, gsc_konto, importe, keywords, luecken, onpage, positionen, vitals, projekte, themen, tracking, vergleich
 from app.db import sitzung, verbinden
 from app.gsc.laender import land_name
+from app.web.sicherheit import LokaleApp
 
 
 
@@ -29,7 +31,26 @@ async def lebenszyklus(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Nextfix", lifespan=lebenszyklus)
+app = LokaleApp(title="Nextfix", lifespan=lebenszyklus)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
+
+@app.middleware("http")
+async def nur_eigene_seite(request: Request, call_next):
+    """Browser dürfen nur lokal ändern; Skripte ohne Herkunftsheader bleiben möglich."""
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        herkunft = request.headers.get("origin")
+        try:
+            teile = urlsplit(herkunft) if herkunft else None
+            lokal = herkunft is None or (teile is not None and teile.scheme in ("http", "https")
+                                      and teile.hostname in ("localhost", "127.0.0.1")
+                                      and teile.username is None and teile.password is None)
+        except ValueError:
+            lokal = False
+        if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none") or not lokal:
+            return Response("Fremde Herkunft abgelehnt", status_code=403)
+    return await call_next(request)
+
+
 app.include_router(api_router)
 templates = Jinja2Templates(directory=Path(__file__).with_name("templates"))
 app.mount("/static", StaticFiles(directory=Path(__file__).with_name("static")), name="static")

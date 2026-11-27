@@ -39,22 +39,40 @@ if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot '..\app\web'))) {
     Write-Host "Nutze vorhandenen Ordner: $Ziel"
 } else {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Abbruch 'git fehlt: https://git-scm.com/download/win' }
-    # Standard: neuestes Release (höchstes Tag v…); ohne Release oder mit NEXTFIX_BRANCH: dieser Branch
-    if (-not $Branch) {
-        $tag = git ls-remote --tags --refs --sort=-v:refname $Repo 'v*' 2>$null | Select-Object -First 1
-        $Branch = if ($tag) { ($tag -split 'refs/tags/')[-1] } else { 'main' }
-    }
-    if (Test-Path (Join-Path $Ziel '.git')) {
-        Write-Host "Aktualisiere $Ziel auf $Branch"
-        # Tag oder Branch gezielt holen: der flache Klon kennt sonst nur den Stand, mit dem er angelegt wurde
-        git -C $Ziel fetch --quiet --depth 1 origin $Branch; Pruefe 'git fetch fehlgeschlagen'
-        git -C $Ziel -c advice.detachedHead=false checkout --quiet --detach FETCH_HEAD; Pruefe 'git checkout fehlgeschlagen'
+    if (Test-Path (Join-Path $Ziel '.git') -PathType Container) {
+        $Repo = git -C $Ziel remote get-url origin
+        Pruefe 'Der vorhandenen Installation fehlt die Git-Quelle origin.'
     } elseif (Test-Path $Ziel) {
         Abbruch "$Ziel gibt es schon, ist aber kein Nextfix-Ordner. Anderen Ordner wählen: `$env:NEXTFIX_DIR = 'C:\anderer-ordner'"
-    } else {
-        Write-Host "Hole Nextfix $Branch nach $Ziel"
-        git -c advice.detachedHead=false clone --quiet --depth 1 --branch $Branch $Repo $Ziel; Pruefe 'git clone fehlgeschlagen'
     }
+
+    $Ref = $Branch
+    $TagId = ''
+    if (-not $Ref) {
+        $Tags = git ls-remote --tags --refs --sort=-v:refname -- $Repo 'v*'
+        Pruefe 'Release-Tags konnten nicht abgerufen werden. Bitte Verbindung und Git-Quelle prüfen.'
+        foreach ($Tag in $Tags) {
+            if ($Tag -cmatch '^([0-9a-f]+)	(refs/tags/v[0-9]+\.[0-9]+\.[0-9]+)$') {
+                $TagId = $Matches[1]
+                $Ref = $Matches[2]
+                break
+            }
+        }
+        if (-not $Ref) { Abbruch 'Kein stabiles Release gefunden. Für die Entwicklung NEXTFIX_BRANCH=main setzen.' }
+    }
+
+    if (-not (Test-Path (Join-Path $Ziel '.git') -PathType Container)) {
+        git init --quiet -- $Ziel; Pruefe 'git init fehlgeschlagen'
+        git -C $Ziel remote add -- origin $Repo; Pruefe 'git remote add fehlgeschlagen'
+    }
+    Write-Host "Hole Nextfix $($Ref -replace '^refs/tags/', '') nach $Ziel"
+    git -C $Ziel fetch --quiet --depth 1 -- origin $Ref; Pruefe 'git fetch fehlgeschlagen'
+    if ($TagId) {
+        $Fetched = git -C $Ziel rev-parse --verify FETCH_HEAD
+        Pruefe 'git rev-parse fehlgeschlagen'
+        if ($Fetched -cne $TagId) { Abbruch 'Das Release-Tag hat sich beim Abruf geändert. Bitte erneut starten.' }
+    }
+    git -C $Ziel -c advice.detachedHead=false checkout --quiet --detach FETCH_HEAD; Pruefe 'git checkout fehlgeschlagen'
 }
 Set-Location $Ziel
 

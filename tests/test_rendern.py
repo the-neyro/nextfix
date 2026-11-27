@@ -13,7 +13,7 @@ class FakeRenderer:
     """Hängt an /gut viel Text und einen Link auf /verwaist an (sonst nur über die Sitemap erreichbar)."""
     gerendert: list[str] = []
 
-    def __init__(self, user_agent):
+    def __init__(self, user_agent, *, start_url):
         pass
 
     def __enter__(self):
@@ -128,7 +128,7 @@ def test_kein_hinweis_mit_js_rendern(testseite, monkeypatch):
 
 class Scheitert(FakeRenderer):
     """/gut lässt sich nicht rendern, alle anderen Seiten schon."""
-    def __init__(self, user_agent):
+    def __init__(self, user_agent, *, start_url):
         self.fehler = None
 
     def rendern(self, url):

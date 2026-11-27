@@ -1,12 +1,12 @@
 """Sitemaps laden: XML, Sitemap-Index (rekursiv), gzip. Liefert Dateien und URL-Einträge."""
 
-import gzip
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
 import httpx
 
 from app.crawler.urls import normalisieren
+from app.crawler.lesen import _entpacken, _lesen
 
 MAX_DATEIEN = 50
 MAX_BYTES = 50 * 1024 * 1024      # Grenze laut sitemaps.org (unkomprimiert)
@@ -49,7 +49,7 @@ def laden(client: httpx.Client, start_urls: list[str]) -> SitemapErgebnis:
 def _datei_laden(client: httpx.Client, url: str) -> tuple[SitemapDatei, list[str], list[str]]:
     datei = SitemapDatei(url=url)
     try:
-        r = client.get(url, follow_redirects=True)
+        r = _lesen(client, url, MAX_BYTES)
     except httpx.HTTPError as fehler:
         datei.fehler = f"{type(fehler).__name__}: {fehler}"[:200]
         return datei, [], []
@@ -60,8 +60,8 @@ def _datei_laden(client: httpx.Client, url: str) -> tuple[SitemapDatei, list[str
     inhalt = r.content
     if inhalt[:2] == b"\x1f\x8b":  # gzip, unabhängig von der Endung
         try:
-            inhalt = gzip.decompress(inhalt)
-        except (OSError, EOFError) as fehler:
+            inhalt = _entpacken(inhalt, MAX_BYTES)
+        except httpx.HTTPError as fehler:
             datei.fehler = f"gzip: {fehler}"
             return datei, [], []
     datei.bytes = len(inhalt)

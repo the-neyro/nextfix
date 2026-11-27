@@ -13,6 +13,8 @@ from urllib.parse import urlsplit
 import httpx
 
 from app.crawler import filter, rendern, ressourcen, site, sitemap
+from app.crawler.lesen import _inhalt_begrenzt, _lesen
+from app.crawler.netz import http_client
 from app.crawler.parser import dekodieren, zerlegen
 from app.crawler.robots import RobotsTxt
 from app.crawler.urls import host, ist_intern, ist_lokal, normalisieren
@@ -57,8 +59,9 @@ class Crawler:
         self.conn = conn
         self.crawl_id = crawl_id
         self.e = e
-        self.client = client or httpx.Client(
-            timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": e.user_agent}
+        self._eigener_client = client is None
+        self.client = client if client is not None else http_client(
+            e.start_url, user_agent=e.user_agent, timeout=TIMEOUT
         )
         self.start_host = host(e.start_url)
         self.robots = RobotsTxt()   # ohne robots.txt: alles erlaubt
@@ -70,10 +73,17 @@ class Crawler:
     # ---------- Ablauf ----------
 
     def ausfuehren(self) -> None:
+        try:
+            self._ausfuehren()
+        finally:
+            if self._eigener_client:
+                self.client.close()
+
+    def _ausfuehren(self) -> None:
         self._robots_und_sitemap()
         if self.e.js_rendern:
             try:
-                with RENDERER_FABRIK(self.e.user_agent) as self.renderer:
+                with RENDERER_FABRIK(self.e.user_agent, start_url=self.e.start_url) as self.renderer:
                     self._seiten_crawlen()
             except ImportError as fehler:
                 raise RuntimeError("JavaScript ausführen braucht Playwright: .venv/bin/pip install -r requirements.txt"
@@ -109,7 +119,7 @@ class Crawler:
         wurzel = f"{teile.scheme}://{teile.netloc}"
         status, text, sitemaps = None, None, []
         try:
-            r = self.client.get(wurzel + "/robots.txt", follow_redirects=True)
+            r = _lesen(self.client, wurzel + "/robots.txt", MAX_HTML_BYTES)
             status = r.status_code
             if r.status_code == 200:
                 text = r.text.removeprefix("\ufeff")   # BOM (Windows-Editoren): Google ignoriert ihn
@@ -354,7 +364,8 @@ class Crawler:
             try:
                 r = self.client.head(url)
                 if r.status_code in (405, 501):
-                    r = self.client.get(url)
+                    with self.client.stream("GET", url) as r:
+                        pass
                 status = r.status_code
             except httpx.HTTPError:
                 pass
@@ -384,14 +395,17 @@ class Crawler:
         for url in [u for u in self._ziel_urls() if u not in gecrawlt][:MAX_ZIEL_PRUEFUNG]:
             if self._abbruch_gewuenscht():
                 return
+            if ist_lokal(url) and not ist_intern(url, self.start_host):
+                continue
             if self.e.robots_beachten and not self._erlaubt(url):
                 continue
             status = None
             try:
-                r = _mit_wiederholung(lambda: self.client.head(url))
-                if r.status_code in (405, 501):
-                    r = _mit_wiederholung(lambda: self.client.get(url))
-                status = r.status_code
+                status = _mit_wiederholung(lambda: _sicher_status(
+                    self.client, url, "HEAD", start_host=self.start_host))
+                if status in (405, 501):
+                    status = _mit_wiederholung(lambda: _sicher_status(
+                        self.client, url, "GET", start_host=self.start_host))
             except httpx.HTTPError:
                 pass
             self.conn.execute("INSERT OR REPLACE INTO ziel_status (crawl_id, url, status_code) VALUES (?,?,?)",
@@ -415,18 +429,13 @@ def _mit_wiederholung(aufruf):
 def _abrufen(client: httpx.Client, url: str) -> tuple[httpx.Response, bytes, int | None]:
     """GET als Stream: nur HTML-Seiten mit Status 200 werden gelesen, und das höchstens bis MAX_HTML_BYTES.
     PDFs, Videos und Fehlerseiten kosten so keine Zeit und keinen Speicher. Liefert (Antwort, Inhalt, Größe)."""
-    with client.stream("GET", url) as r:
+    with client.stream("GET", url, headers={"Accept-Encoding": "gzip, deflate"}) as r:
         laenge = r.headers.get("content-length")
         groesse = int(laenge) if laenge and laenge.isdigit() else None
         if r.status_code != 200 or "html" not in (r.headers.get("content-type") or "").lower():
             return r, b"", groesse
-        teile, gelesen = [], 0
-        for stueck in r.iter_bytes():
-            teile.append(stueck)
-            gelesen += len(stueck)
-            if gelesen > MAX_HTML_BYTES:
-                break
-        inhalt = b"".join(teile)[:MAX_HTML_BYTES]
+        inhalt, gekuerzt = _inhalt_begrenzt(r, MAX_HTML_BYTES)
+        gelesen = MAX_HTML_BYTES + 1 if gekuerzt else len(inhalt)
         return r, inhalt, max(gelesen, groesse or 0)
 
 
@@ -439,18 +448,30 @@ def _status(client: httpx.Client, url: str, folgen: bool = False) -> int:
     return r.status_code
 
 
+def _sicher_status(client: httpx.Client, url: str, methode: str, folgen: bool = False,
+                   headers: dict | None = None, start_host: str | None = None) -> int:
+    """Jeden Redirect vor dem Abruf prüfen; Statusabfragen laden nie einen Body."""
+    for _ in range(client.max_redirects + 1):
+        if ist_lokal(url) and not (start_host and ist_intern(url, start_host)):
+            raise httpx.RequestError("Lokales Ziel wird nicht automatisch abgerufen")
+        with client.stream(methode, url, follow_redirects=False, headers=headers) as r:
+            if folgen and r.has_redirect_location:
+                url = str(r.next_request.url)
+                continue
+            return r.status_code
+    raise httpx.TooManyRedirects("Zu viele Weiterleitungen")
+
+
 def _extern_status(client: httpx.Client, url: str) -> int:
-    """HEAD mit Bot-Kennung; bei Ablehnung einmal per GET mit Browser-Kennung nachprüfen.
-    Gemeldet wird nur, was auch für einen normalen Browser fehlschlägt."""
-    r = client.head(url, follow_redirects=True)
-    if r.status_code in EXTERN_NACHPRUEFEN:
-        with client.stream("GET", url, follow_redirects=True, headers={"User-Agent": BROWSER_UA}) as r:
-            pass
-    return r.status_code
+    """HEAD mit Bot-Kennung, bei Ablehnung GET als Browser; private Redirect-Ziele sperren."""
+    status = _sicher_status(client, url, "HEAD", folgen=True)
+    if status in EXTERN_NACHPRUEFEN:
+        status = _sicher_status(client, url, "GET", folgen=True, headers={"User-Agent": BROWSER_UA})
+    return status
 
 
 def _datei_laden(client: httpx.Client, url: str) -> dict:
-    r = client.get(url)
+    r = _lesen(client, url, MAX_HTML_BYTES, folgen=False)
     werte = {"status_code": r.status_code}
     if r.status_code == 200:
         text = r.text
